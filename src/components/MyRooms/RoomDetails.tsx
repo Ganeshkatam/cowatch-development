@@ -11,6 +11,9 @@ import {
   Paper,
   ActionIcon,
   Tooltip,
+  SegmentedControl,
+  Avatar,
+  ScrollArea,
 } from "@mantine/core";
 import {
   IconArrowLeft,
@@ -73,6 +76,20 @@ interface RoomDetailsData {
     messagesCount: number;
     lastMessageAt: string | null;
   };
+  chatMessages?: ChatMessageItem[];
+}
+
+interface ChatMessageItem {
+  id: string;
+  roomId: string;
+  user_id: string | null;
+  message: string;
+  message_type: 'user' | 'system';
+  event_type?: string | null;
+  metadata?: any;
+  created_at: string;
+  authorName?: string;
+  authorAvatar?: string;
 }
 
 const getStatusConfig = (status: RoomDetailsData["status"]) => {
@@ -149,6 +166,7 @@ export const RoomDetails = () => {
   const [copiedRoomId, setCopiedRoomId] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editModalOpened, setEditModalOpened] = useState(false);
+  const [activeHistoryTab, setActiveHistoryTab] = useState<"chat" | "activity">("chat");
 
   const fetchRoomDetails = async () => {
     setLoading(true);
@@ -851,60 +869,122 @@ export const RoomDetails = () => {
             </div>
           </div>
 
-          {/* Card 5: Activity History */}
+          {/* Card 5: Room Chat & Activity History */}
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <div className={styles.cardTitle}>
                 <div className={styles.cardTitleIconWrap}>
-                  <IconActivity size={18} />
+                  {activeHistoryTab === "chat" ? <IconMessage size={18} /> : <IconActivity size={18} />}
                 </div>
-                <span>Activity History</span>
+                <span>{activeHistoryTab === "chat" ? "Room Chat" : "Activity History"}</span>
               </div>
+              <SegmentedControl
+                value={activeHistoryTab}
+                onChange={(val) => setActiveHistoryTab(val as "chat" | "activity")}
+                size="xs"
+                radius="md"
+                data={[
+                  {
+                    label: `Chat (${room.chatMessages?.length ?? room.chatSummary?.messagesCount ?? 0})`,
+                    value: "chat",
+                  },
+                  {
+                    label: `Activity (${room.lifecycleEvents?.length ?? 0})`,
+                    value: "activity",
+                  },
+                ]}
+              />
             </div>
 
-            {room.lifecycleEvents && room.lifecycleEvents.length > 0 ? (
-              <div className={styles.timeline}>
-                {room.lifecycleEvents.slice(0, 6).map((event, index) => (
-                  <div key={event.id || index} className={styles.timelineItem}>
-                    {index < Math.min(room.lifecycleEvents.length, 6) - 1 && (
-                      <div className={styles.timelineLine} />
-                    )}
-                    <div className={styles.timelineNode}>
-                      <div
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          backgroundColor: "var(--color-violet)",
-                        }}
-                      />
-                    </div>
-                    <div className={styles.timelineBody}>
-                      <div className={styles.timelineTitle}>{event.event}</div>
-                      <div className={styles.timelineTime}>
-                        {new Date(event.timestamp).toLocaleString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+            {activeHistoryTab === "chat" ? (
+              room.chatMessages && room.chatMessages.length > 0 ? (
+                <ScrollArea.Autosize mah={360} type="auto">
+                  <div className={styles.chatList}>
+                    {room.chatMessages.map((msg) => (
+                      <div key={msg.id} className={styles.chatItem}>
+                        <Avatar
+                          src={msg.authorAvatar}
+                          alt={msg.authorName || "Guest"}
+                          radius="xl"
+                          size="sm"
+                          color="violet"
+                        >
+                          {(msg.authorName || "G").charAt(0).toUpperCase()}
+                        </Avatar>
+                        <div className={styles.chatContent}>
+                          <div className={styles.chatHeaderRow}>
+                            <span className={styles.chatAuthor}>{msg.authorName || "Guest"}</span>
+                            <span className={styles.chatTime}>
+                              {new Date(msg.created_at).toLocaleTimeString(undefined, {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                          <div className={styles.chatMessageText}>{msg.message}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea.Autosize>
+              ) : (
+                <div className={styles.emptyStateContainer}>
+                  <div className={styles.emptyStateIconWrap}>
+                    <IconMessage size={22} color="var(--color-violet)" />
+                  </div>
+                  <Text fw={600} size="sm" c="var(--text-primary)">
+                    No Messages Yet
+                  </Text>
+                  <Text size="xs" c="dimmed" ta="center" style={{ maxWidth: 260 }}>
+                    Chats sent during watch parties in this room will appear here.
+                  </Text>
+                </div>
+              )
+            ) : (
+              room.lifecycleEvents && room.lifecycleEvents.length > 0 ? (
+                <div className={styles.timeline}>
+                  {room.lifecycleEvents.slice(0, 10).map((event, index) => (
+                    <div key={event.id || index} className={styles.timelineItem}>
+                      {index < Math.min(room.lifecycleEvents.length, 10) - 1 && (
+                        <div className={styles.timelineLine} />
+                      )}
+                      <div className={styles.timelineNode}>
+                        <div
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            backgroundColor: "var(--color-violet)",
+                          }}
+                        />
+                      </div>
+                      <div className={styles.timelineBody}>
+                        <div className={styles.timelineTitle}>{event.event}</div>
+                        <div className={styles.timelineTime}>
+                          {new Date(event.timestamp).toLocaleString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={styles.emptyStateContainer}>
-                <div className={styles.emptyStateIconWrap}>
-                  <IconActivity size={22} color="var(--color-violet)" />
+                  ))}
                 </div>
-                <Text fw={600} size="sm" c="var(--text-primary)">
-                  No Activity Recorded
-                </Text>
-                <Text size="xs" c="dimmed" ta="center" style={{ maxWidth: 260 }}>
-                  Room events, status changes, and participant activity will appear here.
-                </Text>
-              </div>
+              ) : (
+                <div className={styles.emptyStateContainer}>
+                  <div className={styles.emptyStateIconWrap}>
+                    <IconActivity size={22} color="var(--color-violet)" />
+                  </div>
+                  <Text fw={600} size="sm" c="var(--text-primary)">
+                    No Activity Recorded
+                  </Text>
+                  <Text size="xs" c="dimmed" ta="center" style={{ maxWidth: 260 }}>
+                    Room events, status changes, and participant activity will appear here.
+                  </Text>
+                </div>
+              )
             )}
           </div>
         </div>

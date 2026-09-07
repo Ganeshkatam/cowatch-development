@@ -821,6 +821,19 @@ app.get("/roomDetails", async (req, res) => {
     );
     const chatSummary = chatSummaryResult?.rows[0] || { messagesCount: 0, lastMessageAt: null };
 
+    // Fetch recent chat messages
+    const chatMessagesResult = await postgres?.query(
+      `SELECT rm.id, rm.room_id as "roomId", rm.user_id, rm.message, rm.message_type, rm.event_type, rm.metadata, rm.created_at,
+              COALESCE(p.display_name, rm.metadata->>'name', 'Guest') as "authorName",
+              COALESCE(p.avatar_url, rm.metadata->>'picture') as "authorAvatar"
+       FROM room_messages rm
+       LEFT JOIN profiles p ON rm.user_id = p.id
+       WHERE rm.room_id = $1
+       ORDER BY rm.created_at DESC
+       LIMIT 50`,
+      [roomId]
+    );
+
     res.json({
       ...room,
       owner_passcode: undefined,
@@ -829,7 +842,8 @@ app.get("/roomDetails", async (req, res) => {
       chatSummary: {
         messagesCount: chatSummary.messagesCount || 0,
         lastMessageAt: chatSummary.lastMessageAt || null
-      }
+      },
+      chatMessages: (chatMessagesResult?.rows ?? []).reverse()
     });
 
   } catch (error) {
