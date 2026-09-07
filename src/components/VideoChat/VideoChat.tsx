@@ -517,8 +517,9 @@ export class VideoChat extends React.Component<VideoChatProps> {
             </div>
           </div>
         )}
-        {participants.map((p) => {
-          const isSelf = p.id === selfId;
+        <div className={styles.tilesGrid}>
+          {participants.map((p) => {
+            const isSelf = p.id === selfId;
           const displayName =
             (isSelf ? this.context.displayName : null) ||
             nameMap[p.id] ||
@@ -588,6 +589,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
                       radius="md"
                       onClick={this.setupWebRTC}
                       leftSection={<IconVideo size={14} />}
+                      className={styles.joinCallBtn}
                       style={{ marginTop: "4px" }}
                     >
                       Join Video Call
@@ -726,31 +728,36 @@ export class VideoChat extends React.Component<VideoChatProps> {
           );
         })}
 
-        <div
-          className={styles.inviteCard}
-          onClick={this.handleOpenInvite}
-          role="button"
-          tabIndex={0}
-          title="Click to invite friends"
-        >
           <div
-            className={styles.inviteIconBadge}
-            style={{
-              backgroundColor: "var(--bg-surface)",
-              color: "var(--color-violet)",
-            }}
+            className={`${styles.inviteCard} ${
+              participants.length % 2 !== 0
+                ? styles.inviteCardCompanion
+                : styles.inviteCardFull
+            }`}
+            onClick={this.handleOpenInvite}
+            role="button"
+            tabIndex={0}
+            title="Click to invite friends"
           >
-            <IconUserPlus size={18} />
+            <div
+              className={styles.inviteIconBadge}
+              style={{
+                backgroundColor: "var(--bg-surface)",
+                color: "var(--color-violet)",
+              }}
+            >
+              <IconUserPlus size={18} />
+            </div>
+            <div className={styles.inviteMeta}>
+              <span className={styles.inviteTitle}>
+                Invite people
+              </span>
+              <span className={styles.inviteSubtitle}>
+                Share a link to bring friends into the room
+              </span>
+            </div>
+            <IconChevronRight className={styles.inviteChevron} size={16} color="var(--text-muted)" />
           </div>
-          <div className={styles.inviteMeta}>
-            <span className={styles.inviteTitle}>
-              Invite people
-            </span>
-            <span className={styles.inviteSubtitle}>
-              Share a link to bring friends into the room
-            </span>
-          </div>
-          <IconChevronRight size={16} color="var(--text-muted)" />
         </div>
 
         {this.state.isInviteModalOpen && (
