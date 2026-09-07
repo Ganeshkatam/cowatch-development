@@ -372,20 +372,6 @@ export const Create = () => {
                     </div>
                   </Stack>
                 </Box>
-
-                {/* Submit button inside form (convenient on tablet & mobile) */}
-                <Button
-                  type="submit"
-                  size="lg"
-                  variant="gradient"
-                  gradient={{ from: "violet", to: "grape", deg: 135 }}
-                  disabled={loading || !roomTitle.trim()}
-                  leftSection={loading ? <Loader size={20} color="white" /> : <IconCirclePlusFilled size={20} />}
-                  mt="md"
-                  className={styles.createBtnPrimary}
-                >
-                  {loading ? "Creating Room..." : "Create Room"}
-                </Button>
               </Stack>
             </form>
           </div>
