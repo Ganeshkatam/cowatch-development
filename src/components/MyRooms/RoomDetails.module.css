@@ -163,6 +163,10 @@
   background-color: #9CA3AF;
 }
 
+.pulseDot.expired {
+  background-color: #EF4444;
+}
+
 @keyframes pulseAnimation {
   0% {
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
@@ -573,6 +577,12 @@
 .lifecycleBanner.permanent {
   background: rgba(139, 92, 246, 0.08);
   border-color: rgba(139, 92, 246, 0.25);
+}
+
+.lifecycleBanner.expired,
+.lifecycleBanner.ended {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
 }
 
 .countdownBig {

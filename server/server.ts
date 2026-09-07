@@ -84,24 +84,35 @@ io.engine.use(async (req: any, res: Response, next: () => void) => {
     )
   )?.rows?.[0];
   // Don't await after this because we may have a race condition where 2 rquests both try to load the room
-  if (isCorrectShard && !rooms.has(key)) {
-    const data = persistedRoom?.data
-      ? JSON.stringify(persistedRoom.data)
-      : undefined;
-    if (data) {
-      const room = new Room(io, key, data);
-      if (persistedRoom) {
-        room.status = persistedRoom.status || 'active';
-        room.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;
-        room.owner_id = persistedRoom.owner_id;
-        room.isPermanent = persistedRoom.isPermanent || false;
+  if (isCorrectShard) {
+    if (!rooms.has(key)) {
+      const data = persistedRoom?.data
+        ? JSON.stringify(persistedRoom.data)
+        : undefined;
+      if (data) {
+        const room = new Room(io, key, data);
+        if (persistedRoom) {
+          room.status = persistedRoom.status || 'active';
+          room.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;
+          room.owner_id = persistedRoom.owner_id;
+          room.isPermanent = persistedRoom.isPermanent || false;
+        }
+        rooms.set(key, room);
+        console.log(
+          "loading room %s into memory on shard %s",
+          roomId,
+          config.SHARD,
+        );
       }
-      rooms.set(key, room);
-      console.log(
-        "loading room %s into memory on shard %s",
-        roomId,
-        config.SHARD,
-      );
+    } else if (persistedRoom) {
+      const memoryRoom = rooms.get(key);
+      if (memoryRoom) {
+        memoryRoom.isPermanent = persistedRoom.isPermanent || false;
+        memoryRoom.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;
+        if (persistedRoom.status === 'active' && memoryRoom.status === 'expired') {
+          memoryRoom.status = 'active';
+        }
+      }
     }
   }
   next();
@@ -715,12 +726,14 @@ app.get("/listRooms", async (req, res) => {
     const warningWindow = 15 * 60 * 1000; // 15 minutes
     const rows = (result?.rows ?? []).map((r: any) => {
       let derivedStatus = r.status;
-      if ((r.status === 'active' || r.status === 'inactive') && !r.isPermanent && r.expiresAt) {
+      if (!r.isPermanent && r.expiresAt && r.status !== 'ended') {
         const expiresAt = new Date(r.expiresAt).getTime();
         if (expiresAt <= now) {
           derivedStatus = 'expired';
         } else if (expiresAt <= now + warningWindow) {
           derivedStatus = 'expiring';
+        } else if (r.status === 'expired') {
+          derivedStatus = 'active';
         }
       }
       const currentPasscode = r.owner_passcode ? decryptPasscodeForOwner(r.owner_passcode) : null;
@@ -778,12 +791,14 @@ app.get("/roomDetails", async (req, res) => {
     const now = Date.now();
     const warningWindow = 15 * 60 * 1000; // 15 minutes
     let derivedStatus = room.status;
-    if ((room.status === 'active' || room.status === 'inactive') && !room.isPermanent && room.expiresAt) {
+    if (!room.isPermanent && room.expiresAt && room.status !== 'ended') {
       const expiresAt = new Date(room.expiresAt).getTime();
       if (expiresAt <= now) {
         derivedStatus = 'expired';
       } else if (expiresAt <= now + warningWindow) {
         derivedStatus = 'expiring';
+      } else if (room.status === 'expired') {
+        derivedStatus = 'active';
       }
     }
     room.status = derivedStatus;

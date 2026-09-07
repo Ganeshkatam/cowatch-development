@@ -98,7 +98,7 @@ const getStatusConfig = (status: RoomDetailsData["status"]) => {
         label: "Closing Soon",
         color: "orange",
         dotClass: styles.expiring,
-        description: "This room will close soon unless extended.",
+        description: "This room will close soon.",
         badgeColor: "orange",
       };
     case "scheduled":
@@ -116,6 +116,14 @@ const getStatusConfig = (status: RoomDetailsData["status"]) => {
         dotClass: styles.ended,
         description: "This watch party has finished.",
         badgeColor: "gray",
+      };
+    case "expired":
+      return {
+        label: "Expired",
+        color: "red",
+        dotClass: styles.expired,
+        description: "This temporary room has expired and is closed.",
+        badgeColor: "red",
       };
     default:
       return {
@@ -291,6 +299,7 @@ export const RoomDetails = () => {
   // Time remaining calculator
   const getExpiresIn = () => {
     if (!room.expiresAt) return null;
+    if (room.status === "expired" || room.status === "ended") return "Expired";
     const diff = new Date(room.expiresAt).getTime() - nowTime;
     if (diff <= 0) return "Expired";
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -437,10 +446,20 @@ export const RoomDetails = () => {
           <div className={styles.statInfo}>
             <span className={styles.statLabel}>Room Expiry</span>
             <span className={styles.statValue}>
-              {room.isPermanent ? "Never Expires" : (expiresInText || "Temporary")}
+              {room.isPermanent
+                ? "Never Expires"
+                : room.status === "expired" || expiresInText === "Expired"
+                ? "Expired"
+                : room.status === "ended"
+                ? "Ended"
+                : expiresInText || "Temporary"}
             </span>
             <span className={styles.statSubtitle}>
-              {room.isPermanent ? "Saved forever" : "Renews when used"}
+              {room.isPermanent
+                ? "Saved forever"
+                : room.status === "expired" || expiresInText === "Expired" || room.status === "ended"
+                ? "Room is closed"
+                : "Temporary room"}
             </span>
           </div>
         </div>
@@ -766,7 +785,13 @@ export const RoomDetails = () => {
 
             <div
               className={`${styles.lifecycleBanner} ${
-                room.isPermanent ? styles.permanent : room.status === "active" ? styles.active : styles.inactive
+                room.isPermanent
+                  ? styles.permanent
+                  : room.status === "active"
+                  ? styles.active
+                  : room.status === "expired" || room.status === "ended"
+                  ? styles.ended
+                  : styles.inactive
               }`}
             >
               <div>
@@ -775,6 +800,10 @@ export const RoomDetails = () => {
                     ? "Permanent Room"
                     : room.status === "active"
                     ? "Party in Progress"
+                    : room.status === "expired"
+                    ? "Room Expired"
+                    : room.status === "ended"
+                    ? "Room Ended"
                     : "Room is Paused"}
                 </Text>
                 <Text size="xs" c="var(--text-secondary)" mt={4} style={{ lineHeight: 1.5 }}>
@@ -782,12 +811,16 @@ export const RoomDetails = () => {
                     ? "This room is saved forever. You and your friends can come back and watch together anytime."
                     : room.status === "active"
                     ? "People are currently in this room watching together."
+                    : room.status === "expired"
+                    ? "This temporary room has reached its end of life and is now closed."
+                    : room.status === "ended"
+                    ? "This watch party has been ended by the host."
                     : "Nobody is in the room right now. It automatically wakes up as soon as someone joins."}
                 </Text>
               </div>
             </div>
 
-            {room.status === "active" && !room.isPermanent && room.expiresAt && (
+            {(room.status === "active" || room.status === "expiring") && !room.isPermanent && room.expiresAt && expiresInText !== "Expired" && (
               <div style={{ marginBottom: "20px" }}>
                 <div className={styles.countdownBig}>
                   {expiresInText || "—"}
