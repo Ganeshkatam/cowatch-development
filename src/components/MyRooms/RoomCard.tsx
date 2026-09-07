@@ -235,8 +235,17 @@ export const EditRoomModal = ({
       if (coverFile) {
         const fileExt = coverFile.name.split('.').pop();
         const safeRoomId = room.roomId.startsWith("/") ? room.roomId.substring(1) : room.roomId;
-        const filePath = `${user.id}/${safeRoomId}/cover.${fileExt}`;
-        
+        const folderPath = `${user.id}/${safeRoomId}`;
+
+        // Clean up old cover files in folder to prevent orphans
+        try {
+          const { data: oldFiles } = await supabase.storage.from('room_covers').list(folderPath);
+          if (oldFiles && oldFiles.length > 0) {
+            await supabase.storage.from('room_covers').remove(oldFiles.map(f => `${folderPath}/${f.name}`));
+          }
+        } catch (_) {}
+
+        const filePath = `${folderPath}/cover.${fileExt}`;
         const { error: uploadError } = await supabase.storage
           .from('room_covers')
           .upload(filePath, coverFile, { upsert: true });
@@ -607,8 +616,17 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
 
       const fileExt = file.name.split('.').pop();
       const safeRoomId = room.roomId.startsWith("/") ? room.roomId.substring(1) : room.roomId;
-      const filePath = `${user.id}/${safeRoomId}/cover.${fileExt}`;
-      
+      const folderPath = `${user.id}/${safeRoomId}`;
+
+      // Clean up old cover files in folder to prevent orphans
+      try {
+        const { data: oldFiles } = await supabase.storage.from('room_covers').list(folderPath);
+        if (oldFiles && oldFiles.length > 0) {
+          await supabase.storage.from('room_covers').remove(oldFiles.map(f => `${folderPath}/${f.name}`));
+        }
+      } catch (_) {}
+
+      const filePath = `${folderPath}/cover.${fileExt}`;
       const { error: uploadError } = await supabase.storage.from('room_covers').upload(filePath, file, { upsert: true });
       if (uploadError) throw uploadError;
       

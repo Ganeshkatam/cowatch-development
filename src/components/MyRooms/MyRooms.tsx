@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useContext, useRef } 
 import { useHistory } from "react-router-dom";
 import { Title, Text, Button, Loader, Center } from "@mantine/core";
 import { serverPath, serverCandidates, setServerPath, addAndSavePasscode } from "../../utils/utils";
-import { getAccessToken } from "../../utils/supabaseClient";
+import { getAccessToken, supabase } from "../../utils/supabaseClient";
 import { MetadataContext } from "../../MetadataContext";
 import styles from "./MyRooms.module.css";
 import { Hero } from "./Hero";
@@ -156,6 +156,20 @@ const useRooms = (user: any) => {
   const deleteRoom = async (roomId: string) => {
     try {
       const token = await getAccessToken();
+
+      // Clean up storage bucket files for this room
+      try {
+        const cleanId = roomId.startsWith("/") ? roomId.substring(1) : roomId;
+        const folderPath = `${user.id}/${cleanId}`;
+        const { data: files } = await supabase.storage.from("room_covers").list(folderPath);
+        if (files && files.length > 0) {
+          const filesToRemove = files.map(f => `${folderPath}/${f.name}`);
+          await supabase.storage.from("room_covers").remove(filesToRemove);
+        }
+      } catch (storageErr) {
+        console.warn("Storage cleanup error:", storageErr);
+      }
+
       const response = await fetch(`${serverPath}/deleteRoom?uid=${user.id}&token=${token}&roomId=${roomId}`, {
         method: "DELETE",
       });

@@ -238,7 +238,24 @@ export const RoomDetails = () => {
     try {
       const token = await getAccessToken();
       const user = await supabase.auth.getUser();
-      const response = await fetch(`${serverPath}/deleteRoom?uid=${user.data.user?.id}&token=${token}&roomId=${room.roomId}`, {
+      const uid = user.data.user?.id;
+
+      // Clean up storage bucket files for this room
+      if (uid) {
+        try {
+          const cleanId = room.roomId.startsWith("/") ? room.roomId.substring(1) : room.roomId;
+          const folderPath = `${uid}/${cleanId}`;
+          const { data: files } = await supabase.storage.from("room_covers").list(folderPath);
+          if (files && files.length > 0) {
+            const filesToRemove = files.map(f => `${folderPath}/${f.name}`);
+            await supabase.storage.from("room_covers").remove(filesToRemove);
+          }
+        } catch (storageErr) {
+          console.warn("Storage cleanup error:", storageErr);
+        }
+      }
+
+      const response = await fetch(`${serverPath}/deleteRoom?uid=${uid}&token=${token}&roomId=${room.roomId}`, {
         method: "DELETE",
       });
       if (response.ok) {

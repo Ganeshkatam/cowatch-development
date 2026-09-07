@@ -184,10 +184,21 @@ export const SettingsModal = ({
 
       // 1. Upload new cover if selected
       let finalCoverUrl = originalCoverUrl;
+      const safeRoomId = roomId.startsWith("/") ? roomId.substring(1) : roomId;
+      const folderPath = `${user.id}/${safeRoomId}`;
+
       if (coverFile) {
         const fileExt = coverFile.name.split('.').pop();
-        const safeRoomId = roomId.startsWith("/") ? roomId.substring(1) : roomId;
-        const filePath = `${user.id}/${safeRoomId}/cover.${fileExt}`;
+
+        // Clean up old cover files in folder to prevent orphans
+        try {
+          const { data: oldFiles } = await supabase.storage.from('room_covers').list(folderPath);
+          if (oldFiles && oldFiles.length > 0) {
+            await supabase.storage.from('room_covers').remove(oldFiles.map(f => `${folderPath}/${f.name}`));
+          }
+        } catch (_) {}
+
+        const filePath = `${folderPath}/cover.${fileExt}`;
         
         const { error: uploadError } = await supabase.storage
           .from('room_covers')
@@ -199,6 +210,12 @@ export const SettingsModal = ({
         finalCoverUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
       } else if (clearCover) {
         finalCoverUrl = null;
+        try {
+          const { data: oldFiles } = await supabase.storage.from('room_covers').list(folderPath);
+          if (oldFiles && oldFiles.length > 0) {
+            await supabase.storage.from('room_covers').remove(oldFiles.map(f => `${folderPath}/${f.name}`));
+          }
+        } catch (_) {}
       }
 
       if (finalCoverUrl !== originalCoverUrl) {

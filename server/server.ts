@@ -280,6 +280,50 @@ app.get("/stats", async (req, res) => {
   }
 });
 
+async function cleanupRoomCoverStorage(uid: string, roomId: string) {
+  if (!supabaseAdmin) return;
+  try {
+    const cleanId = roomId.startsWith("/") ? roomId.substring(1) : roomId;
+    const folderPath = `${uid}/${cleanId}`;
+    const { data: files } = await supabaseAdmin.storage.from("room_covers").list(folderPath);
+    if (files && files.length > 0) {
+      const filesToRemove = files.map((f: any) => `${folderPath}/${f.name}`);
+      await supabaseAdmin.storage.from("room_covers").remove(filesToRemove);
+    }
+  } catch (err) {
+    console.warn("Error cleaning room cover storage for room", roomId, err);
+  }
+}
+
+async function cleanupUserStorage(uid: string) {
+  if (!supabaseAdmin) return;
+  try {
+    // 1. Delete avatars
+    const { data: avatarFiles } = await supabaseAdmin.storage.from("avatars").list(uid);
+    if (avatarFiles && avatarFiles.length > 0) {
+      const filesToRemove = avatarFiles.map((f: any) => `${uid}/${f.name}`);
+      await supabaseAdmin.storage.from("avatars").remove(filesToRemove);
+    }
+
+    // 2. Delete all room covers for this user
+    const { data: roomFolders } = await supabaseAdmin.storage.from("room_covers").list(uid);
+    if (roomFolders && roomFolders.length > 0) {
+      for (const folder of roomFolders) {
+        const folderPath = `${uid}/${folder.name}`;
+        const { data: roomFiles } = await supabaseAdmin.storage.from("room_covers").list(folderPath);
+        if (roomFiles && roomFiles.length > 0) {
+          const filesToRemove = roomFiles.map((f: any) => `${folderPath}/${f.name}`);
+          await supabaseAdmin.storage.from("room_covers").remove(filesToRemove);
+        }
+      }
+      // Also delete any direct files under uid folder
+      await supabaseAdmin.storage.from("room_covers").remove(roomFolders.map((f: any) => `${uid}/${f.name}`));
+    }
+  } catch (err) {
+    console.error("Error cleaning user storage for", uid, err);
+  }
+}
+
 app.post("/api/account/delete", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -297,23 +341,8 @@ app.post("/api/account/delete", async (req, res) => {
     }
     const uid = user.id;
 
-    // Clean up Storage (avatars bucket)
-    const { data: existingFiles, error: listError } = await supabaseAdmin.storage.from("avatars").list(uid);
-    if (listError) {
-      console.error("Storage list error during account deletion:", listError);
-      res.status(500).json({ error: "Failed to list avatars" });
-      return;
-    }
-
-    if (existingFiles && existingFiles.length > 0) {
-      const filesToRemove = existingFiles.map((f: any) => `${uid}/${f.name}`);
-      const { error: removeError } = await supabaseAdmin.storage.from("avatars").remove(filesToRemove);
-      if (removeError) {
-        console.error("Storage remove error during account deletion:", removeError);
-        res.status(500).json({ error: "Failed to delete avatars" });
-        return;
-      }
-    }
+    // Clean up all Storage files (avatars + room_covers)
+    await cleanupUserStorage(uid);
 
     // Delete Auth User (Postgres handles cascades automatically)
     const { error: deleteError } = await deleteUser(uid);
@@ -655,6 +684,7 @@ app.delete("/deleteAccount", async (req, res) => {
       decoded.uid,
     ]);
   }
+  await cleanupUserStorage(decoded.uid);
   await deleteUser(decoded.uid);
   redisCount("deleteAccount");
   res.json({});
@@ -984,10 +1014,14 @@ app.delete("/deleteRoom", async (req, res) => {
         io._nsps.delete(roomId);
       }
 
+      // Clean up any uploaded cover images for this room
+      await cleanupRoomCoverStorage(decoded.uid, roomId);
+
       res.json({ success: true, deleted: result?.rows });
       return;
     }
 
+    await cleanupRoomCoverStorage(decoded.uid, roomId);
     res.json({ success: true });
   } catch (e: any) {
     console.error("Error deleting room:", e);
