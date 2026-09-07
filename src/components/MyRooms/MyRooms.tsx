@@ -10,6 +10,7 @@ import { RoomStats } from "./RoomStats";
 import { RoomsToolbar } from "./RoomsToolbar";
 import { RoomCard } from "./RoomCard";
 import { RoomPagination } from "./RoomPagination";
+import { IconArrowLeft } from "@tabler/icons-react";
 
 export interface RoomSummary {
   roomId: string;
@@ -279,8 +280,25 @@ export const MyRooms = () => {
   return (
     <div className={styles.page}>
       <div className={styles.container}>
+        <div className={styles.topNav}>
+          <button
+            type="button"
+            className={styles.backBtn}
+            onClick={() => {
+              if (window.history.length > 1) {
+                history.goBack();
+              } else {
+                history.push("/");
+              }
+            }}
+          >
+            <IconArrowLeft size={16} />
+            <span>Back to Home</span>
+          </button>
+        </div>
+
         <Hero>
-          {rooms.length > 0 && <RoomStats rooms={rooms} />}
+          <RoomStats rooms={rooms} />
         </Hero>
 
         {loading && rooms.length === 0 ? (

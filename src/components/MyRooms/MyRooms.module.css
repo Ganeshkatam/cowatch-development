@@ -24,13 +24,42 @@
   }
 }
 
+/* Navigation / Back Button */
+.topNav {
+  display: flex;
+  align-items: center;
+  margin-top: 20px;
+  margin-bottom: -12px;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  padding: 7px 14px;
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.backBtn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong, rgba(255, 255, 255, 0.2));
+  background: var(--bg-surface-hover, var(--bg-elevated));
+}
+
 /* Hero Section */
 .hero {
   position: relative;
-  height: auto;
+  min-height: 190px;
   background-color: var(--bg-surface);
   background-image: 
-    linear-gradient(to right, rgba(15, 15, 18, 0.9) 0%, rgba(15, 15, 18, 0.75) 40%, rgba(15, 15, 18, 0.5) 100%),
+    linear-gradient(to right, rgba(15, 15, 18, 0.92) 0%, rgba(15, 15, 18, 0.78) 40%, rgba(15, 15, 18, 0.5) 100%),
     url('/hero_bg.png');
   background-repeat: no-repeat;
   background-position: center;
@@ -41,7 +70,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: 24px 32px;
+  justify-content: center;
+  padding: 36px 44px;
   border: 1px solid var(--border-subtle);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
@@ -51,30 +81,32 @@
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 28px;
 }
 
 .heroHeader {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .heroTitle {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--text-primary);
+  letter-spacing: 0.9px;
+  color: #FFFFFF !important;
   margin: 0;
   line-height: 1.2;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 .heroSubtitle {
-  font-size: 13.5px;
-  color: var(--text-secondary);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.78) !important;
   margin: 0;
   line-height: 1.4;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .heroMetrics {
@@ -104,6 +136,7 @@
   line-height: 1;
   font-variant-numeric: tabular-nums;
   display: inline-block;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .statLabelTotal {
@@ -135,7 +168,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.65) !important;
 }
 
 /* Responsive Mobile Rules for Hero & Stats */
