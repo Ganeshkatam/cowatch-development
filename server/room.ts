@@ -2110,13 +2110,20 @@ export class Room {
 
   private kickUser = async (raw: unknown) => {
     const data = raw as { userToBeKicked: string };
-    if (!data) {
+    if (!data || !data.userToBeKicked) {
       return;
     }
-    this.admittedClientIds.delete(data.userToBeKicked);
     const userToBeKickedSocket = this.io
       .of(this.roomId)
       .sockets.get(this.socketIdMap[data.userToBeKicked]);
+    if (
+      this.owner_id &&
+      (data.userToBeKicked === this.owner_id ||
+        userToBeKickedSocket?.uid === this.owner_id)
+    ) {
+      return;
+    }
+    this.admittedClientIds.delete(data.userToBeKicked);
     if (userToBeKickedSocket) {
       if (userToBeKickedSocket.uid) {
         this.admittedUids.delete(userToBeKickedSocket.uid);

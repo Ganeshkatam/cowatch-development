@@ -27,6 +27,10 @@ export const UserMenu = ({
   isChatMessage?: boolean;
 }) => {
   const { user } = useContext(MetadataContext);
+  const isSelf =
+    userToManage === clientId ||
+    (Boolean(user?.id) && userToManage === user?.id);
+
   return (
     <Menu
       closeOnItemClick
@@ -51,26 +55,30 @@ export const UserMenu = ({
             Delete Message
           </Menu.Item>
         )}
-        <Menu.Item
-          leftSection={<IconTrashFilled />}
-          onClick={async () => {
-            socket.emit("CMD:deleteChatMessages", {
-              author: userToManage,
-            });
-          }}
-        >
-          Delete User's Messages
-        </Menu.Item>
-        <Menu.Item
-          leftSection={<IconBan />}
-          onClick={async () => {
-            socket.emit("CMD:kickUser", {
-              userToBeKicked: userToManage,
-            });
-          }}
-        >
-          Kick User
-        </Menu.Item>
+        {!isSelf && (
+          <>
+            <Menu.Item
+              leftSection={<IconTrashFilled />}
+              onClick={async () => {
+                socket.emit("CMD:deleteChatMessages", {
+                  author: userToManage,
+                });
+              }}
+            >
+              Delete User's Messages
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<IconBan />}
+              onClick={async () => {
+                socket.emit("CMD:kickUser", {
+                  userToBeKicked: userToManage,
+                });
+              }}
+            >
+              Kick User
+            </Menu.Item>
+          </>
+        )}
       </Menu.Dropdown>
     </Menu>
   );

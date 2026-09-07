@@ -614,26 +614,23 @@ export class VideoChat extends React.Component<VideoChatProps> {
                   {isSelf && <span className={styles.youBadge}>You</span>}
                 </div>
 
-                <UserMenu
-                  displayName={displayName}
-                  disabled={!Boolean(owner && owner === this.context.user?.id)}
-                  socket={socket}
-                  userToManage={p.id}
-                  trigger={
-                    <button
-                      type="button"
-                      className={styles.menuTrigger}
-                      title="User options"
-                      style={{
-                        visibility: Boolean(owner && owner === this.context.user?.id)
-                          ? "visible"
-                          : "hidden",
-                      }}
-                    >
-                      <IconDotsVertical size={15} />
-                    </button>
-                  }
-                />
+                {!isSelf && Boolean(owner && owner === this.context.user?.id) && (
+                  <UserMenu
+                    displayName={displayName}
+                    disabled={false}
+                    socket={socket}
+                    userToManage={p.id}
+                    trigger={
+                      <button
+                        type="button"
+                        className={styles.menuTrigger}
+                        title="User options"
+                      >
+                        <IconDotsVertical size={15} />
+                      </button>
+                    }
+                  />
+                )}
               </div>
 
               {/* Bottom Bar: Timestamp and Video/Audio Controls */}
