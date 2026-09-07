@@ -250,13 +250,11 @@ export const RoomDetails = () => {
     }
   };
 
+  const [endConfirm, setEndConfirm] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
 
-  const handleEndRoom = async () => {
+  const confirmEndRoom = async () => {
     if (!room) return;
-    if (!window.confirm("Are you sure you want to end this room? Guests will no longer be able to watch or join.")) {
-      return;
-    }
     setIsEnding(true);
     try {
       const token = await getAccessToken();
@@ -267,6 +265,7 @@ export const RoomDetails = () => {
         body: JSON.stringify({ uid: user.data.user?.id, token, roomId: room.roomId }),
       });
       if (response.ok) {
+        setEndConfirm(false);
         await fetchRoomDetails();
       }
     } catch (e) {
@@ -743,7 +742,7 @@ export const RoomDetails = () => {
                 <Button
                   color="orange"
                   variant="light"
-                  onClick={handleEndRoom}
+                  onClick={() => setEndConfirm(true)}
                   loading={isEnding}
                   leftSection={<IconPlayerStop size={15} />}
                 >
@@ -915,6 +914,21 @@ export const RoomDetails = () => {
           </Button>
           <Button color="red" onClick={handleDelete} loading={isDeleting}>
             Delete Room
+          </Button>
+        </Group>
+      </Modal>
+
+      {/* END CONFIRMATION MODAL */}
+      <Modal opened={endConfirm} onClose={() => setEndConfirm(false)} title="End Watch Party" centered>
+        <Text size="sm" mb="lg">
+          Are you sure you want to end <strong>{room.roomTitle || room.roomId}</strong>? Guests will no longer be able to watch or join this room.
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="default" onClick={() => setEndConfirm(false)}>
+            Cancel
+          </Button>
+          <Button color="orange" onClick={confirmEndRoom} loading={isEnding}>
+            End Room
           </Button>
         </Group>
       </Modal>

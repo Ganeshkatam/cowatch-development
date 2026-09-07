@@ -482,6 +482,10 @@ export const EditRoomModal = ({
 // --- Shared Action Hook ---
 const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRefresh?: () => void, onUpdateCover?: (id: string, url: string) => void) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
+  const [endModalOpened, setEndModalOpened] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [editModalOpened, setEditModalOpened] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -491,10 +495,18 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
     navigator.clipboard.writeText(getRoomUrl(room.roomId)).catch(console.error);
   };
 
-  const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this room?")) {
-      setIsDeleting(true);
+  const handleDeleteClick = () => {
+    setDeleteModalOpened(true);
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
       await onDelete(room.roomId);
+      setDeleteModalOpened(false);
+    } catch (err: any) {
+      setActionError(err.message || "Failed to delete room");
+    } finally {
       setIsDeleting(false);
     }
   };
@@ -527,39 +539,45 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
         onRefresh();
       }
     } catch (e: any) {
-      alert(e.message || "Failed to extend room");
+      setActionError(e.message || "Failed to extend room");
     }
   };
 
-  const handleEndRoom = async () => {
-    if (window.confirm("Are you sure you want to end this room? Guests will no longer be able to watch or join.")) {
-      try {
-        const token = await getAccessToken();
-        const user = await supabase.auth.getUser();
-        if (!user.data.user) throw new Error("Please log in");
-        const response = await fetch(`${serverPath}/endRoom`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            uid: user.data.user.id,
-            token,
-            roomId: room.roomId,
-          }),
-        });
-        const contentType = response.headers.get("content-type") || "";
-        if (!contentType.includes("application/json")) {
-          throw new Error("Invalid response from server");
-        }
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error?.message || data.error || "Failed to end room");
-        }
-        if (onRefresh) {
-          onRefresh();
-        }
-      } catch (e: any) {
-        alert(e.message || "Failed to end room");
+  const handleEndRoomClick = () => {
+    setEndModalOpened(true);
+  };
+
+  const confirmEndRoom = async () => {
+    setIsEnding(true);
+    try {
+      const token = await getAccessToken();
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) throw new Error("Please log in");
+      const response = await fetch(`${serverPath}/endRoom`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: user.data.user.id,
+          token,
+          roomId: room.roomId,
+        }),
+      });
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Invalid response from server");
       }
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || data.error || "Failed to end room");
+      }
+      setEndModalOpened(false);
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (e: any) {
+      setActionError(e.message || "Failed to end room");
+    } finally {
+      setIsEnding(false);
     }
   };
 
@@ -583,8 +601,7 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
       const { data: publicUrlData } = supabase.storage.from('room_covers').getPublicUrl(filePath);
       onUpdateCover(room.roomId, `${publicUrlData.publicUrl}?t=${Date.now()}`);
     } catch (e: any) {
-      console.error("Failed to upload cover", e);
-      alert(e.message || "Failed to upload cover photo.");
+      setActionError(e.message || "Failed to upload cover photo.");
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -648,7 +665,7 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
         </Menu.Item>
       );
       items.push(
-        <Menu.Item key="end" leftSection={<IconPlayerStop size={14} />} onClick={handleEndRoom}>
+        <Menu.Item key="end" leftSection={<IconPlayerStop size={14} />} onClick={handleEndRoomClick}>
           End Room
         </Menu.Item>
       );
@@ -656,14 +673,94 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
 
     items.push(<Menu.Divider key="div2" />);
     items.push(
-      <Menu.Item key="delete" color="red" leftSection={<IconTrash size={14} />} onClick={handleDelete}>
+      <Menu.Item key="delete" color="red" leftSection={<IconTrash size={14} />} onClick={handleDeleteClick}>
         Delete Room
       </Menu.Item>
     );
     return items;
   };
 
-  return { isUploading, fileInputRef, handleFileUpload, renderPrimary, renderSecondary, renderMenuItems, editModalOpened, setEditModalOpened };
+  const renderModals = () => (
+    <>
+      {/* DELETE CONFIRMATION MODAL */}
+      <Modal
+        opened={deleteModalOpened}
+        onClose={() => setDeleteModalOpened(false)}
+        title="Delete Room"
+        centered
+      >
+        <Text size="sm" mb="lg">
+          Are you sure you want to delete <strong>{room.roomTitle || room.roomId}</strong> forever? All messages and room settings will be lost.
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="default" onClick={() => setDeleteModalOpened(false)}>
+            Keep Room
+          </Button>
+          <Button color="red" onClick={confirmDelete} loading={isDeleting}>
+            Delete Room
+          </Button>
+        </Group>
+      </Modal>
+
+      {/* END ROOM CONFIRMATION MODAL */}
+      <Modal
+        opened={endModalOpened}
+        onClose={() => setEndModalOpened(false)}
+        title="End Watch Party"
+        centered
+      >
+        <Text size="sm" mb="lg">
+          Are you sure you want to end <strong>{room.roomTitle || room.roomId}</strong>? Guests will no longer be able to watch or join this room.
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="default" onClick={() => setEndModalOpened(false)}>
+            Cancel
+          </Button>
+          <Button color="orange" onClick={confirmEndRoom} loading={isEnding}>
+            End Room
+          </Button>
+        </Group>
+      </Modal>
+
+      {/* ERROR / NOTICE MODAL */}
+      <Modal
+        opened={Boolean(actionError)}
+        onClose={() => setActionError(null)}
+        title="Notice"
+        centered
+      >
+        <Text size="sm" mb="lg">
+          {actionError}
+        </Text>
+        <Group justify="flex-end">
+          <Button onClick={() => setActionError(null)} color="violet">
+            OK
+          </Button>
+        </Group>
+      </Modal>
+
+      {/* EDIT ROOM MODAL */}
+      <EditRoomModal
+        room={room}
+        opened={editModalOpened}
+        onClose={() => setEditModalOpened(false)}
+        onSuccess={() => {
+          if (onRefresh) onRefresh();
+          else window.location.reload();
+        }}
+      />
+    </>
+  );
+
+  return {
+    isUploading,
+    fileInputRef,
+    handleFileUpload,
+    renderPrimary,
+    renderSecondary,
+    renderMenuItems,
+    renderModals,
+  };
 };
 
 // --- View Components ---
@@ -761,12 +858,7 @@ const GridRoomCard = ({
         </Menu>
       </div>
 
-      <EditRoomModal 
-        room={room}
-        opened={actions.editModalOpened} 
-        onClose={() => actions.setEditModalOpened(false)} 
-        onSuccess={() => window.location.reload()} 
-      />
+      {actions.renderModals()}
     </div>
   );
 };
@@ -864,12 +956,7 @@ const StackRoomCard = ({
         </div>
       </div>
 
-      <EditRoomModal 
-        room={room}
-        opened={actions.editModalOpened} 
-        onClose={() => actions.setEditModalOpened(false)} 
-        onSuccess={() => window.location.reload()} 
-      />
+      {actions.renderModals()}
     </div>
   );
 };
