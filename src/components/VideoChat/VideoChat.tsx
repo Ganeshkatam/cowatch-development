@@ -387,6 +387,8 @@ export class VideoChat extends React.Component<VideoChatProps> {
                   console.warn("Could not set remote stream on video element:", e);
                 }
               }
+              // Re-render so peerHasVideoStream picks up the new stream
+              this.forceUpdate();
             }
           };
           pc.oniceconnectionstatechange = () => {
@@ -550,7 +552,15 @@ export class VideoChat extends React.Component<VideoChatProps> {
           const isSelfInCall = Boolean(isSelf && ourStream);
           const isSelfVideoActive = Boolean(isSelfInCall && this.getVideoWebRTC());
           const isPeerInCall = Boolean(!isSelf && p.isVideoChat);
-          const showVideoFeed = isSelf ? isSelfVideoActive : isPeerInCall;
+          // Only show the video element if we actually have a remote stream
+          // with active video tracks. Otherwise show the avatar placeholder
+          // to avoid displaying a black rectangle.
+          const peerHasVideoStream = Boolean(
+            isPeerInCall &&
+            this.remoteStreams[p.id] &&
+            this.remoteStreams[p.id].getVideoTracks().some((t) => t.enabled)
+          );
+          const showVideoFeed = isSelf ? isSelfVideoActive : peerHasVideoStream;
 
           return (
             <div key={p.id} className={styles.videoTile}>
@@ -622,7 +632,11 @@ export class VideoChat extends React.Component<VideoChatProps> {
                   )}
                   {!isSelf && (
                     <span className={styles.peerStatusNotice}>
-                      {p.isVideoChat ? "Camera is turned off" : "Watching"}
+                      {p.isVideoChat
+                        ? this.remoteStreams[p.id]
+                          ? "Camera is turned off"
+                          : "Connecting..."
+                        : "Watching"}
                     </span>
                   )}
                 </div>
