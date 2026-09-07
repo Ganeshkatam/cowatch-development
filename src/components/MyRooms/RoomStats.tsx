@@ -2,7 +2,7 @@ import React from "react";
 import { type RoomSummary } from "./MyRooms";
 import styles from "./MyRooms.module.css";
 
-export const RoomStats = ({ rooms }: { rooms: RoomSummary[] }) => {
+export const RoomStats = React.memo(({ rooms }: { rooms: RoomSummary[] }) => {
   const total = rooms.length;
   const active = rooms.filter(r => r.status === "active").length;
   const expiring = rooms.filter(r => r.status === "expiring").length;
@@ -31,4 +31,4 @@ export const RoomStats = ({ rooms }: { rooms: RoomSummary[] }) => {
       </div>
     </div>
   );
-};
+});

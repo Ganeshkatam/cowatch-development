@@ -87,12 +87,14 @@
   grid-template-columns: repeat(4, auto);
   gap: 40px;
   align-items: center;
+  min-height: 40px;
 }
 
 .statCard {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  min-width: 65px;
 }
 
 .statValue {
@@ -100,6 +102,8 @@
   font-weight: 700;
   color: #FFFFFF;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
 }
 
 .statLabelTotal {
@@ -159,6 +163,7 @@
   .statsGrid {
     grid-template-columns: repeat(4, 1fr);
     gap: 5px;
+    min-height: 48px;
   }
 
   .statCard {
@@ -168,6 +173,8 @@
     padding: 6px 4px;
     align-items: center;
     text-align: center;
+    min-height: 48px;
+    justify-content: center;
   }
 
   .statLabelTotal,
@@ -185,6 +192,7 @@
   .statValue {
     font-size: 16px;
     margin-top: 2px;
+    font-variant-numeric: tabular-nums;
   }
 }
 

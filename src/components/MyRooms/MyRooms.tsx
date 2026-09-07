@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useContext } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useContext, useRef } from "react";
 import { useHistory } from "react-router-dom";
 import { Title, Text, Button, Loader, Center } from "@mantine/core";
 import { serverPath, serverCandidates, setServerPath, addAndSavePasscode } from "../../utils/utils";
@@ -21,6 +21,7 @@ export interface RoomSummary {
   coverPhoto: string | null;
   isChatDisabled: boolean;
   isSubRoom: boolean;
+  isWaitingLoungeEnabled?: boolean;
   status: "scheduled" | "active" | "inactive" | "expiring" | "expired" | "ended";
   startedAt: string | null;
   expiresAt: string | null;
@@ -28,17 +29,52 @@ export interface RoomSummary {
   isPermanent?: boolean;
 }
 
+const areRoomsEqual = (a: RoomSummary[], b: RoomSummary[]): boolean => {
+  if (a === b) return true;
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const rA = a[i];
+    const rB = b[i];
+    if (
+      rA.roomId !== rB.roomId ||
+      rA.status !== rB.status ||
+      rA.roomTitle !== rB.roomTitle ||
+      rA.roomDescription !== rB.roomDescription ||
+      rA.expiresAt !== rB.expiresAt ||
+      rA.coverPhoto !== rB.coverPhoto ||
+      rA.isPermanent !== rB.isPermanent ||
+      rA.isChatDisabled !== rB.isChatDisabled ||
+      rA.isPasscodeProtected !== rB.isPasscodeProtected ||
+      rA.currentPasscode !== rB.currentPasscode ||
+      rA.isWaitingLoungeEnabled !== rB.isWaitingLoungeEnabled
+    ) {
+      return false;
+    }
+  }
+  return true;
+};
+
 const useRooms = (user: any) => {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const roomsRef = useRef<RoomSummary[]>([]);
+  roomsRef.current = rooms;
+  const isInitialLoadRef = useRef(true);
 
-  const fetchRooms = useCallback(async () => {
+  const fetchRooms = useCallback(async (options?: { silent?: boolean }) => {
     if (!user) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+
+    // Always update silently if rooms already exist in memory or silent option is set
+    const isSilent = options?.silent ?? (!isInitialLoadRef.current || roomsRef.current.length > 0);
+    if (!isSilent && roomsRef.current.length === 0) {
+      setLoading(true);
+    }
+
     try {
       const token = await getAccessToken();
       let response: Response | undefined;
@@ -86,18 +122,33 @@ const useRooms = (user: any) => {
           }
         });
       }
-      setRooms(data);
+
+      // Reconcile state silently: if data didn't change, preserve array reference to prevent re-render cascades
+      setRooms(prev => {
+        if (areRoomsEqual(prev, data)) {
+          return prev;
+        }
+        return data;
+      });
       setError(null);
     } catch (err: any) {
-      setError(err.message);
+      // If we already have rooms loaded, do not blow up UI on background refresh failure
+      if (roomsRef.current.length === 0) {
+        setError(err.message);
+      } else {
+        console.warn("Silent background room refresh failed:", err.message);
+      }
     } finally {
+      isInitialLoadRef.current = false;
       setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
     fetchRooms();
-    const interval = setInterval(fetchRooms, 30000);
+    const interval = setInterval(() => {
+      fetchRooms({ silent: true });
+    }, 30000);
     return () => clearInterval(interval);
   }, [fetchRooms]);
 
@@ -137,21 +188,23 @@ const useRooms = (user: any) => {
     }
   };
 
-  return { rooms, loading, error, deleteRoom, updateRoomCover, refresh: fetchRooms };
+  const silentRefresh = useCallback(() => fetchRooms({ silent: true }), [fetchRooms]);
+
+  return { rooms, loading, error, deleteRoom, updateRoomCover, refresh: silentRefresh };
 };
 
 export const MyRooms = () => {
   const { user } = useContext(MetadataContext);
   const { rooms, loading, error, deleteRoom, updateRoomCover, refresh } = useRooms(user);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState("newest");
-  
+
   const [viewMode, setViewModeState] = useState<'grid' | 'stack'>(() => {
     try {
       const stored = localStorage.getItem('cowatch-room-view-mode');
       if (stored === 'grid' || stored === 'stack') return stored;
-    } catch (e) {}
+    } catch (e) { }
     return 'grid';
   });
 
@@ -159,11 +212,11 @@ export const MyRooms = () => {
     setViewModeState(mode);
     try {
       localStorage.setItem('cowatch-room-view-mode', mode);
-    } catch (e) {}
+    } catch (e) { }
   }, []);
 
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   const history = useHistory();
   const PAGE_SIZE = 12;
 
@@ -226,7 +279,7 @@ export const MyRooms = () => {
     <div className={styles.page}>
       <div className={styles.container}>
         <Hero>
-          {(!loading && !error && rooms.length > 0) && <RoomStats rooms={rooms} />}
+          {rooms.length > 0 && <RoomStats rooms={rooms} />}
         </Hero>
 
         {loading && rooms.length === 0 ? (
@@ -272,7 +325,7 @@ export const MyRooms = () => {
                 </Center>
               )}
 
-              <RoomPagination 
+              <RoomPagination
                 currentPage={currentPage}
                 pageSize={PAGE_SIZE}
                 totalItems={filteredAndSortedRooms.length}
