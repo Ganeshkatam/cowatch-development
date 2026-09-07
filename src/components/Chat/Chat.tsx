@@ -497,7 +497,7 @@ export class ChatComponent extends React.Component<ChatProps & { onLoadMore?: ()
                     : "dark"
                 }
                 previewPosition="none"
-                maxFrequentRows={1}
+                maxFrequentRows={0}
                 perLine={6}
                 onClickOutside={() => this.setReactionMenu(false)}
                 onEmojiSelect={(emoji: any) => {
@@ -609,7 +609,7 @@ export class ChatComponent extends React.Component<ChatProps & { onLoadMore?: ()
                         : "dark"
                     }
                     previewPosition="none"
-                    maxFrequentRows={1}
+                    maxFrequentRows={0}
                     onEmojiSelect={(emoji: any) => {
                       this.addEmoji(emoji);
                       this.setState({ isPickerOpen: false });
