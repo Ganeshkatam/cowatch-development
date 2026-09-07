@@ -169,36 +169,25 @@ export function shuffle(array: any[]) {
 
 export const iceServers = () => [
   { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun2.l.google.com:19302" },
+  { urls: "stun:stun3.l.google.com:19302" },
+  { urls: "stun:stun4.l.google.com:19302" },
   {
-    urls: "turn:5.161.207.54:3478",
-    username: "username",
-    credential: "password",
+    urls: "turn:openrelay.metered.ca:80",
+    username: "openrelayproject",
+    credential: "openrelayproject",
   },
   {
-    urls: "turn:5.161.49.183:3478",
-    username: "username",
-    credential: "password",
+    urls: "turn:openrelay.metered.ca:443",
+    username: "openrelayproject",
+    credential: "openrelayproject",
   },
   {
-    urls: "turn:135.181.147.65:3478",
-    username: "username",
-    credential: "password",
+    urls: "turn:openrelay.metered.ca:443?transport=tcp",
+    username: "openrelayproject",
+    credential: "openrelayproject",
   },
-  {
-    urls: "turn:5.78.83.26:3478",
-    username: "username",
-    credential: "password",
-  },
-  {
-    urls: "turn:5.223.48.157:3478",
-    username: "username",
-    credential: "password",
-  },
-  // {
-  //   urls: 'turn:numb.viagenie.ca',
-  //   credential: 'cowatch',
-  //   username: 'howardzchung@gmail.com',
-  // },
 ];
 
 export function normalizeServerUrl(rawUrl: string): string {

@@ -88,6 +88,10 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
   socket = this.props.socket;
 
+  // Stores remote MediaStreams keyed by peer clientId so they survive
+  // the race between ontrack firing and the <video> ref being mounted.
+  private remoteStreams: Record<string, MediaStream> = {};
+
   state = {
     copied: false,
     isInviteModalOpen: false,
@@ -237,6 +241,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
         } catch (e) {}
         delete videoPCs[key];
       });
+      this.remoteStreams = {};
       this.socket?.emit("CMD:leaveVideo");
       this.forceUpdate();
     } catch (err) {
@@ -332,6 +337,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
             value.close();
           } catch (e) {}
           delete videoPCs[key];
+          delete this.remoteStreams[key];
         }
       });
 
@@ -370,21 +376,29 @@ export class VideoChat extends React.Component<VideoChatProps> {
             }
           };
           pc.ontrack = (event: RTCTrackEvent) => {
-            if (videoRefs && videoRefs[id] && event.streams && event.streams[0]) {
-              try {
-                videoRefs[id].srcObject = event.streams[0];
-              } catch (e) {
-                console.warn("Could not set remote stream on video element:", e);
+            if (event.streams && event.streams[0]) {
+              // Persist the stream so it can be applied even if the
+              // <video> ref hasn't mounted yet (race condition fix).
+              this.remoteStreams[id] = event.streams[0];
+              if (videoRefs && videoRefs[id]) {
+                try {
+                  videoRefs[id].srcObject = event.streams[0];
+                } catch (e) {
+                  console.warn("Could not set remote stream on video element:", e);
+                }
               }
             }
           };
           pc.oniceconnectionstatechange = () => {
+            console.log(`[VideoChat] ICE state for ${id}: ${pc.iceConnectionState}`);
             if (pc.iceConnectionState === "failed") {
               // ICE failed (permanently, not a temporary disconnection, which would be "disconnected"), tear down and attempt to re-establish
+              console.warn(`[VideoChat] ICE connection to ${id} failed, tearing down and retrying`);
               try {
                 pc.close();
               } catch (e) {}
               delete videoPCs[id];
+              delete this.remoteStreams[id];
               this.updateWebRTC();
             }
           };
@@ -550,6 +564,14 @@ export class VideoChat extends React.Component<VideoChatProps> {
                           el.srcObject = ourStream;
                         } catch (e) {
                           console.warn("Error assigning srcObject to local video:", e);
+                        }
+                      }
+                      // Apply any remote stream that arrived before this ref was mounted
+                      if (!isSelf && this.remoteStreams[p.id] && el.srcObject !== this.remoteStreams[p.id]) {
+                        try {
+                          el.srcObject = this.remoteStreams[p.id];
+                        } catch (e) {
+                          console.warn("Error assigning remote stream on ref mount:", e);
                         }
                       }
                     } else {
