@@ -310,7 +310,8 @@ export const RoomDetails = () => {
     );
   }
 
-  const isOpenable = room.status === "active" || room.status === "expiring" || room.status === "scheduled" || room.status === "inactive";
+  const isClosed = room.status === "expired" || room.status === "ended";
+  const isOpenable = !isClosed && (room.status === "active" || room.status === "expiring" || room.status === "scheduled" || room.status === "inactive");
   const urlPath = `/watch/${room.roomId.replace(/^\//, "")}`;
   const statusConfig = getStatusConfig(room.status);
 
@@ -386,9 +387,13 @@ export const RoomDetails = () => {
                 </p>
               )}
 
-              <Tooltip label={copiedUrl ? "Copied to clipboard!" : "Click to copy invite link"} withArrow>
-                <div className={styles.heroUrlBadge} onClick={handleCopyUrl}>
-                  {copiedUrl ? <IconCheck size={14} color="#10B981" /> : <IconCopy size={14} />}
+              <Tooltip label={isClosed ? "Room is expired — link disabled" : (copiedUrl ? "Copied to clipboard!" : "Click to copy invite link")} withArrow>
+                <div
+                  className={styles.heroUrlBadge}
+                  onClick={isClosed ? undefined : handleCopyUrl}
+                  style={isClosed ? { opacity: 0.5, cursor: "not-allowed", textDecoration: "line-through" } : undefined}
+                >
+                  {copiedUrl && !isClosed ? <IconCheck size={14} color="#10B981" /> : <IconCopy size={14} />}
                   <span>/watch/{room.roomId.replace(/^\//, "")}</span>
                 </div>
               </Tooltip>
@@ -405,22 +410,26 @@ export const RoomDetails = () => {
                   Join Room
                 </Button>
               )}
-              <Button
-                size="md"
-                className={styles.glassBtn}
-                onClick={() => setEditModalOpened(true)}
-                leftSection={<IconSettings size={16} />}
-              >
-                Edit
-              </Button>
-              <Button
-                size="md"
-                className={styles.glassBtn}
-                onClick={handleCopyUrl}
-                leftSection={copiedUrl ? <IconCheck size={16} color="#10B981" /> : <IconCopy size={16} />}
-              >
-                {copiedUrl ? "Copied!" : "Copy Link"}
-              </Button>
+              {!isClosed && (
+                <Button
+                  size="md"
+                  className={styles.glassBtn}
+                  onClick={() => setEditModalOpened(true)}
+                  leftSection={<IconSettings size={16} />}
+                >
+                  Edit
+                </Button>
+              )}
+              {!isClosed && (
+                <Button
+                  size="md"
+                  className={styles.glassBtn}
+                  onClick={handleCopyUrl}
+                  leftSection={copiedUrl ? <IconCheck size={16} color="#10B981" /> : <IconCopy size={16} />}
+                >
+                  {copiedUrl ? "Copied!" : "Copy Link"}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -518,17 +527,19 @@ export const RoomDetails = () => {
                 <span className={styles.tileLabel}>Room ID</span>
                 <div className={styles.tileValue}>
                   <span className={styles.codeBadge}>{room.roomId}</span>
-                  <Tooltip label={copiedRoomId ? "Copied!" : "Copy room ID"} withArrow>
-                    <ActionIcon
-                      size="xs"
-                      variant="subtle"
-                      color={copiedRoomId ? "green" : "gray"}
-                      onClick={handleCopyRoomId}
-                      aria-label="Copy Room ID"
-                    >
-                      {copiedRoomId ? <IconCheck size={14} /> : <IconCopy size={14} />}
-                    </ActionIcon>
-                  </Tooltip>
+                  {!isClosed && (
+                    <Tooltip label={copiedRoomId ? "Copied!" : "Copy room ID"} withArrow>
+                      <ActionIcon
+                        size="xs"
+                        variant="subtle"
+                        color={copiedRoomId ? "green" : "gray"}
+                        onClick={handleCopyRoomId}
+                        aria-label="Copy Room ID"
+                      >
+                        {copiedRoomId ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
                 </div>
               </div>
 
@@ -554,7 +565,18 @@ export const RoomDetails = () => {
                   Password
                 </span>
                 <div className={styles.tileValue}>
-                  {room.isPasscodeProtected ? (
+                  {isClosed ? (
+                    <Badge
+                      color="gray"
+                      variant="light"
+                      size="md"
+                      radius="md"
+                      leftSection={<IconLock size={13} />}
+                      style={{ fontWeight: 600 }}
+                    >
+                      Room Closed
+                    </Badge>
+                  ) : room.isPasscodeProtected ? (
                     currentPasscode ? (
                       <Group gap={6} align="center">
                         <span
@@ -653,31 +675,42 @@ export const RoomDetails = () => {
               <div className={styles.tile} style={{ gridColumn: "1 / -1" }}>
                 <span className={styles.tileLabel}>Invite Link</span>
                 <div className={styles.tileValue}>
-                  <a
-                    href={urlPath}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      history.push(urlPath);
-                    }}
-                    style={{
-                      color: "var(--color-violet)",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      textDecoration: "underline",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {window.location.origin}{urlPath}
-                    <IconExternalLink size={14} />
-                  </a>
+                  {isClosed ? (
+                    <Group gap="xs" align="center">
+                      <span style={{ color: "var(--text-muted)", textDecoration: "line-through", fontSize: 13 }}>
+                        {window.location.origin}{urlPath}
+                      </span>
+                      <Badge color="red" variant="light" size="sm">
+                        Link Inactive (Expired)
+                      </Badge>
+                    </Group>
+                  ) : (
+                    <a
+                      href={urlPath}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        history.push(urlPath);
+                      }}
+                      style={{
+                        color: "var(--color-violet)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        textDecoration: "underline",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {window.location.origin}{urlPath}
+                      <IconExternalLink size={14} />
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Card 2: Settings */}
-          <div className={styles.card}>
+          <div className={styles.card} style={isClosed ? { opacity: 0.75 } : undefined}>
             <div className={styles.cardHeader}>
               <div className={styles.cardTitle}>
                 <div className={styles.cardTitleIconWrap}>
@@ -685,15 +718,17 @@ export const RoomDetails = () => {
                 </div>
                 <span>Room Settings</span>
               </div>
-              <Button
-                variant="subtle"
-                size="xs"
-                color="violet"
-                onClick={() => setEditModalOpened(true)}
-                leftSection={<IconSettings size={14} />}
-              >
-                Edit
-              </Button>
+              {!isClosed && (
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  color="violet"
+                  onClick={() => setEditModalOpened(true)}
+                  leftSection={<IconSettings size={14} />}
+                >
+                  Edit
+                </Button>
+              )}
             </div>
 
             <div className={styles.tileGrid}>
@@ -701,18 +736,20 @@ export const RoomDetails = () => {
                 <span className={styles.tileLabel}>Live Chat</span>
                 <div className={styles.tileValue}>
                   <Badge
-                    color={room.isChatDisabled ? "gray" : "green"}
+                    color={isClosed ? "gray" : room.isChatDisabled ? "gray" : "green"}
                     variant="light"
                     size="md"
                     radius="md"
                     style={{
                       fontWeight: 600,
-                      border: room.isChatDisabled
+                      border: isClosed
+                        ? "1px solid rgba(156, 163, 175, 0.25)"
+                        : room.isChatDisabled
                         ? "1px solid rgba(156, 163, 175, 0.25)"
                         : "1px solid rgba(16, 185, 129, 0.25)",
                     }}
                   >
-                    {room.isChatDisabled ? "Turned Off" : "Turned On"}
+                    {isClosed ? "Disabled" : room.isChatDisabled ? "Turned Off" : "Turned On"}
                   </Badge>
                 </div>
               </div>
@@ -721,14 +758,14 @@ export const RoomDetails = () => {
                 <span className={styles.tileLabel}>Video Controls</span>
                 <div className={styles.tileValue}>
                   <Badge
-                    color="violet"
+                    color={isClosed ? "gray" : "violet"}
                     variant="light"
                     size="md"
                     radius="md"
                     leftSection={<IconShieldCheck size={13} />}
-                    style={{ fontWeight: 600, border: "1px solid rgba(139, 92, 246, 0.25)" }}
+                    style={{ fontWeight: 600, border: isClosed ? "1px solid rgba(156, 163, 175, 0.25)" : "1px solid rgba(139, 92, 246, 0.25)" }}
                   >
-                    Host Only
+                    {isClosed ? "Disabled" : "Host Only"}
                   </Badge>
                 </div>
               </div>
@@ -864,7 +901,9 @@ export const RoomDetails = () => {
 
               <div className={styles.tile}>
                 <span className={styles.tileLabel}>Auto-Start</span>
-                <span className={styles.tileValue}>Starts when someone joins</span>
+                <span className={styles.tileValue}>
+                  {isClosed ? "Disabled (Room closed)" : "Starts when someone joins"}
+                </span>
               </div>
             </div>
           </div>
