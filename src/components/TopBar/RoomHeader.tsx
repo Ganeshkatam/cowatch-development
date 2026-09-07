@@ -6,9 +6,7 @@ import {
   IconCopy,
   IconLock,
   IconLockOpen,
-  IconMessage,
   IconSettings,
-  IconUsersGroup,
   IconX,
 } from "@tabler/icons-react";
 import { Menu, Tooltip } from "@mantine/core";
@@ -18,9 +16,9 @@ import styles from "./RoomHeader.module.css";
 
 interface RoomHeaderProps {
   roomTitle: string;
-  participantCount: number;
-  currentTab: string;
-  onSelectTab: (tab: "people" | "chat") => void;
+  participantCount?: number;
+  currentTab?: string;
+  onSelectTab?: (tab: "people" | "chat") => void;
   onOpenSettings: () => void;
   onExit: () => void;
   isLocked?: boolean;
@@ -176,29 +174,6 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
       )}
 
       <div className={styles.rightSection}>
-        <button
-          type="button"
-          className={`${styles.actionBtn} ${
-            currentTab === "people" ? styles.actionBtnActive : ""
-          }`}
-          onClick={() => onSelectTab("people")}
-          title="Toggle People panel"
-        >
-          <IconUsersGroup size={16} stroke={1.5} />
-          <span>{participantCount}</span>
-        </button>
-
-        <button
-          type="button"
-          className={`${styles.iconOnlyBtn} ${
-            currentTab === "chat" ? styles.actionBtnActive : ""
-          }`}
-          onClick={() => onSelectTab("chat")}
-          title="Toggle Messages panel"
-        >
-          <IconMessage size={16} stroke={1.5} />
-        </button>
-
         <button
           type="button"
           className={styles.iconOnlyBtn}
