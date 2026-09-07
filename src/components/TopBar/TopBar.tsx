@@ -144,7 +144,7 @@ export const NewRoomButton = (props: {
   const context = useContext(MetadataContext);
   const history = useHistory();
   const onClick = useCallback(async () => {
-    history.push("/create");
+    history.push("/room/new");
   }, [history]);
   return (
     <Button

@@ -237,7 +237,7 @@ export const MyRooms = () => {
           <div style={{ textAlign: "center", padding: "64px 0", background: "var(--bg-surface)", borderRadius: "16px", border: "1px solid var(--border-subtle)", marginTop: "32px" }}>
             <Title order={3} mb="sm" style={{ color: "var(--text-primary)" }}>No rooms yet</Title>
             <Text c="dimmed" mb="lg">Create a room to start watching together.</Text>
-            <Button size="md" variant="gradient" onClick={() => history.push("/create")}>
+            <Button size="md" variant="gradient" onClick={() => history.push("/room/new")}>
               Create your first room
             </Button>
           </div>

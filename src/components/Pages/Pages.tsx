@@ -214,7 +214,7 @@ export const FAQ = () => {
             </Text>
           </Accordion.Control>
           <Accordion.Panel>
-            You can link to <Anchor href="https://www.cowatch.me/create?video=URL_HERE" target="_blank" rel="noopener noreferrer" c="var(--color-violet)">https://www.cowatch.me/create?video=URL_HERE</Anchor> to do this!
+            You can link to <Anchor href="https://www.cowatch.me/room/new?video=URL_HERE" target="_blank" rel="noopener noreferrer" c="var(--color-violet)">https://www.cowatch.me/room/new?video=URL_HERE</Anchor> to do this!
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>

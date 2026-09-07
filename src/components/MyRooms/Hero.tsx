@@ -22,7 +22,7 @@ export const Hero: React.FC<{ children?: React.ReactNode }> = ({ children }) => 
             size="md"
             variant="default"
             leftSection={<IconCirclePlusFilled size={18} />}
-            onClick={() => history.push("/create")}
+            onClick={() => history.push("/room/new")}
             style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'white', border: 'none' }}
           >
             New Room

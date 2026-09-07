@@ -3,7 +3,7 @@ import "./index.css";
 
 import React, { lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route } from "react-router-dom";
+import { BrowserRouter, Route, Redirect } from "react-router-dom";
 
 import type { User } from "@supabase/supabase-js";
 import {
@@ -460,11 +460,18 @@ class CoWatch extends React.Component {
                     </Route>
                     <Route path="/verify-email" exact component={VerifyEmail} />
                     <Route
-                      path="/create"
+                      path="/room/new"
                       exact
                       render={() => {
                         return <RequireVerifiedEmail><Create /></RequireVerifiedEmail>;
                       }}
+                    />
+                    <Route
+                      path="/create"
+                      exact
+                      render={({ location }) => (
+                        <Redirect to={{ pathname: "/room/new", search: location.search }} />
+                      )}
                     />
                     <Route
                       path="/watch/:roomId"
