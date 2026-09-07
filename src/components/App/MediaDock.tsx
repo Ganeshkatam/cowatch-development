@@ -3,6 +3,7 @@ import {
   IconBrowser,
   IconCheck,
   IconChevronDown,
+  IconChevronUp,
   IconCopy,
   IconDots,
   IconFile,
@@ -40,6 +41,7 @@ interface MediaDockProps {
   onToggleLock?: () => void;
   isFullScreen?: boolean;
   onToggleFullScreen?: () => void;
+  paused?: boolean;
 }
 
 export const MediaDock: React.FC<MediaDockProps> = ({
@@ -62,8 +64,64 @@ export const MediaDock: React.FC<MediaDockProps> = ({
   onToggleLock,
   isFullScreen,
   onToggleFullScreen,
+  paused = false,
 }) => {
   const [copied, setCopied] = React.useState(false);
+  const [openMenus, setOpenMenus] = React.useState(0);
+  const isPlaying = Boolean(roomMedia) && !paused;
+
+  // Collapse while playing if media is loaded
+  const [isCollapsed, setIsCollapsed] = React.useState<boolean>(
+    Boolean(roomMedia) && !paused
+  );
+
+  const autoCollapseTimer = React.useRef<NodeJS.Timeout | null>(null);
+
+  // When roomMedia or playback state changes
+  React.useEffect(() => {
+    if (!roomMedia) {
+      setIsCollapsed(false);
+      return;
+    }
+    if (isPlaying) {
+      setIsCollapsed(true);
+    }
+  }, [isPlaying, Boolean(roomMedia)]);
+
+  const clearTimer = React.useCallback(() => {
+    if (autoCollapseTimer.current) {
+      clearTimeout(autoCollapseTimer.current);
+      autoCollapseTimer.current = null;
+    }
+  }, []);
+
+  const scheduleAutoCollapse = React.useCallback(() => {
+    clearTimer();
+    if (isPlaying && openMenus === 0 && !isCollapsed) {
+      autoCollapseTimer.current = setTimeout(() => {
+        setIsCollapsed(true);
+      }, 3500);
+    }
+  }, [isPlaying, openMenus, isCollapsed, clearTimer]);
+
+  React.useEffect(() => {
+    if (!isCollapsed && isPlaying && openMenus === 0) {
+      scheduleAutoCollapse();
+    } else {
+      clearTimer();
+    }
+    return clearTimer;
+  }, [isCollapsed, isPlaying, openMenus, scheduleAutoCollapse, clearTimer]);
+
+  const handleMenuOpen = () => {
+    setOpenMenus((c) => c + 1);
+    clearTimer();
+  };
+
+  const handleMenuClose = () => {
+    setOpenMenus((c) => Math.max(0, c - 1));
+    scheduleAutoCollapse();
+  };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -71,8 +129,26 @@ export const MediaDock: React.FC<MediaDockProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  if (Boolean(roomMedia) && isCollapsed) {
+    return (
+      <button
+        type="button"
+        className={styles.collapsedPill}
+        onClick={() => setIsCollapsed(false)}
+        title="Show media dock"
+      >
+        <IconChevronUp size={14} stroke={2.5} />
+        <span>Media</span>
+      </button>
+    );
+  }
+
   return (
-    <div className={styles.dockContainer}>
+    <div
+      className={styles.dockContainer}
+      onMouseEnter={clearTimer}
+      onMouseLeave={scheduleAutoCollapse}
+    >
       {/* Prioritized single stop button (VBrowser > ScreenShare > Standard Media) */}
       {isPlayingVBrowser && onStopVBrowser ? (
         <button
@@ -113,7 +189,14 @@ export const MediaDock: React.FC<MediaDockProps> = ({
       ) : null}
 
       {/* Add Media Dropdown Menu */}
-      <Menu shadow="xl" width={260} position="top-start" offset={10}>
+      <Menu
+        shadow="xl"
+        width={260}
+        position="top-start"
+        offset={10}
+        onOpen={handleMenuOpen}
+        onClose={handleMenuClose}
+      >
         <Menu.Target>
           <button
             type="button"
@@ -172,7 +255,14 @@ export const MediaDock: React.FC<MediaDockProps> = ({
       </Menu>
 
       {/* Playlist Button & Dropdown */}
-      <Menu shadow="xl" width={340} position="top" offset={10}>
+      <Menu
+        shadow="xl"
+        width={340}
+        position="top"
+        offset={10}
+        onOpen={handleMenuOpen}
+        onClose={handleMenuClose}
+      >
         <Menu.Target>
           <button type="button" className={styles.dockBtn} title="View playlist">
             <IconList size={16} />
@@ -213,7 +303,14 @@ export const MediaDock: React.FC<MediaDockProps> = ({
       </Menu>
 
       {/* More Options Menu */}
-      <Menu shadow="xl" width={200} position="top-end" offset={10}>
+      <Menu
+        shadow="xl"
+        width={200}
+        position="top-end"
+        offset={10}
+        onOpen={handleMenuOpen}
+        onClose={handleMenuClose}
+      >
         <Menu.Target>
           <button type="button" className={styles.iconBtn} title="More actions">
             <IconDots size={16} />
@@ -263,6 +360,18 @@ export const MediaDock: React.FC<MediaDockProps> = ({
           </Menu.Item>
         </Menu.Dropdown>
       </Menu>
+
+      {/* Collapse button when media is loaded */}
+      {Boolean(roomMedia) && (
+        <button
+          type="button"
+          className={styles.collapseBtn}
+          onClick={() => setIsCollapsed(true)}
+          title="Collapse media dock"
+        >
+          <IconChevronDown size={16} stroke={2} />
+        </button>
+      )}
     </div>
   );
 };

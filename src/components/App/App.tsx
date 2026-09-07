@@ -2716,6 +2716,7 @@ export class App extends React.Component<AppProps, AppState> {
                         this.roomPlaylistMove(from, to)
                       }
                       roomMedia={this.state.roomMedia}
+                      paused={this.state.roomPaused}
                       onStopMedia={() => this.roomSetMedia("")}
                       isScreenSharing={Boolean(this.localStreamToPublish)}
                       onStopScreenShare={this.stopPublishingLocalStream}
