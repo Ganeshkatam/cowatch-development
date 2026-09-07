@@ -314,7 +314,7 @@ html[data-color-scheme="light"] .mantine-Menu-dropdown {
 }
 
 /* ==========================================
-   Modern Switch Toggle Component Styling
+   Modern Clean Switch Toggle Component Styling
    ========================================== */
 .mantine-Switch-root {
   cursor: pointer;
@@ -322,48 +322,67 @@ html[data-color-scheme="light"] .mantine-Menu-dropdown {
   align-items: center;
 }
 
+/* Remove default Mantine inner indicator / bullseye / dot */
+.mantine-Switch-thumb::before,
+.mantine-Switch-thumb::after,
+[class*="Switch-thumb"]::before,
+[class*="Switch-thumb"]::after,
+.m_93039a1d::before,
+.m_93039a1d::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Track - Inactive State */
 .mantine-Switch-track {
   cursor: pointer !important;
-  background-color: rgba(255, 255, 255, 0.12) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  background-color: rgba(255, 255, 255, 0.14) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 100px !important;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .mantine-Switch-root:hover .mantine-Switch-track {
-  background-color: rgba(255, 255, 255, 0.18) !important;
-  border-color: rgba(255, 255, 255, 0.28) !important;
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
 }
 
+/* Thumb - Crisp Solid Floating Knob */
 .mantine-Switch-thumb {
   background-color: #FFFFFF !important;
   border: none !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.2) !important;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease !important;
+  border-radius: 50% !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.2) !important;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* Checked / Active State */
+/* Track - Checked / Active State */
 .mantine-Switch-input:checked + .mantine-Switch-track {
   background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%) !important;
   border-color: rgba(139, 92, 246, 0.9) !important;
-  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.45) !important;
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.4) !important;
 }
 
 .mantine-Switch-root:hover .mantine-Switch-input:checked + .mantine-Switch-track {
   background: linear-gradient(135deg, #996BF8 0%, #884BF0 100%) !important;
-  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.55) !important;
+  border-color: #996BF8 !important;
+  box-shadow: 0 3px 14px rgba(139, 92, 246, 0.5) !important;
 }
 
 .mantine-Switch-input:checked + .mantine-Switch-track .mantine-Switch-thumb {
   background-color: #FFFFFF !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
 }
 
+/* Focus ring */
 .mantine-Switch-input:focus-visible + .mantine-Switch-track {
   outline: 2px solid var(--color-violet) !important;
   outline-offset: 2px !important;
 }
 
-/* Light mode support */
+/* Light Theme Styling */
 html[data-color-scheme="light"] .mantine-Switch-track {
   background-color: #E2E8F0 !important;
   border: 1px solid #CBD5E1 !important;
@@ -371,12 +390,13 @@ html[data-color-scheme="light"] .mantine-Switch-track {
 
 html[data-color-scheme="light"] .mantine-Switch-root:hover .mantine-Switch-track {
   background-color: #CBD5E1 !important;
+  border-color: #94A3B8 !important;
 }
 
 html[data-color-scheme="light"] .mantine-Switch-input:checked + .mantine-Switch-track {
-  background: linear-gradient(135deg, #7048E8 0%, #5F3DC4 100%) !important;
-  border-color: #7048E8 !important;
-  box-shadow: 0 2px 8px rgba(112, 72, 232, 0.35) !important;
+  background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%) !important;
+  border-color: #7C3AED !important;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3) !important;
 }
 
 /* Brand Logo - Light & Dark Theme Support */
