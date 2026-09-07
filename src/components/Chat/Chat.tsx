@@ -4,6 +4,8 @@ import {
   Avatar,
   Button,
   HoverCard,
+  Popover,
+  Portal,
   TextInput,
   Tooltip,
 } from "@mantine/core";
@@ -463,51 +465,49 @@ export class ChatComponent extends React.Component<ChatProps & { onLoadMore?: ()
             </Button>
           )}
         </div>
-        {this.state.isPickerOpen && (
-          <div style={{ position: "absolute", bottom: "60px" }}>
-            <Picker
-              theme={typeof document !== "undefined" && document.documentElement.getAttribute("data-color-scheme") === "light" ? "light" : "dark"}
-              previewPosition="none"
-              maxFrequentRows={1}
-              onEmojiSelect={this.addEmoji}
-              onClickOutside={() => this.setState({ isPickerOpen: false })}
-            />
-          </div>
-        )}
-        <CSSTransition
-          in={this.state.reactionMenu.isOpen}
-          timeout={300}
-          classNames={{
-            enter: styles["reactionMenu-enter"],
-            enterActive: styles["reactionMenu-enter-active"],
-            exit: styles["reactionMenu-exit"],
-            exitActive: styles["reactionMenu-exit-active"],
-          }}
-          unmountOnExit
-        >
-          <div
-            style={{
-              position: "fixed",
-              top: Math.min(
-                this.state.reactionMenu.yPosition - 150,
-                window.innerHeight - 450,
-              ),
-              left: this.state.reactionMenu.xPosition - 240,
+        <Portal>
+          <CSSTransition
+            in={this.state.reactionMenu.isOpen}
+            timeout={300}
+            classNames={{
+              enter: styles["reactionMenu-enter"],
+              enterActive: styles["reactionMenu-enter-active"],
+              exit: styles["reactionMenu-exit"],
+              exitActive: styles["reactionMenu-exit-active"],
             }}
+            unmountOnExit
           >
-            <Picker
-              theme={typeof document !== "undefined" && document.documentElement.getAttribute("data-color-scheme") === "light" ? "light" : "dark"}
-              previewPosition="none"
-              maxFrequentRows={1}
-              perLine={6}
-              onClickOutside={() => this.setReactionMenu(false)}
-              onEmojiSelect={(emoji: any) => {
-                this.handleReactionClick(emoji.native);
-                this.setReactionMenu(false);
+            <div
+              style={{
+                position: "fixed",
+                zIndex: 10000,
+                top: Math.min(
+                  this.state.reactionMenu.yPosition - 150,
+                  window.innerHeight - 450,
+                ),
+                left: this.state.reactionMenu.xPosition - 240,
               }}
-            />
-          </div>
-        </CSSTransition>
+            >
+              <Picker
+                theme={
+                  typeof document !== "undefined" &&
+                  document.documentElement.getAttribute("data-color-scheme") ===
+                    "light"
+                    ? "light"
+                    : "dark"
+                }
+                previewPosition="none"
+                maxFrequentRows={1}
+                perLine={6}
+                onClickOutside={() => this.setReactionMenu(false)}
+                onEmojiSelect={(emoji: any) => {
+                  this.handleReactionClick(emoji.native);
+                  this.setReactionMenu(false);
+                }}
+              />
+            </div>
+          </CSSTransition>
+        </Portal>
         {this.state.replyTo && (
           <div
             className={styles.replyComposer}
@@ -566,18 +566,57 @@ export class ChatComponent extends React.Component<ChatProps & { onLoadMore?: ()
                 marginRight: "4px",
               }}
             >
-              <ActionIcon
-                variant="subtle"
-                size="sm"
-                onClick={() => {
-                  const curr = this.state.isPickerOpen;
-                  setTimeout(() => this.setState({ isPickerOpen: !curr }), 100);
-                }}
-                disabled={this.props.isChatDisabled}
-                title="Select emoji"
+              <Popover
+                opened={this.state.isPickerOpen}
+                onChange={(open) => this.setState({ isPickerOpen: open })}
+                position="top-end"
+                offset={12}
+                withArrow={false}
+                shadow="xl"
+                withinPortal={true}
+                zIndex={10000}
+                trapFocus={false}
               >
-                <IconMoodSmile size={18} />
-              </ActionIcon>
+                <Popover.Target>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    onClick={() =>
+                      this.setState((prev: any) => ({
+                        isPickerOpen: !prev.isPickerOpen,
+                      }))
+                    }
+                    disabled={this.props.isChatDisabled}
+                    title="Select emoji"
+                  >
+                    <IconMoodSmile size={18} />
+                  </ActionIcon>
+                </Popover.Target>
+                <Popover.Dropdown
+                  style={{
+                    padding: 0,
+                    border: "none",
+                    background: "transparent",
+                    boxShadow: "none",
+                  }}
+                >
+                  <Picker
+                    theme={
+                      typeof document !== "undefined" &&
+                      document.documentElement.getAttribute("data-color-scheme") ===
+                        "light"
+                        ? "light"
+                        : "dark"
+                    }
+                    previewPosition="none"
+                    maxFrequentRows={1}
+                    onEmojiSelect={(emoji: any) => {
+                      this.addEmoji(emoji);
+                      this.setState({ isPickerOpen: false });
+                    }}
+                  />
+                </Popover.Dropdown>
+              </Popover>
               {Boolean(this.state.chatMsg.trim()) && (
                 <ActionIcon
                   variant="filled"
