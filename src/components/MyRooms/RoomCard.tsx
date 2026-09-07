@@ -35,6 +35,8 @@ import {
   IconEyeOff,
   IconCheck,
   IconAlertCircle,
+  IconClock,
+  IconInfinity,
 } from "@tabler/icons-react";
 import { type RoomSummary } from "./MyRooms";
 import {
@@ -50,18 +52,18 @@ import styles from "./MyRooms.module.css";
 // --- Pure Helpers ---
 
 const getComputedState = (room: RoomSummary) => {
-  const isPermanent = Boolean(room.isPermanent);
-  if (room.status === 'expired') return 'Expired';
-  if (room.status === 'ended') return 'Ended';
-  if (room.status === 'active' && isPermanent) return 'Permanent';
-  if (room.status === 'active') return 'Active';
-  if (room.status === 'expiring') return 'Expiring';
-  return 'Inactive';
+  if (room.status === "expired") return "Expired";
+  if (room.status === "ended") return "Ended";
+  if (room.isPermanent) return "Permanent";
+  if (!room.expiresAt) return "Permanent";
+  const now = Date.now();
+  const exp = new Date(room.expiresAt).getTime();
+  if (exp <= now) return "Expired";
+  return "Active";
 };
 
-const RoomStatusBadge = ({ status, isPermanent }: { status: RoomSummary["status"], isPermanent: boolean }) => {
-  if (status === "active" && isPermanent) return <Badge color="green" variant="filled" size="sm">● PERMANENT</Badge>;
-  if (status === "active") return <Badge color="green" variant="filled" size="sm">● ACTIVE</Badge>;
+const RoomStatusBadge = ({ status, isPermanent }: { status: string; isPermanent: boolean }) => {
+  if (status === "active") return <Badge color="teal" variant="filled" size="sm">● ACTIVE</Badge>;
   if (status === "expiring") return <Badge color="orange" variant="filled" size="sm">● EXPIRING SOON</Badge>;
   if (status === "expired" || status === "ended") return <Badge color="gray" variant="filled" size="sm">● ENDED</Badge>;
   if (status === "scheduled") return <Badge color="blue" variant="filled" size="sm">● SCHEDULED</Badge>;
@@ -69,33 +71,41 @@ const RoomStatusBadge = ({ status, isPermanent }: { status: RoomSummary["status"
 };
 
 const formatTimeLeft = (expiresAt: string | null, status: string, isPermanent: boolean) => {
-  if (status === "expired" || status === "ended") return <div className={styles.lifecycleText}>Room is no longer active</div>;
-  if (isPermanent) return <div className={styles.lifecycleText}>No expiration</div>;
-  if (status !== "active" && status !== "expiring") return <div className={styles.lifecycleText}>Reactivates when someone joins</div>;
+  if (status === "expired" || status === "ended") return <span className={styles.lifecycleText}>Room ended</span>;
+  if (isPermanent) {
+    return (
+      <span className={styles.lifecycleBadge}>
+        <IconInfinity size={13} color="var(--color-teal)" />
+        <span>Permanent</span>
+      </span>
+    );
+  }
+  if (status !== "active" && status !== "expiring") return <span className={styles.lifecycleText}>Inactive</span>;
 
   if (!expiresAt) return null;
 
   const now = Date.now();
   const diff = new Date(expiresAt).getTime() - now;
 
-  if (diff <= 0) return <div className={styles.lifecycleText}>Expired</div>;
+  if (diff <= 0) return <span className={styles.lifecycleText}>Expired</span>;
 
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
   if (status === "expiring") {
     return (
-      <div className={styles.expiringText}>
-        <IconHourglassHigh size={14} />
-        {minutes}m remaining
-      </div>
+      <span className={styles.lifecycleExpiring}>
+        <IconHourglassHigh size={13} />
+        <span>{minutes}m remaining</span>
+      </span>
     );
   }
 
   return (
-    <div className={styles.lifecycleText}>
-      Expires in {hours > 0 ? `${hours}h ` : ''}{minutes}m
-    </div>
+    <span className={styles.lifecycleBadge}>
+      <IconClock size={13} color="var(--color-violet)" />
+      <span>Expires in {hours > 0 ? `${hours}h ` : ''}{minutes}m</span>
+    </span>
   );
 };
 
@@ -620,13 +630,25 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
   const renderPrimary = () => {
     if (computedState === 'Expired' || computedState === 'Ended') {
       return (
-        <Button variant="default" onClick={() => history.push(detailsPath)}>
+        <Button
+          variant="default"
+          onClick={() => history.push(detailsPath)}
+          radius="md"
+          className={styles.cardPrimaryBtn}
+        >
           Details
         </Button>
       );
     }
     return (
-      <Button variant="white" color="dark" onClick={() => history.push(urlPath)} leftSection={<IconPlayerPlayFilled size={14} />}>
+      <Button
+        variant="gradient"
+        gradient={{ from: "violet", to: "grape", deg: 135 }}
+        onClick={() => history.push(urlPath)}
+        leftSection={<IconPlayerPlayFilled size={14} />}
+        radius="md"
+        className={styles.cardPrimaryBtn}
+      >
         Open Room
       </Button>
     );
@@ -635,7 +657,12 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
   const renderSecondary = () => {
     if (computedState === 'Expired' || computedState === 'Ended') return null;
     return (
-      <Button variant="subtle" color="gray" onClick={() => history.push(detailsPath)}>
+      <Button
+        variant="default"
+        onClick={() => history.push(detailsPath)}
+        radius="md"
+        className={styles.cardSecondaryBtn}
+      >
         Details
       </Button>
     );
@@ -810,24 +837,24 @@ const GridRoomCard = ({
         </div>
 
         <div className={styles.roomMetadata}>
-          <div className={styles.metaItemValue}>
+          <div className={styles.metaBadge}>
             {room.isPasscodeProtected ? (
               <>
-                <IconLock size={16} />
-                Protected
+                <IconLock size={12} color="var(--color-violet)" />
+                <span>Protected</span>
               </>
             ) : (
               <>
-                <IconLockOpen size={16} />
-                Public
+                <IconLockOpen size={12} color="var(--text-muted)" />
+                <span>Public</span>
               </>
             )}
           </div>
-          <div className={styles.metaItemValue}>
-            <IconMessage size={16} />
-            {room.isChatDisabled ? 'Chat disabled' : 'Chat'}
+          <div className={styles.metaBadge}>
+            <IconMessage size={12} color="var(--text-muted)" />
+            <span>{room.isChatDisabled ? 'Chat off' : 'Chat on'}</span>
           </div>
-          <div className={styles.metaItemValue}>{creationDate}</div>
+          <div className={styles.metaDate}>{creationDate}</div>
         </div>
 
         <div className={styles.roomLifecycle}>
@@ -842,7 +869,7 @@ const GridRoomCard = ({
         </div>
         <Menu shadow="md" width={220} position="bottom-end">
           <Menu.Target>
-            <ActionIcon variant="subtle" color="gray" size="lg" radius="md">
+            <ActionIcon variant="subtle" color="gray" size="lg" radius="md" className={styles.cardDotsBtn}>
               <IconDots size={18} />
             </ActionIcon>
           </Menu.Target>
