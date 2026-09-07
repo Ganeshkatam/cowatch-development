@@ -189,7 +189,7 @@
   color: var(--text-muted);
 }
 
-@media only screen and (max-width: 600px) {
+@media only screen and (max-width: 768px) {
   .dockContainer {
     bottom: 8px;
     gap: 4px;

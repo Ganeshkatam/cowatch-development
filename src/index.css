@@ -82,14 +82,58 @@ html[data-color-scheme="light"] {
 
 html body {
   margin: 0;
-  /* fix for scrollbar popping in and out at certain widths, but adds a permanent scrollbar */
-  overflow-y: scroll;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
   background-color: var(--bg-app);
   color: var(--text-primary);
 }
 
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Light Theme Scrollbar */
+html[data-color-scheme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.2);
+}
+
+html[data-color-scheme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.38);
+}
+
+/* Standards-compliant thin scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+html[data-color-scheme="light"] * {
+  scrollbar-color: rgba(15, 23, 42, 0.2) transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {
