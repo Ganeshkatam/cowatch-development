@@ -75,13 +75,14 @@ export const Signup = () => {
 
     setSubmitting(true);
     try {
+      const finalUsername = username.trim() || email.split("@")[0] || "User";
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            username: username.trim(),
-            display_name: username.trim(),
+            username: finalUsername,
+            display_name: finalUsername,
           },
         },
       });
@@ -195,8 +196,7 @@ export const Signup = () => {
               <form onSubmit={handleSignup} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
                 <TextInput
                   label="Username"
-                  placeholder="Username"
-                  required
+                  placeholder="Username (optional)"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
