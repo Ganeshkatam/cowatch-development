@@ -76,8 +76,33 @@
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: #FFFFFF;
+  color: var(--text-primary);
   margin: 0 0 8px 0;
+}
+
+:global([data-color-scheme="light"]) .stageWrapper {
+  background: radial-gradient(circle at 50% 30%, #f8fafc 0%, #e2e8f0 100%);
+}
+
+:global([data-color-scheme="light"]) .horizonGlow {
+  background: radial-gradient(ellipse at 50% 0%, rgba(112, 72, 232, 0.1) 0%, rgba(112, 72, 232, 0.02) 55%, transparent 80%);
+}
+
+:global([data-color-scheme="light"]) .playIconBox {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-color: rgba(112, 72, 232, 0.25);
+  box-shadow: 0 8px 24px rgba(112, 72, 232, 0.12), inset 0 1px 0 #ffffff;
+  color: var(--color-violet);
+}
+
+:global([data-color-scheme="light"]) .playIconGlow {
+  background: radial-gradient(circle, rgba(112, 72, 232, 0.2) 0%, rgba(112, 72, 232, 0) 70%);
+}
+
+:global([data-color-scheme="light"]) .lockNotice {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #b45309;
 }
 
 .emptySubtitle {

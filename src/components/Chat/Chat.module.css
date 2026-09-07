@@ -8,7 +8,7 @@
 }
 
 .light {
-  color: gainsboro;
+  color: var(--text-primary);
   font-size: 14px;
 }
 
@@ -17,7 +17,7 @@
 }
 
 .dark {
-  color: gray;
+  color: var(--text-muted);
 }
 
 .small {
@@ -67,7 +67,8 @@
 }
 
 .replyInfo {
-  color: rgba(180, 200, 220, 0.95);
+  color: var(--color-violet, #8b5cf6);
+  font-weight: 500;
   font-size: 12px;
   margin-bottom: 2px;
 }

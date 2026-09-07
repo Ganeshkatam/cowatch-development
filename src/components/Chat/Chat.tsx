@@ -14,7 +14,7 @@ import { init } from "emoji-mart";
 //@ts-expect-error
 import Linkify from "react-linkify";
 import { SecureLink } from "react-secure-link";
-import { IconMoodSmile, IconSend, IconTrash } from "@tabler/icons-react";
+import { IconCheck, IconMoodSmile, IconSend, IconTrash, IconX } from "@tabler/icons-react";
 import styles from "./Chat.module.css";
 import { useEffect, useState, useCallback } from 'react';
 import { createUuid } from "../../utils/utils";
@@ -463,7 +463,7 @@ export class ChatComponent extends React.Component<ChatProps & { onLoadMore?: ()
         {this.state.isPickerOpen && (
           <div style={{ position: "absolute", bottom: "60px" }}>
             <Picker
-              theme="dark"
+              theme={typeof document !== "undefined" && document.documentElement.getAttribute("data-color-scheme") === "light" ? "light" : "dark"}
               previewPosition="none"
               maxFrequentRows={1}
               onEmojiSelect={this.addEmoji}
@@ -493,7 +493,7 @@ export class ChatComponent extends React.Component<ChatProps & { onLoadMore?: ()
             }}
           >
             <Picker
-              theme="dark"
+              theme={typeof document !== "undefined" && document.documentElement.getAttribute("data-color-scheme") === "light" ? "light" : "dark"}
               previewPosition="none"
               maxFrequentRows={1}
               perLine={6}
@@ -728,16 +728,16 @@ const ChatMessage = ({
               rightSectionWidth={60}
               rightSection={
                 <div style={{ display: 'flex', gap: '4px', marginRight: '4px' }}>
-                  <ActionIcon onClick={() => { setIsEditing(false); setEditMsg(msg || ''); }} size="sm">
-                    <span role="img" aria-label="Cancel">❌</span>
+                  <ActionIcon onClick={() => { setIsEditing(false); setEditMsg(msg || ''); }} size="sm" title="Cancel">
+                    <IconX size={14} />
                   </ActionIcon>
                   <ActionIcon onClick={() => {
                     if (editMsg.trim().length > 0 && editMsg.trim() !== msg) {
                       onEdit && message.dbId && onEdit(message.dbId, editMsg.trim());
                     }
                     setIsEditing(false);
-                  }} size="sm">
-                    <span role="img" aria-label="Save">✅</span>
+                  }} size="sm" color="violet" variant="filled" title="Save">
+                    <IconCheck size={14} />
                   </ActionIcon>
                 </div>
               }

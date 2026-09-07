@@ -434,3 +434,44 @@
   font-size: 10px;
   font-family: inherit;
 }
+
+/* Light Theme Overrides */
+:global([data-color-scheme="light"]) .searchInput :global(.mantine-TextInput-input) {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+:global([data-color-scheme="light"]) .searchInput :global(.mantine-TextInput-input:focus) {
+  background: #ffffff !important;
+  border-color: var(--color-violet, #8B5CF6) !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18) !important;
+}
+
+:global([data-color-scheme="light"]) .actionBtnPlaylist {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+:global([data-color-scheme="light"]) .actionBtnPlaylist:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+:global([data-color-scheme="light"]) .miniActionBtn {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+:global([data-color-scheme="light"]) .miniActionBtn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+:global([data-color-scheme="light"]) .shortcutKbd {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #64748b;
+}

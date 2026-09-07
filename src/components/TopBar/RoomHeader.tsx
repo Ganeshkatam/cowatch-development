@@ -12,7 +12,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { Menu, Tooltip } from "@mantine/core";
-import { SignInButton } from "./TopBar";
+import { SignInButton, ThemeToggleQuickButton } from "./TopBar";
 import { HeaderSearchBar } from "./HeaderSearchBar";
 import styles from "./RoomHeader.module.css";
 
@@ -207,6 +207,8 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
         >
           <IconSettings size={16} stroke={1.5} />
         </button>
+
+        <ThemeToggleQuickButton />
 
         <button
           type="button"

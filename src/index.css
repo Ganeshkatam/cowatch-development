@@ -407,7 +407,7 @@ img[src*="logo192.png"] {
 
 html[data-color-scheme="light"] .cowatch-brand-logo,
 html[data-color-scheme="light"] img[src*="logo192.png"] {
-  filter: brightness(0) opacity(0.85);
+  filter: invert(44%) sepia(88%) saturate(1914%) hue-rotate(236deg) brightness(96%) contrast(97%);
 }
 
 

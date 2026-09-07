@@ -499,3 +499,79 @@
     padding: 10px 8px;
   }
 }
+
+/* Light Theme Overrides */
+:global([data-color-scheme="light"]) .searchInput {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: #e2e8f0;
+  color: #0f172a;
+}
+
+:global([data-color-scheme="light"]) .searchInput:focus {
+  background: #ffffff;
+  border-color: var(--color-violet, #8B5CF6);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15), 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+:global([data-color-scheme="light"]) .kbdHint {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+:global([data-color-scheme="light"]) .clearBtn {
+  background: rgba(0, 0, 0, 0.06);
+  color: #64748b;
+}
+
+:global([data-color-scheme="light"]) .clearBtn:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+}
+
+:global([data-color-scheme="light"]) .dropdownMenu {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: #e2e8f0;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(139, 92, 246, 0.1);
+}
+
+:global([data-color-scheme="light"]) .filterPill {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+:global([data-color-scheme="light"]) .filterPill:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+:global([data-color-scheme="light"]) .filterPillActive {
+  background: rgba(139, 92, 246, 0.15);
+  color: #6d28d9;
+  border-color: #8b5cf6;
+}
+
+:global([data-color-scheme="light"]) .directActionCard {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), #ffffff);
+  border-color: rgba(139, 92, 246, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+:global([data-color-scheme="light"]) .actionBtnPlaylist {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+:global([data-color-scheme="light"]) .actionBtnPlaylist:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+@media (max-width: 640px) {
+  :global([data-color-scheme="light"]) .searchContainer.mobileActive {
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  }
+}

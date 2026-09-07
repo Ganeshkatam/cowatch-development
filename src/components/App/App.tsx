@@ -2849,6 +2849,8 @@ export class App extends React.Component<AppProps, AppState> {
                     borderRadius: "8px",
                     overflow: "hidden",
                     border: "1px solid var(--border-subtle)",
+                    backgroundColor: "var(--bg-elevated)",
+                    padding: "8px",
                   }}
                 >
                   <Chat

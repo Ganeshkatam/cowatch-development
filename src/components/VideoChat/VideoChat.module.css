@@ -109,7 +109,7 @@
 .nameText {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #FFFFFF !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -137,7 +137,7 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-secondary);
+  color: #E2E8F0;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -407,4 +407,56 @@
   background: #EF4444;
   color: #FFFFFF;
 }
+
+/* Light Theme Overrides */
+:global([data-color-scheme="light"]) .videoTile {
+  border-color: #e2e8f0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+:global([data-color-scheme="light"]) .inviteCard {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+:global([data-color-scheme="light"]) .inviteCard:hover {
+  background: #f8fafc;
+  border-color: var(--color-violet, #8b5cf6);
+}
+
+:global([data-color-scheme="light"]) .inviteIconBadge {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+:global([data-color-scheme="light"]) .waitingSection {
+  background: rgba(139, 92, 246, 0.06);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+:global([data-color-scheme="light"]) .waitingHeaderTitle {
+  color: #6d28d9;
+}
+
+:global([data-color-scheme="light"]) .waitingBadge {
+  background: rgba(139, 92, 246, 0.18);
+  color: #5b21b6;
+}
+
+:global([data-color-scheme="light"]) .waitingRow {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+:global([data-color-scheme="light"]) .waitingName {
+  color: #0f172a;
+}
+
+:global([data-color-scheme="light"]) .waitingTime {
+  color: #64748b;
+}
+
 

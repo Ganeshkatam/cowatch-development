@@ -12,6 +12,13 @@
   top: 0;
   z-index: 100;
   box-sizing: border-box;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+:global([data-color-scheme="light"]) .header {
+  background-color: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
 }
 
 .leftSection {
@@ -41,10 +48,6 @@
   display: block;
 }
 
-:global(html[data-color-scheme="light"]) .logoImg {
-  filter: brightness(0);
-}
-
 .logoText {
   font-size: 17px;
   font-weight: 700;
@@ -57,6 +60,10 @@
   height: 18px;
   background-color: rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
+}
+
+:global([data-color-scheme="light"]) .divider {
+  background-color: #e2e8f0;
 }
 
 .roomDropdownBtn {
@@ -83,6 +90,11 @@
   border-color: rgba(255, 255, 255, 0.1);
 }
 
+:global([data-color-scheme="light"]) .roomDropdownBtn:hover {
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
 .nowPlayingBadge {
   display: inline-flex;
   align-items: center;
@@ -106,10 +118,21 @@
   color: #C4B5FD;
 }
 
+:global([data-color-scheme="light"]) .nowPlayingActive {
+  background-color: #ede9fe;
+  border-color: #c4b5fd;
+  color: #6d28d9;
+}
+
 .nowPlayingActive:hover {
   background-color: rgba(139, 92, 246, 0.2);
   border-color: rgba(139, 92, 246, 0.45);
   color: #DDD6FE;
+}
+
+:global([data-color-scheme="light"]) .nowPlayingActive:hover {
+  background-color: #ddd6fe;
+  color: #5b21b6;
 }
 
 .nowPlayingIdle {
@@ -118,10 +141,22 @@
   color: var(--text-muted);
 }
 
+:global([data-color-scheme="light"]) .nowPlayingIdle {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
 .nowPlayingIdle:hover {
   background-color: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.15);
   color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .nowPlayingIdle:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
 }
 
 .playingDot {
@@ -155,6 +190,10 @@
   text-overflow: ellipsis;
   font-weight: 600;
   color: #EDE9FE;
+}
+
+:global([data-color-scheme="light"]) .nowPlayingTitle {
+  color: #5b21b6;
 }
 
 .idleText {
@@ -212,10 +251,28 @@
   color: var(--text-primary);
 }
 
+:global([data-color-scheme="light"]) .actionBtn {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+:global([data-color-scheme="light"]) .actionBtn:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
 .actionBtnActive {
   background-color: rgba(139, 92, 246, 0.15);
   border-color: rgba(139, 92, 246, 0.35);
   color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .actionBtnActive {
+  background-color: #ede9fe;
+  border-color: #c4b5fd;
+  color: #6d28d9;
 }
 
 .iconOnlyBtn {
@@ -239,6 +296,18 @@
   color: var(--text-primary);
 }
 
+:global([data-color-scheme="light"]) .iconOnlyBtn {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+:global([data-color-scheme="light"]) .iconOnlyBtn:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
 .exitBtn {
   display: inline-flex;
   align-items: center;
@@ -260,6 +329,18 @@
   background-color: rgba(239, 68, 68, 0.18);
   border-color: rgba(239, 68, 68, 0.35);
   color: #FFFFFF;
+}
+
+:global([data-color-scheme="light"]) .exitBtn {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+:global([data-color-scheme="light"]) .exitBtn:hover {
+  background-color: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
 }
 
 @media only screen and (max-width: 768px) {

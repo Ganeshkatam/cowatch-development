@@ -17,6 +17,12 @@
   box-sizing: border-box;
 }
 
+:global([data-color-scheme="light"]) .dockContainer {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
 .addMediaBtn {
   display: inline-flex;
   align-items: center;
@@ -66,6 +72,18 @@
   border-color: rgba(255, 255, 255, 0.15);
 }
 
+:global([data-color-scheme="light"]) .dockBtn {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #334155;
+}
+
+:global([data-color-scheme="light"]) .dockBtn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
 .dockBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -92,6 +110,18 @@
   color: var(--text-primary);
 }
 
+:global([data-color-scheme="light"]) .iconBtn {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+:global([data-color-scheme="light"]) .iconBtn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
 .stopBtn {
   display: inline-flex;
   align-items: center;
@@ -112,6 +142,17 @@
   color: #FFFFFF;
 }
 
+:global([data-color-scheme="light"]) .stopBtn {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+:global([data-color-scheme="light"]) .stopBtn:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -124,6 +165,11 @@
   font-size: 11px;
   font-weight: 600;
   color: #DDD6FE;
+}
+
+:global([data-color-scheme="light"]) .badge {
+  background: #ede9fe;
+  color: #6d28d9;
 }
 
 .menuItemWithDesc {
