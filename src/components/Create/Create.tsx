@@ -32,6 +32,7 @@ import {
   IconClock,
   IconInfinity,
   IconInfoCircle,
+  IconArmchair,
 } from "@tabler/icons-react";
 import styles from "./Create.module.css";
 
@@ -49,6 +50,7 @@ export const Create = () => {
   const [isChatDisabled, setIsChatDisabled] = useState(false);
   const [lock, setLock] = useState(false);
   const [isPermanent, setIsPermanent] = useState(false);
+  const [isWaitingLoungeEnabled, setIsWaitingLoungeEnabled] = useState(false);
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
@@ -89,6 +91,7 @@ export const Create = () => {
           passcode: passcode || undefined,
           isPermanent,
           isChatDisabled,
+          isWaitingLoungeEnabled,
           lock,
           noRedirect: true,
         }
@@ -324,6 +327,30 @@ export const Create = () => {
                       <Group justify="space-between" align="center" wrap="nowrap">
                         <Group gap="md" wrap="nowrap">
                           <div className={styles.switchIconWrap}>
+                            <IconArmchair size={18} />
+                          </div>
+                          <div>
+                            <Text fw={600} size="sm" c="var(--text-primary)">
+                              Waiting Lounge
+                            </Text>
+                            <Text size="xs" c="dimmed" mt={2}>
+                              Require host approval before participants can enter the room
+                            </Text>
+                          </div>
+                        </Group>
+                        <Switch
+                          checked={isWaitingLoungeEnabled}
+                          onChange={(e) => setIsWaitingLoungeEnabled(e.currentTarget.checked)}
+                          color="violet"
+                          size="md"
+                        />
+                      </Group>
+                    </div>
+
+                    <div className={styles.switchCard}>
+                      <Group justify="space-between" align="center" wrap="nowrap">
+                        <Group gap="md" wrap="nowrap">
+                          <div className={styles.switchIconWrap}>
                             {isPermanent ? <IconInfinity size={18} /> : <IconClock size={18} />}
                           </div>
                           <div>
@@ -411,6 +438,14 @@ export const Create = () => {
                     leftSection={isPermanent ? <IconInfinity size={12} /> : <IconClock size={12} />}
                   >
                     {isPermanent ? "Permanent Room" : "3-Hour Session"}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    color={isWaitingLoungeEnabled ? "grape" : "gray"}
+                    size="sm"
+                    leftSection={<IconArmchair size={12} />}
+                  >
+                    {isWaitingLoungeEnabled ? "Lounge Active" : "Direct Entry"}
                   </Badge>
                   <Badge
                     variant="outline"

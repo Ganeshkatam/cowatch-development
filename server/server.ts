@@ -415,6 +415,7 @@ app.post("/createRoom", async (req, res) => {
   }
   newRoom.isChatDisabled = Boolean(req.body?.isChatDisabled);
   newRoom.creator = decoded.email || "";
+  newRoom.isWaitingLoungeEnabled = Boolean(req.body?.isWaitingLoungeEnabled);
 
   const isPermanent = Boolean(req.body?.isPermanent);
   const now = new Date();
@@ -442,6 +443,7 @@ app.post("/createRoom", async (req, res) => {
       startedAt: now,
       expiresAt: expiresAt ?? null,
       isPermanent: isPermanent,
+      isWaitingLoungeEnabled: Boolean(req.body?.isWaitingLoungeEnabled),
     };
     try {
       await insertObject(postgres, "rooms", roomObj);
