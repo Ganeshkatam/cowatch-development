@@ -48,7 +48,8 @@ const useRooms = (user: any) => {
         const candidate = candidatesToTry[i];
         try {
           const res = await fetch(`${candidate}/listRooms?uid=${user.id}&token=${token}`);
-          if (res.ok) {
+          const contentType = res.headers.get("content-type") || "";
+          if (res.ok && contentType.includes("application/json")) {
             response = res;
             if (candidate !== serverPath) {
               setServerPath(candidate);
@@ -65,12 +66,17 @@ const useRooms = (user: any) => {
       }
 
       if (!response || !response.ok) {
-        const errData = await response?.json().catch(() => null);
-        const errMsg =
-          errData?.error?.message ||
-          errData?.error ||
-          (response ? `Failed to fetch rooms (${response.status})` : "Failed to fetch rooms");
+        const contentType = response?.headers.get("content-type") || "";
+        let errMsg = response ? `Failed to fetch rooms (${response.status})` : "Failed to fetch rooms";
+        if (contentType.includes("application/json")) {
+          const errData = await response?.json().catch(() => null);
+          errMsg = errData?.error?.message || errData?.error || errMsg;
+        }
         throw new Error(errMsg);
+      }
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Invalid response received from server. Please verify backend connection.");
       }
       const data = await response.json();
       if (Array.isArray(data)) {

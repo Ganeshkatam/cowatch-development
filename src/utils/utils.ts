@@ -201,6 +201,29 @@ export const iceServers = () => [
   // },
 ];
 
+export function normalizeServerUrl(rawUrl: string): string {
+  let trimmed = String(rawUrl || "").trim().replace(/\/+$/, "");
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  if (trimmed.startsWith("//")) {
+    const proto =
+      typeof window !== "undefined" && window.location.protocol
+        ? window.location.protocol
+        : "https:";
+    return `${proto}${trimmed}`;
+  }
+  if (
+    trimmed.startsWith("localhost") ||
+    trimmed.startsWith("127.0.0.1") ||
+    trimmed.startsWith("0.0.0.0")
+  ) {
+    return `http://${trimmed}`;
+  }
+  return `https://${trimmed}`;
+}
+
 export const serverCandidates: string[] = (() => {
   if (typeof window !== "undefined") {
     const isLocalhost =
@@ -213,7 +236,7 @@ export const serverCandidates: string[] = (() => {
   if (config.VITE_SERVER_HOST) {
     return String(config.VITE_SERVER_HOST)
       .split(",")
-      .map((s: string) => s.trim().replace(/\/+$/, ""))
+      .map((s: string) => normalizeServerUrl(s))
       .filter(Boolean);
   }
   return [
@@ -237,7 +260,7 @@ const getInitialServerPath = (): string => {
 export let serverPath: string = getInitialServerPath();
 
 export function setServerPath(newPath: string): void {
-  serverPath = newPath.replace(/\/+$/, "");
+  serverPath = normalizeServerUrl(newPath);
   if (typeof window !== "undefined") {
     try {
       sessionStorage.setItem("cowatch_active_backend", serverPath);
@@ -256,6 +279,17 @@ export async function resolveFastestServer(): Promise<string> {
           signal: AbortSignal.timeout(3000),
         });
         if (!res.ok) throw new Error(`Ping failed for ${candidate}`);
+        const contentType = res.headers.get("content-type") || "";
+        if (
+          !contentType.includes("application/json") &&
+          !contentType.includes("text/plain")
+        ) {
+          throw new Error(`Invalid content type from ${candidate}`);
+        }
+        const text = await res.text();
+        if (!text.includes("pong")) {
+          throw new Error(`Invalid ping response from ${candidate}`);
+        }
         return candidate;
       })
     );

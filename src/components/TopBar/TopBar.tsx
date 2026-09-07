@@ -109,6 +109,10 @@ export async function createRoom(
       ...options,
     }),
   });
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new Error("Server returned an invalid response. Please check your backend connection.");
+  }
   const data = await response.json();
   if (data.error) {
     throw new Error(data.error);

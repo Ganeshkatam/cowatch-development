@@ -154,6 +154,10 @@ export const RoomDetails = () => {
         if (response.status === 404) throw new Error("Room not found or unauthorized");
         throw new Error("Failed to fetch room details");
       }
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Received invalid response from server");
+      }
       const data = await response.json();
       if (data && data.currentPasscode) {
         addAndSavePasscode(data.roomId, data.currentPasscode);
