@@ -167,28 +167,49 @@ export function shuffle(array: any[]) {
   }
 }
 
-export const iceServers = () => [
+// Metered TURN server credentials (fetched dynamically and cached)
+const METERED_API_URL =
+  "https://cowatch-dev.metered.live/api/v1/turn/credentials?apiKey=394cc66575e67979e2f7d70fd73dabcf1f0c";
+
+const STUN_FALLBACK: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
   { urls: "stun:stun2.l.google.com:19302" },
   { urls: "stun:stun3.l.google.com:19302" },
   { urls: "stun:stun4.l.google.com:19302" },
-  {
-    urls: "turn:openrelay.metered.ca:80",
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
-  {
-    urls: "turn:openrelay.metered.ca:443",
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
-  {
-    urls: "turn:openrelay.metered.ca:443?transport=tcp",
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
 ];
+
+let _cachedIceServers: RTCIceServer[] | null = null;
+
+// Fetch and cache TURN credentials from Metered API
+async function fetchMeteredIceServers(): Promise<RTCIceServer[]> {
+  try {
+    const response = await fetch(METERED_API_URL);
+    if (!response.ok) {
+      throw new Error(`Metered API returned ${response.status}`);
+    }
+    const servers: RTCIceServer[] = await response.json();
+    // Prepend Google STUN servers for fastest initial candidate gathering
+    _cachedIceServers = [...STUN_FALLBACK, ...servers];
+    console.log("[ICE] Fetched Metered TURN credentials:", _cachedIceServers.length, "servers");
+    return _cachedIceServers;
+  } catch (e) {
+    console.warn("[ICE] Failed to fetch Metered TURN credentials, using STUN-only fallback:", e);
+    _cachedIceServers = STUN_FALLBACK;
+    return _cachedIceServers;
+  }
+}
+
+// Pre-fetch on module load so credentials are ready before first video call
+fetchMeteredIceServers();
+
+export const iceServers = (): RTCIceServer[] => {
+  if (_cachedIceServers) {
+    return _cachedIceServers;
+  }
+  // If fetch hasn't completed yet, return STUN-only (fetch will update cache)
+  return STUN_FALLBACK;
+};
 
 export function normalizeServerUrl(rawUrl: string): string {
   let trimmed = String(rawUrl || "").trim().replace(/\/+$/, "");
