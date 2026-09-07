@@ -14,7 +14,7 @@ import { init } from "emoji-mart";
 //@ts-expect-error
 import Linkify from "react-linkify";
 import { SecureLink } from "react-secure-link";
-import { IconCheck, IconMoodSmile, IconSend, IconTrash, IconX } from "@tabler/icons-react";
+import { IconArrowBackUp, IconCheck, IconMoodSmile, IconPencil, IconSend, IconTrash, IconX } from "@tabler/icons-react";
 import styles from "./Chat.module.css";
 import { useEffect, useState, useCallback } from 'react';
 import { createUuid } from "../../utils/utils";
@@ -352,10 +352,12 @@ export class ChatComponent extends React.Component<ChatProps & { onLoadMore?: ()
           display: this.props.hide ? "none" : "flex",
           flexDirection: "column",
           flexGrow: 1,
+          height: "100%",
           minHeight: 0,
           marginTop: 0,
           marginBottom: 0,
-          padding: "8px",
+          padding: "10px 12px",
+          boxSizing: "border-box",
           backgroundColor: "var(--bg-elevated)",
         }}
       >
@@ -365,10 +367,11 @@ export class ChatComponent extends React.Component<ChatProps & { onLoadMore?: ()
               display: "flex",
               justifyContent: "flex-end",
               alignItems: "center",
-              padding: "4px 0",
-              marginBottom: "4px",
+              padding: "2px 0 8px 0",
+              marginBottom: "8px",
               borderBottom: "1px solid var(--border-subtle)",
-              minHeight: "32px",
+              minHeight: "30px",
+              flexShrink: 0,
             }}
           >
             {this.state.confirmClear ? (
@@ -771,38 +774,24 @@ const ChatMessage = ({
             <ActionIcon
               onClick={() => { setIsEditing(true); setEditMsg(msg || ""); }}
               disabled={isChatDisabled}
-              style={{
-                opacity: 1,
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                padding: 0,
-                margin: 0,
-                marginRight: 4,
-              }}
+              variant="subtle"
+              size="xs"
+              color="gray"
+              title="Edit message"
             >
-              <span role="img" aria-label="Edit" style={{ margin: 0, fontSize: 16 }}>
-                ✎
-              </span>
+              <IconPencil size={13} />
             </ActionIcon>
           )}
           {id && id !== clientId && (
             <ActionIcon
               onClick={() => onReply(id, timestamp, msg)}
               disabled={isChatDisabled}
-              style={{
-                opacity: 1,
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                padding: 0,
-                margin: 0,
-                marginRight: 4,
-              }}
+              variant="subtle"
+              size="xs"
+              color="gray"
+              title="Reply to message"
             >
-              <span role="img" aria-label="Reply" style={{ margin: 0, fontSize: 16 }}>
-                ↩
-              </span>
+              <IconArrowBackUp size={13} />
             </ActionIcon>
           )}
           <ActionIcon
@@ -820,16 +809,12 @@ const ChatMessage = ({
               }, 100);
             }}
             disabled={isChatDisabled}
-            style={{
-              opacity: 1,
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              padding: 0,
-              margin: 0,
-            }}
+            variant="subtle"
+            size="xs"
+            color="gray"
+            title="Add reaction"
           >
-            <IconMoodSmile size={18} />
+            <IconMoodSmile size={14} />
           </ActionIcon>
         </div>
         <TransitionGroup>

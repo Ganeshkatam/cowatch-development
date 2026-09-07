@@ -32,19 +32,35 @@
 
 .comment .commentMenu {
   display: none;
-  justify-content: center;
+  align-items: center;
+  gap: 2px;
   position: absolute;
-  right: 5px;
-  top: -13px;
-  padding: 4px !important;
-  border-radius: 3px;
+  right: 6px;
+  top: 4px;
+  padding: 2px 4px !important;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   cursor: pointer;
+  z-index: 5;
+}
+
+:global([data-color-scheme="light"]) .comment .commentMenu {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 .comment .commentMenu:hover,
 .comment.selected .commentMenu {
-  background: rgb(46, 137, 212);
-  transition: background 0.2s ease-in-out;
+  background: var(--bg-surface);
+  transition: background 0.15s ease;
+}
+
+:global([data-color-scheme="light"]) .comment .commentMenu:hover,
+:global([data-color-scheme="light"]) .comment.selected .commentMenu {
+  background: #f8fafc;
 }
 
 .comment:hover,

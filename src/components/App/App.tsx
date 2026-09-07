@@ -2844,13 +2844,12 @@ export class App extends React.Component<AppProps, AppState> {
                     flexGrow: 1,
                     display: "flex",
                     flexDirection: "column",
-                    minHeight: 0,
+                    minHeight: "380px",
                     marginTop: "8px",
                     borderRadius: "8px",
                     overflow: "hidden",
                     border: "1px solid var(--border-subtle)",
                     backgroundColor: "var(--bg-elevated)",
-                    padding: "8px",
                   }}
                 >
                   <Chat
