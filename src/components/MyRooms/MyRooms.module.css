@@ -13,6 +13,14 @@
 @media (max-width: 900px) {
   .container {
     width: calc(100vw - 32px);
+    padding: 0 0 40px;
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    width: calc(100vw - 24px);
+    padding: 0 0 32px;
   }
 }
 
@@ -20,24 +28,22 @@
 .hero {
   position: relative;
   height: auto;
-  min-height: 160px;
   background-color: var(--bg-surface);
   background-image: 
-    linear-gradient(to right, rgba(15, 15, 18, 0.9) 0%, rgba(15, 15, 18, 0.7) 40%, rgba(15, 15, 18, 0.4) 100%),
+    linear-gradient(to right, rgba(15, 15, 18, 0.9) 0%, rgba(15, 15, 18, 0.75) 40%, rgba(15, 15, 18, 0.5) 100%),
     url('/hero_bg.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
   border-radius: 16px;
   margin-top: 24px;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 48px;
-  padding: 32px 40px;
+  padding: 24px 32px;
   border: 1px solid var(--border-subtle);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 .heroContent {
@@ -45,77 +51,157 @@
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 48px;
+  gap: 20px;
+}
+
+.heroHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .heroTitle {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
   color: var(--text-primary);
-  margin-bottom: 4px;
+  margin: 0;
   line-height: 1.2;
 }
 
 .heroSubtitle {
-  font-size: 14px;
+  font-size: 13.5px;
   color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
 }
 
-.heroSubtitle {
-  font-size: 18px;
-  color: var(--text-secondary);
+.heroMetrics {
+  width: 100%;
 }
 
-.heroActions {
-  display: flex;
+/* Stats Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 40px;
   align-items: center;
 }
 
-@media (min-width: 901px) {
-  .hero {
-    min-height: 160px;
-  }
+.statCard {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-@media (max-width: 900px) {
+.statValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1;
+}
+
+.statLabelTotal {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--mantine-color-violet-3);
+}
+
+.statLabelActive {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--mantine-color-green-4);
+}
+
+.statLabelExpiring {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--mantine-color-orange-4);
+}
+
+.statLabelFinished {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-secondary);
+}
+
+/* Responsive Mobile Rules for Hero & Stats */
+@media (max-width: 768px) {
   .hero {
-    height: auto;
-    padding: 32px 24px;
-    background: transparent;
-    border: none;
-    margin-top: 16px;
-    margin-bottom: 24px;
+    padding: 16px;
+    margin-top: 14px;
+    margin-bottom: 18px;
+    border-radius: 14px;
   }
-  .heroGlow {
-    display: none;
-  }
+
   .heroContent {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 24px;
+    gap: 14px;
   }
+
   .heroTitle {
-    font-size: 36px;
+    font-size: 18px;
+    letter-spacing: 0.5px;
   }
-  .heroActions {
-    width: 100%;
+
+  .heroSubtitle {
+    font-size: 12px;
   }
-  .heroNewRoomBtn {
-    width: 100%;
+
+  .statsGrid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .statCard {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 8px 6px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .statLabelTotal,
+  .statLabelActive,
+  .statLabelExpiring,
+  .statLabelFinished {
+    font-size: 9.5px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .statValue {
+    font-size: 17px;
+    margin-top: 2px;
   }
 }
 
-/* Stats are now inline styled in RoomStats.tsx. Removed obsolete CSS. */
+@media (max-width: 420px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
 
 /* Toolbar */
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
-  gap: 24px;
+  margin-bottom: 28px;
+  gap: 20px;
 }
 
 .search {
@@ -124,23 +210,24 @@
 }
 
 .search input {
-  height: 52px;
+  height: 48px;
   border-radius: 12px;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
+  font-size: 14px;
 }
 
 .toolbarActions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
 }
 
 .viewToggle {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  padding: 4px;
+  border-radius: 10px;
+  padding: 3px;
   display: flex;
   gap: 4px;
 }
@@ -149,16 +236,36 @@
   width: 180px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 768px) {
   .toolbar {
     flex-direction: column;
     align-items: stretch;
+    margin-bottom: 18px;
+    gap: 10px;
   }
+
   .search {
     max-width: 100%;
+    width: 100%;
   }
+
+  .search input {
+    height: 44px;
+    font-size: 13.5px;
+    border-radius: 10px;
+  }
+
   .toolbarActions {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .sort {
+    flex: 1;
+    width: auto;
   }
 }
 
@@ -393,6 +500,61 @@
 .actionButtons {
   display: flex;
   gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .roomGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .gridCard {
+    border-radius: 14px;
+  }
+
+  .gridCardCover {
+    height: 150px;
+  }
+
+  .gridCardBody {
+    padding: 16px;
+  }
+
+  .roomTitle {
+    font-size: 17px;
+  }
+
+  .roomDescription {
+    font-size: 13px;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .roomMetadata {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    gap: 10px;
+  }
+
+  .metaItemValue {
+    font-size: 12px;
+  }
+
+  .roomActionsBar {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .actionButtons {
+    gap: 8px;
+    flex: 1;
+  }
+
+  .actionButtons button {
+    height: 38px;
+    font-size: 13px;
+    flex: 1;
+  }
 }
 
 /* Pagination */
