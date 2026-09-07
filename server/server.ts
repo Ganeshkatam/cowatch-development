@@ -912,6 +912,73 @@ app.post("/extendRoom", async (req, res) => {
   }
 });
 
+app.post("/endRoom", async (req, res) => {
+  const decoded = await validateUserToken(
+    String(req.body?.uid),
+    String(req.body?.token),
+  );
+  if (decoded === "EMAIL_NOT_VERIFIED") {
+    res.status(403).json({ error: { code: "EMAIL_NOT_VERIFIED", message: "Email verification is required." } });
+    return;
+  }
+  if (!decoded) {
+    res.status(400).json({ error: "invalid user token" });
+    return;
+  }
+  const roomId = req.body?.roomId;
+  if (!roomId) {
+    res.status(400).json({ error: "missing roomId parameter" });
+    return;
+  }
+
+  try {
+    if (!postgres) {
+      res.status(503).json({ error: "Database unavailable" });
+      return;
+    }
+
+    const selectResult = await postgres.query(
+      `SELECT "startedAt", "expiresAt", status FROM rooms WHERE "roomId" = $1 AND owner_id = $2`,
+      [roomId, decoded.uid]
+    );
+
+    if (!selectResult || selectResult.rows.length === 0) {
+      res.status(400).json({ error: "Room not found or unowned" });
+      return;
+    }
+
+    const roomRow = selectResult.rows[0];
+    if (roomRow.status === "ended") {
+      res.json({ success: true, status: "ended" });
+      return;
+    }
+
+    await postgres.query(
+      `UPDATE rooms 
+       SET status = 'ended', "endedAt" = NOW() 
+       WHERE "roomId" = $1 AND owner_id = $2
+       RETURNING *`,
+      [roomId, decoded.uid],
+    );
+
+    await postgres.query(`
+      INSERT INTO room_lifecycle_events 
+      ("roomId", actor, event, "previousStatus", "newStatus", "previousExpiresAt", "newExpiresAt", reason)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `, [roomId, decoded.uid, 'room.ended', roomRow.status, 'ended', roomRow.expiresAt, roomRow.expiresAt, 'user ended room']);
+
+    const memoryRoom = rooms.get(roomId);
+    if (memoryRoom) {
+      memoryRoom.status = "ended";
+    }
+
+    res.json({ success: true, status: "ended" });
+  } catch (e) {
+    console.error("Error ending room:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 app.delete("/deleteRoom", async (req, res) => {
   const decoded = await validateUserToken(
     String(req.query?.uid),

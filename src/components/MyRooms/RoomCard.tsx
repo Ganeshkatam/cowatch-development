@@ -499,8 +499,68 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
     }
   };
 
-  const handlePlaceholder = (action: string) => {
-    alert(`${action} is currently available in Room Details view.`);
+  const handleExtend = async (minutes: number) => {
+    try {
+      const token = await getAccessToken();
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) throw new Error("Please log in");
+      const durationSeconds = minutes * 60;
+      const response = await fetch(`${serverPath}/extendRoom`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: user.data.user.id,
+          token,
+          roomId: room.roomId,
+          durationSeconds,
+        }),
+      });
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Invalid response from server");
+      }
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || data.error || "Failed to extend room");
+      }
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (e: any) {
+      alert(e.message || "Failed to extend room");
+    }
+  };
+
+  const handleEndRoom = async () => {
+    if (window.confirm("Are you sure you want to end this room? Guests will no longer be able to watch or join.")) {
+      try {
+        const token = await getAccessToken();
+        const user = await supabase.auth.getUser();
+        if (!user.data.user) throw new Error("Please log in");
+        const response = await fetch(`${serverPath}/endRoom`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uid: user.data.user.id,
+            token,
+            roomId: room.roomId,
+          }),
+        });
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          throw new Error("Invalid response from server");
+        }
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error?.message || data.error || "Failed to end room");
+        }
+        if (onRefresh) {
+          onRefresh();
+        }
+      } catch (e: any) {
+        alert(e.message || "Failed to end room");
+      }
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -572,12 +632,12 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
       items.push(<Menu.Divider key="div1" />);
       if (computedState === 'Active' && !isPermanent) {
         items.push(
-          <Menu.Item key="extend30" leftSection={<IconHourglassHigh size={14} />} onClick={() => handlePlaceholder('Extend +30 min')}>
+          <Menu.Item key="extend30" leftSection={<IconHourglassHigh size={14} />} onClick={() => handleExtend(30)}>
             Extend +30 min
           </Menu.Item>
         );
         items.push(
-          <Menu.Item key="extend60" leftSection={<IconHourglassHigh size={14} />} onClick={() => handlePlaceholder('Extend +1 hour')}>
+          <Menu.Item key="extend60" leftSection={<IconHourglassHigh size={14} />} onClick={() => handleExtend(60)}>
             Extend +1 hour
           </Menu.Item>
         );
@@ -588,7 +648,7 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
         </Menu.Item>
       );
       items.push(
-        <Menu.Item key="end" leftSection={<IconPlayerStop size={14} />} onClick={() => handlePlaceholder('End Room')}>
+        <Menu.Item key="end" leftSection={<IconPlayerStop size={14} />} onClick={handleEndRoom}>
           End Room
         </Menu.Item>
       );
@@ -608,8 +668,18 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
 
 // --- View Components ---
 
-const GridRoomCard = ({ room, onDelete, onUpdateCover }: { room: RoomSummary, onDelete: (id: string) => void, onUpdateCover?: (id: string, url: string) => void }) => {
-  const actions = useRoomActions(room, onDelete, undefined, onUpdateCover);
+const GridRoomCard = ({
+  room,
+  onDelete,
+  onRefresh,
+  onUpdateCover,
+}: {
+  room: RoomSummary;
+  onDelete: (id: string) => void;
+  onRefresh?: () => void;
+  onUpdateCover?: (id: string, url: string) => void;
+}) => {
+  const actions = useRoomActions(room, onDelete, onRefresh, onUpdateCover);
   const isPermanent = Boolean(room.isPermanent);
   const creationDate = new Date(room.creationTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
@@ -701,8 +771,18 @@ const GridRoomCard = ({ room, onDelete, onUpdateCover }: { room: RoomSummary, on
   );
 };
 
-const StackRoomCard = ({ room, onDelete, onUpdateCover }: { room: RoomSummary, onDelete: (id: string) => void, onUpdateCover?: (id: string, url: string) => void }) => {
-  const actions = useRoomActions(room, onDelete, undefined, onUpdateCover);
+const StackRoomCard = ({
+  room,
+  onDelete,
+  onRefresh,
+  onUpdateCover,
+}: {
+  room: RoomSummary;
+  onDelete: (id: string) => void;
+  onRefresh?: () => void;
+  onUpdateCover?: (id: string, url: string) => void;
+}) => {
+  const actions = useRoomActions(room, onDelete, onRefresh, onUpdateCover);
   const isPermanent = Boolean(room.isPermanent);
   const creationDate = new Date(room.creationTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
@@ -799,16 +879,18 @@ const StackRoomCard = ({ room, onDelete, onUpdateCover }: { room: RoomSummary, o
 export const RoomCard = ({
   room,
   onDelete,
+  onRefresh,
   onUpdateCover,
-  viewMode
+  viewMode,
 }: {
   room: RoomSummary;
   onDelete: (id: string) => void;
+  onRefresh?: () => void;
   onUpdateCover?: (id: string, url: string) => void;
   viewMode: 'grid' | 'stack';
 }) => {
   if (viewMode === 'stack') {
-    return <StackRoomCard room={room} onDelete={onDelete} onUpdateCover={onUpdateCover} />;
+    return <StackRoomCard room={room} onDelete={onDelete} onRefresh={onRefresh} onUpdateCover={onUpdateCover} />;
   }
-  return <GridRoomCard room={room} onDelete={onDelete} onUpdateCover={onUpdateCover} />;
+  return <GridRoomCard room={room} onDelete={onDelete} onRefresh={onRefresh} onUpdateCover={onUpdateCover} />;
 };

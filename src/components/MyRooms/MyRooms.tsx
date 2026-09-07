@@ -142,7 +142,7 @@ const useRooms = (user: any) => {
 
 export const MyRooms = () => {
   const { user } = useContext(MetadataContext);
-  const { rooms, loading, error, deleteRoom, updateRoomCover } = useRooms(user);
+  const { rooms, loading, error, deleteRoom, updateRoomCover, refresh } = useRooms(user);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState("newest");
@@ -259,6 +259,7 @@ export const MyRooms = () => {
                     key={room.roomId}
                     room={room}
                     onDelete={deleteRoom}
+                    onRefresh={refresh}
                     onUpdateCover={updateRoomCover}
                     viewMode={viewMode}
                   />

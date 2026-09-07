@@ -33,6 +33,7 @@ import {
   IconActivity,
   IconInfinity,
   IconTrash,
+  IconPlayerStop,
 } from "@tabler/icons-react";
 import { serverPath, getRoomUrl, addAndSavePasscode, getSavedPasscodes } from "../../utils/utils";
 import { getAccessToken, supabase } from "../../utils/supabaseClient";
@@ -246,6 +247,32 @@ export const RoomDetails = () => {
       console.error(e);
     } finally {
       setIsExtending(false);
+    }
+  };
+
+  const [isEnding, setIsEnding] = useState(false);
+
+  const handleEndRoom = async () => {
+    if (!room) return;
+    if (!window.confirm("Are you sure you want to end this room? Guests will no longer be able to watch or join.")) {
+      return;
+    }
+    setIsEnding(true);
+    try {
+      const token = await getAccessToken();
+      const user = await supabase.auth.getUser();
+      const response = await fetch(`${serverPath}/endRoom`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: user.data.user?.id, token, roomId: room.roomId }),
+      });
+      if (response.ok) {
+        await fetchRoomDetails();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsEnding(false);
     }
   };
 
@@ -705,20 +732,33 @@ export const RoomDetails = () => {
             <div className={styles.dangerInfo}>
               <div className={styles.dangerTitle}>
                 <IconAlertTriangle size={16} />
-                <span>Danger Zone</span>
+                <span>Room Management</span>
               </div>
               <div className={styles.dangerDesc}>
-                Delete this room forever. All messages and room settings will be lost. You cannot undo this.
+                End the room now or permanently delete it.
               </div>
             </div>
-            <Button
-              color="red"
-              variant="outline"
-              onClick={() => setDeleteConfirm(true)}
-              leftSection={<IconTrash size={15} />}
-            >
-              Delete Room
-            </Button>
+            <Group gap="xs">
+              {room.status !== "ended" && room.status !== "expired" && (
+                <Button
+                  color="orange"
+                  variant="light"
+                  onClick={handleEndRoom}
+                  loading={isEnding}
+                  leftSection={<IconPlayerStop size={15} />}
+                >
+                  End Room
+                </Button>
+              )}
+              <Button
+                color="red"
+                variant="outline"
+                onClick={() => setDeleteConfirm(true)}
+                leftSection={<IconTrash size={15} />}
+              >
+                Delete Room
+              </Button>
+            </Group>
           </div>
         </div>
 
