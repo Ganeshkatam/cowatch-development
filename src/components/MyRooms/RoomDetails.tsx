@@ -357,17 +357,6 @@ export const RoomDetails = () => {
         <div className={styles.heroContent}>
           {/* Top Bar inside Hero */}
           <div className={styles.heroTopRow}>
-            <Button
-              variant="transparent"
-              leftSection={<IconArrowLeft size={16} />}
-              onClick={() => history.push("/rooms")}
-              pl={0}
-              color="gray"
-              style={{ color: "rgba(255,255,255,0.75)" }}
-            >
-              Back to My Rooms
-            </Button>
-
             <div className={styles.statusPill}>
               <div className={`${styles.pulseDot} ${statusConfig.dotClass}`} />
               <span style={{ color: "rgba(255,255,255,0.9)" }}>{statusConfig.label}</span>
