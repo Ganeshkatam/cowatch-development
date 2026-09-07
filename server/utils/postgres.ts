@@ -8,7 +8,40 @@ if (config.DATABASE_URL) {
   postgres = createPool(config.DATABASE_URL);
 }
 
-function createPool(connectionString: string): Pool {
+export function normalizePostgresConnectionString(connStr: string): string {
+  if (!connStr) return connStr;
+  // If direct Supabase host (IPv6 only) is passed, route to IPv4 pooler to prevent ENETUNREACH errors on cloud hosts
+  const match = connStr.match(
+    /^postgres(?:ql)?:\/\/postgres(?::([^@]*))?@db\.([a-z0-9]+)\.supabase\.co(?::\d+)?\/(.*)$/i,
+  );
+  if (match) {
+    const password = match[1] || "";
+    const projectRef = match[2];
+    const rest = match[3] || "postgres";
+    const region =
+      process.env.SUPABASE_REGION ||
+      (projectRef === "mbnuunibouzwteoeuyfh"
+        ? "ap-south-1"
+        : projectRef === "ymsgibplkzuxicwfhefw"
+          ? "ap-south-1"
+          : "");
+    if (region) {
+      const cleanRest = rest.split("?")[0];
+      const auth = password
+        ? `postgres.${projectRef}:${password}`
+        : `postgres.${projectRef}`;
+      const poolerUrl = `postgresql://${auth}@aws-0-${region}.pooler.supabase.com:5432/${cleanRest}`;
+      console.log(
+        `[PostgreSQL] Direct Supabase host detected. Automatically routed through IPv4 pooler: aws-0-${region}.pooler.supabase.com:5432`,
+      );
+      return poolerUrl;
+    }
+  }
+  return connStr;
+}
+
+function createPool(rawConnectionString: string): Pool {
+  const connectionString = normalizePostgresConnectionString(rawConnectionString);
   const pool = new Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
