@@ -62,7 +62,7 @@ export default defineConfig({
         target: "http://localhost:8080",
         ws: true,
       },
-      "^/(ping|subtitle|downloadSubtitles|searchSubtitles|stats|api|health|timeSeries|youtube|youtubePlaylist|createRoom|updateRoomCover|updateRoomSettings|deleteAccount|metadata|roomData|resolveShard|listRooms|roomDetails|extendRoom|deleteRoom|generateName|proxy)": {
+      "^/(ping|subtitle|downloadSubtitles|searchSubtitles|stats|api|health|timeSeries|youtube|youtubePlaylist|createRoom|updateRoomCover|updateRoomSettings|deleteAccount|metadata|roomData|resolveShard|listRooms|roomDetails|deleteRoom|generateName|proxy)": {
         target: "http://localhost:8080",
         changeOrigin: true,
       },

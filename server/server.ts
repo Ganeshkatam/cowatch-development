@@ -594,7 +594,7 @@ app.post("/updateRoomSettings", async (req, res) => {
   } catch (err: any) {
     try {
       await client.query('ROLLBACK');
-    } catch {}
+    } catch { }
     console.error("updateRoomSettings error:", err);
     res.status(500).json({ error: err.message });
   } finally {
@@ -823,94 +823,6 @@ app.get("/roomDetails", async (req, res) => {
   }
 });
 
-app.post("/extendRoom", async (req, res) => {
-  const decoded = await validateUserToken(
-    String(req.body?.uid),
-    String(req.body?.token),
-  );
-  if (decoded === "EMAIL_NOT_VERIFIED") {
-    res.status(403).json({ error: { code: "EMAIL_NOT_VERIFIED", message: "Email verification is required." } });
-    return;
-  }
-  if (!decoded) {
-    res.status(400).json({ error: "invalid user token" });
-    return;
-  }
-  const roomId = req.body?.roomId;
-  const durationSeconds = Number(req.body?.durationSeconds);
-  if (!roomId || !durationSeconds) {
-    res.status(400).json({ error: "missing parameters" });
-    return;
-  }
-
-  // max duration 3 hours = 10800s
-  if (durationSeconds > 10800 || durationSeconds < 0) {
-    res.status(400).json({ error: "invalid duration" });
-    return;
-  }
-
-  try {
-    const selectResult = await postgres?.query(
-      `SELECT "startedAt", "expiresAt", "status" FROM rooms WHERE "roomId" = $1 AND owner_id = $2`,
-      [roomId, decoded.uid]
-    );
-
-    if (!selectResult || selectResult.rows.length === 0) {
-      res.status(400).json({ error: "Room not found or unowned" });
-      return;
-    }
-
-    const roomRow = selectResult.rows[0];
-    if (roomRow.status !== "active" && roomRow.status !== "scheduled" && roomRow.status !== "inactive") {
-      res.status(400).json({ error: "Room cannot be extended in its current state" });
-      return;
-    }
-
-    const startedAt = new Date(roomRow.startedAt || Date.now()).getTime();
-    const proposedExpiresAt = Date.now() + durationSeconds * 1000;
-    const maxExpiresAt = startedAt + 3 * 60 * 60 * 1000; // 3 hours max active duration
-
-    if (proposedExpiresAt > maxExpiresAt) {
-      res.status(400).json({
-        error: {
-          code: "ROOM_MAX_DURATION_EXCEEDED",
-          message: "This room cannot be extended beyond its maximum duration.",
-        },
-      });
-      return;
-    }
-
-    const updateResult = await postgres?.query(
-      `UPDATE rooms 
-       SET "expiresAt" = $1 
-       WHERE "roomId" = $2 AND owner_id = $3 AND status IN ('active', 'scheduled', 'inactive')
-       RETURNING "expiresAt"`,
-      [new Date(proposedExpiresAt), roomId, decoded.uid],
-    );
-
-    if (updateResult && updateResult.rowCount && updateResult.rowCount > 0) {
-      const newExpiresAt = updateResult.rows[0].expiresAt;
-
-      // Insert audit log
-      await postgres?.query(`
-        INSERT INTO room_lifecycle_events 
-        ("roomId", actor, event, "previousStatus", "newStatus", "previousExpiresAt", "newExpiresAt", reason)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `, [roomId, decoded.uid, 'room.extended', roomRow.status, roomRow.status, roomRow.expiresAt, newExpiresAt, 'user extended']);
-
-      const memoryRoom = rooms.get(roomId);
-      if (memoryRoom) {
-        memoryRoom.expiresAt = new Date(newExpiresAt);
-      }
-      res.json({ expiresAt: newExpiresAt });
-    } else {
-      res.status(400).json({ error: "Room not found, unowned, or cannot be extended" });
-    }
-  } catch (e) {
-    console.error("Error extending room:", e);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
 
 app.post("/endRoom", async (req, res) => {
   const decoded = await validateUserToken(

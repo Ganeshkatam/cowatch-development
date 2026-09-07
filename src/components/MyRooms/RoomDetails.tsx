@@ -140,7 +140,6 @@ export const RoomDetails = () => {
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedRoomId, setCopiedRoomId] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isExtending, setIsExtending] = useState(false);
   const [editModalOpened, setEditModalOpened] = useState(false);
 
   const fetchRoomDetails = async () => {
@@ -228,27 +227,15 @@ export const RoomDetails = () => {
     }
   };
 
-  const handleExtend = async () => {
-    if (!room) return;
-    setIsExtending(true);
-    try {
-      const token = await getAccessToken();
-      const user = await supabase.auth.getUser();
-      const durationSeconds = 3600; // 1 hour
-      const response = await fetch(`${serverPath}/extendRoom`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: user.data.user?.id, token, roomId: room.roomId, durationSeconds }),
-      });
-      if (response.ok) {
-        await fetchRoomDetails();
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsExtending(false);
-    }
-  };
+  const [nowTime, setNowTime] = useState(Date.now());
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowTime(Date.now());
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   const [endConfirm, setEndConfirm] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
@@ -304,8 +291,8 @@ export const RoomDetails = () => {
   // Time remaining calculator
   const getExpiresIn = () => {
     if (!room.expiresAt) return null;
-    const diff = new Date(room.expiresAt).getTime() - Date.now();
-    if (diff <= 0) return null;
+    const diff = new Date(room.expiresAt).getTime() - nowTime;
+    if (diff <= 0) return "Expired";
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     if (hours > 0) return `${hours}h ${mins}m left`;
@@ -806,19 +793,6 @@ export const RoomDetails = () => {
                   {expiresInText || "—"}
                 </div>
                 <div className={styles.countdownLabel}>Time left until room closes</div>
-                {isOpenable && (
-                  <Button
-                    variant="light"
-                    color="violet"
-                    size="sm"
-                    fullWidth
-                    mt="md"
-                    onClick={handleExtend}
-                    loading={isExtending}
-                  >
-                    Add 1 More Hour
-                  </Button>
-                )}
               </div>
             )}
 
@@ -929,6 +903,18 @@ export const RoomDetails = () => {
           </Button>
           <Button color="orange" onClick={confirmEndRoom} loading={isEnding}>
             End Room
+          </Button>
+        </Group>
+      </Modal>
+
+      {/* NOTICE / ERROR MODAL */}
+      <Modal opened={Boolean(actionError)} onClose={() => setActionError(null)} title="Notice" centered>
+        <Text size="sm" mb="lg">
+          {actionError}
+        </Text>
+        <Group justify="flex-end">
+          <Button onClick={() => setActionError(null)} color="violet">
+            OK
           </Button>
         </Group>
       </Modal>

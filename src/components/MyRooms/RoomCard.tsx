@@ -511,38 +511,6 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
     }
   };
 
-  const handleExtend = async (minutes: number) => {
-    try {
-      const token = await getAccessToken();
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) throw new Error("Please log in");
-      const durationSeconds = minutes * 60;
-      const response = await fetch(`${serverPath}/extendRoom`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uid: user.data.user.id,
-          token,
-          roomId: room.roomId,
-          durationSeconds,
-        }),
-      });
-      const contentType = response.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        throw new Error("Invalid response from server");
-      }
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error?.message || data.error || "Failed to extend room");
-      }
-      if (onRefresh) {
-        onRefresh();
-      }
-    } catch (e: any) {
-      setActionError(e.message || "Failed to extend room");
-    }
-  };
-
   const handleEndRoomClick = () => {
     setEndModalOpened(true);
   };
@@ -647,18 +615,7 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
 
     if (computedState !== 'Expired' && computedState !== 'Ended') {
       items.push(<Menu.Divider key="div1" />);
-      if (computedState === 'Active' && !isPermanent) {
-        items.push(
-          <Menu.Item key="extend30" leftSection={<IconHourglassHigh size={14} />} onClick={() => handleExtend(30)}>
-            Extend +30 min
-          </Menu.Item>
-        );
-        items.push(
-          <Menu.Item key="extend60" leftSection={<IconHourglassHigh size={14} />} onClick={() => handleExtend(60)}>
-            Extend +1 hour
-          </Menu.Item>
-        );
-      }
+
       items.push(
         <Menu.Item key="settings" leftSection={<IconSettings size={14} />} onClick={() => setEditModalOpened(true)}>
           Edit Room
