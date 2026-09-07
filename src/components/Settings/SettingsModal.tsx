@@ -51,6 +51,8 @@ interface SettingsModalProps {
   setRoomDescription: (desc: string) => void;
   mediaPath: string | undefined;
   setMediaPath: (path: string) => void;
+  isWaitingLoungeEnabled?: boolean;
+  setIsWaitingLoungeEnabled?: (enabled: boolean) => void;
 }
 
 export const SettingsModal = ({
@@ -70,6 +72,8 @@ export const SettingsModal = ({
   setRoomTitle,
   roomDescription,
   setRoomDescription,
+  isWaitingLoungeEnabled,
+  setIsWaitingLoungeEnabled,
 }: SettingsModalProps) => {
   const { user, profile } = useContext(MetadataContext);
   
@@ -79,6 +83,7 @@ export const SettingsModal = ({
   const [draftLock, setDraftLock] = useState(Boolean(roomLock));
   const [draftPermanent, setDraftPermanent] = useState(false);
   const [draftChatEnabled, setDraftChatEnabled] = useState(!isChatDisabled);
+  const [draftWaitingLounge, setDraftWaitingLounge] = useState(Boolean(isWaitingLoungeEnabled));
   
   // Local settings draft
   const [draftNotif, setDraftNotif] = useState(Boolean(getCurrentSettings().disableChatSound));
@@ -106,6 +111,7 @@ export const SettingsModal = ({
       setDraftDescription(roomDescription || "");
       setDraftLock(Boolean(roomLock));
       setDraftChatEnabled(!isChatDisabled);
+      setDraftWaitingLounge(Boolean(isWaitingLoungeEnabled));
       
       setDraftNotif(Boolean(getCurrentSettings().disableChatSound));
       setDraftCamera(profile?.pref_camera_on ?? false);
@@ -137,7 +143,7 @@ export const SettingsModal = ({
       };
       fetchRoomData();
     }
-  }, [modalOpen, roomTitle, roomDescription, roomLock, isChatDisabled, profile, roomId]);
+  }, [modalOpen, roomTitle, roomDescription, roomLock, isChatDisabled, isWaitingLoungeEnabled, profile, roomId]);
 
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [copiedCurrentPassword, setCopiedCurrentPassword] = useState(false);
@@ -248,6 +254,13 @@ export const SettingsModal = ({
         if (draftLock !== Boolean(roomLock)) {
           setRoomLock(draftLock);
         }
+
+        if (draftWaitingLounge !== Boolean(isWaitingLoungeEnabled)) {
+          socket?.emit("CMD:setWaitingLounge", { enabled: draftWaitingLounge });
+          if (setIsWaitingLoungeEnabled) {
+            setIsWaitingLoungeEnabled(draftWaitingLounge);
+          }
+        }
       }
 
       // 3. Save Local Settings
@@ -339,6 +352,14 @@ export const SettingsModal = ({
                 description="Allow participants to send messages."
                 checked={draftChatEnabled}
                 onChange={(e) => setDraftChatEnabled(e.currentTarget.checked)}
+                disabled={owner !== user?.id}
+                size="md"
+              />
+              <Switch
+                label="Waiting Lounge"
+                description="Require host approval before guests can enter the room."
+                checked={draftWaitingLounge}
+                onChange={(e) => setDraftWaitingLounge(e.currentTarget.checked)}
                 disabled={owner !== user?.id}
                 size="md"
               />

@@ -39,6 +39,11 @@ interface VideoChatProps {
   getLeaderTime: () => number;
   roomId?: string;
   onOpenInviteModal?: () => void;
+  waitingList?: WaitingGuest[];
+  onAdmitUser?: (clientId: string) => void;
+  onDeclineUser?: (clientId: string) => void;
+  onAdmitAll?: () => void;
+  isOwner?: boolean;
 }
 
 export class VideoChatErrorBoundary extends React.Component<
@@ -410,14 +415,108 @@ export class VideoChat extends React.Component<VideoChatProps> {
   };
 
   render() {
-    const { participants, pictureMap, nameMap, tsMap, socket, owner } =
-      this.props;
+    const {
+      participants,
+      pictureMap,
+      nameMap,
+      tsMap,
+      socket,
+      owner,
+      waitingList,
+      onAdmitUser,
+      onDeclineUser,
+      onAdmitAll,
+      isOwner,
+    } = this.props;
     const ourStream = window.cowatch.ourStream;
     const videoRefs = window.cowatch.videoRefs;
     const selfId = getOrCreateClientId();
 
     return (
       <div className={styles.container}>
+        {isOwner && waitingList && waitingList.length > 0 && (
+          <div className={styles.waitingSection}>
+            <div className={styles.waitingHeader}>
+              <div className={styles.waitingHeaderTitle}>
+                <span>Waiting Lounge</span>
+                <span className={styles.waitingBadge}>{waitingList.length}</span>
+              </div>
+              {onAdmitAll && (
+                <button
+                  type="button"
+                  className={styles.waitingAdmitAllBtn}
+                  onClick={onAdmitAll}
+                  title="Admit all waiting guests"
+                >
+                  Admit All
+                </button>
+              )}
+            </div>
+
+            <div className={styles.waitingList}>
+              {waitingList.map((guest) => {
+                const guestName = guest.name || "Guest";
+                const guestAvatar =
+                  guest.picture ||
+                  getDefaultPicture(
+                    guestName,
+                    getColorForStringHex(guest.clientId)
+                  );
+
+                return (
+                  <div key={guest.clientId} className={styles.waitingRow}>
+                    <img
+                      src={guestAvatar}
+                      alt={guestName}
+                      className={styles.waitingAvatar}
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        const fallback = getDefaultPicture(
+                          guestName,
+                          getColorForStringHex(guest.clientId)
+                        );
+                        if (target.src !== fallback) {
+                          target.src = fallback;
+                        }
+                      }}
+                    />
+                    <div className={styles.waitingMeta}>
+                      <span className={styles.waitingName} title={guestName}>
+                        {guestName}
+                      </span>
+                      <span className={styles.waitingTime}>Waiting to join</span>
+                    </div>
+
+                    <div className={styles.waitingActions}>
+                      {onAdmitUser && (
+                        <button
+                          type="button"
+                          className={styles.admitBtn}
+                          onClick={() => onAdmitUser(guest.clientId)}
+                          title={`Admit ${guestName}`}
+                          aria-label={`Admit ${guestName}`}
+                        >
+                          <IconCheck size={14} stroke={2.5} />
+                        </button>
+                      )}
+                      {onDeclineUser && (
+                        <button
+                          type="button"
+                          className={styles.declineBtn}
+                          onClick={() => onDeclineUser(guest.clientId)}
+                          title={`Decline ${guestName}`}
+                          aria-label={`Decline ${guestName}`}
+                        >
+                          <IconX size={14} stroke={2.5} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {participants.map((p) => {
           const isSelf = p.id === selfId;
           const displayName =

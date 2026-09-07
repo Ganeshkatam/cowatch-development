@@ -120,3 +120,25 @@ interface ShardMetric {
   users: number;
   vbWaiting: number;
 }
+
+interface WaitingGuest {
+  clientId: string;
+  socketId?: string;
+  uid?: string;
+  name: string;
+  picture?: string;
+  joinedAt: number;
+}
+
+interface WaitingLoungeState {
+  inLounge: boolean;
+  waitingCount?: number;
+  position?: number;
+  host?: {
+    name: string;
+    picture: string;
+    online: boolean;
+  };
+  rejected?: boolean;
+}
+

@@ -134,10 +134,14 @@ export class Room {
   public creator: string | undefined = undefined; // email of the user who created the room (just used for stats)
   public lock: string | undefined = undefined; // uid of the user who locked the room
   public playlist: PlaylistVideo[] = [];
+  public isWaitingLoungeEnabled: boolean = false;
 
   // Non-serialized state
   public roomId: string;
   public roster: User[] = [];
+  private waitingLounge: Map<string, WaitingGuest> = new Map();
+  private admittedUids: Set<string> = new Set();
+  private admittedClientIds: Set<string> = new Set();
   private lastTsMap = Date.now();
   private tsMap: NumberDict = {};
   private io: Server;
@@ -187,7 +191,7 @@ export class Room {
       });
       if (this.video) {
         this.lastTsMap = Date.now();
-        io.of(roomId).emit("REC:tsMap", this.tsMap);
+        this.emitToRoom("REC:tsMap", this.tsMap);
       }
     }, 1000);
 
@@ -292,6 +296,7 @@ export class Room {
         next(new Error("Invalid clientId format"));
         return;
       }
+      socket.clientId = clientId;
       // If Redis isn't enabled we'll just allow
       if (redis) {
         const key = "session:" + clientId;
@@ -319,8 +324,20 @@ export class Room {
       }
       // Keep track of the current socketID associated with this client (only used for signaling and kicking)
       this.socketIdMap[clientId] = socket.id;
-      if (!this.roster.find(user => user.id === clientId)) {
-        this.roster.push({ id: clientId });
+      if (this.isAdmitted(socket)) {
+        if (!this.roster.find((user) => user.id === clientId)) {
+          this.roster.push({ id: clientId });
+        }
+      } else {
+        const existing = this.waitingLounge.get(clientId);
+        this.waitingLounge.set(clientId, {
+          clientId,
+          socketId: socket.id,
+          uid: socket.uid || undefined,
+          name: this.nameMap[clientId] || "Guest",
+          picture: this.pictureMap[clientId] || undefined,
+          joinedAt: existing?.joinedAt || Date.now(),
+        });
       }
 
       if (this.inactivityTimeout) {
@@ -405,12 +422,60 @@ export class Room {
         return !owner || socket.uid === owner;
       };
 
-      socket.on("CMD:name", (data: unknown) =>
-        this.changeUserName(socket, String(data)),
-      );
-      socket.on("CMD:picture", (data: unknown) =>
-        this.changeUserPicture(socket, String(data)),
-      );
+      const validateAdmitted = () => {
+        return this.isAdmitted(socket);
+      };
+
+      socket.on("CMD:admitUser", async (data: { clientId: string }) => {
+        if ((await validateOwner()) && validateNotExpired() && data?.clientId) {
+          await this.admitGuest(data.clientId);
+        }
+      });
+      socket.on("CMD:admitAll", async () => {
+        if ((await validateOwner()) && validateNotExpired()) {
+          await this.admitAllGuests();
+        }
+      });
+      socket.on("CMD:declineUser", async (data: { clientId: string }) => {
+        if ((await validateOwner()) && validateNotExpired() && data?.clientId) {
+          this.declineGuest(data.clientId);
+        }
+      });
+      socket.on("CMD:setWaitingLounge", async (data: { enabled: boolean }) => {
+        if ((await validateOwner()) && validateNotExpired() && data !== undefined) {
+          this.isWaitingLoungeEnabled = Boolean(data.enabled);
+          if (!this.isWaitingLoungeEnabled) {
+            await this.admitAllGuests();
+          }
+          this.emitToRoom("REC:waitingLoungeEnabled", { enabled: this.isWaitingLoungeEnabled });
+          this.broadcastWaitingListToHost();
+          this.saveRoom().catch(console.warn);
+        }
+      });
+      socket.on("CMD:leaveLounge", () => {
+        if (this.waitingLounge.has(socket.clientId)) {
+          this.waitingLounge.delete(socket.clientId);
+          this.broadcastWaitingLoungeStateToWaitingGuests();
+          this.broadcastWaitingListToHost();
+        }
+      });
+
+      socket.on("CMD:name", (data: unknown) => {
+        this.changeUserName(socket, String(data));
+        const guest = this.waitingLounge.get(socket.clientId);
+        if (guest) {
+          guest.name = String(data);
+          this.broadcastWaitingListToHost();
+        }
+      });
+      socket.on("CMD:picture", (data: unknown) => {
+        this.changeUserPicture(socket, String(data));
+        const guest = this.waitingLounge.get(socket.clientId);
+        if (guest) {
+          guest.picture = String(data);
+          this.broadcastWaitingListToHost();
+        }
+      });
       socket.on("CMD:uid", async (raw: unknown) => {
         let data = raw as { uid: string; token: string };
         // Called when the user logs in, sets the socket's auth state
@@ -436,57 +501,75 @@ export class Room {
                 const resolvedName = profile.display_name?.trim() || profile.username?.trim();
                 if (resolvedName && (!this.nameMap[socket.clientId] || this.nameMap[socket.clientId].startsWith("Guest") || this.nameMap[socket.clientId] === socket.clientId)) {
                   this.nameMap[socket.clientId] = resolvedName;
-                  this.io.of(this.roomId).emit("REC:nameMap", this.nameMap);
+                  this.emitToRoom("REC:nameMap", this.nameMap);
                 }
                 if (profile.avatar_url && !this.pictureMap[socket.clientId]) {
                   this.pictureMap[socket.clientId] = profile.avatar_url;
-                  this.io.of(this.roomId).emit("REC:pictureMap", this.pictureMap);
+                  this.emitToRoom("REC:pictureMap", this.pictureMap);
                 }
               }
             } catch (err) {
               console.warn("Failed to fetch profile in CMD:uid", err);
             }
           }
+
+          if (this.waitingLounge.has(socket.clientId)) {
+            if (this.isAdmitted(socket)) {
+              await this.admitGuest(socket.clientId);
+            } else {
+              const guest = this.waitingLounge.get(socket.clientId);
+              if (guest) {
+                guest.uid = decoded.uid;
+                if (this.nameMap[socket.clientId]) {
+                  guest.name = this.nameMap[socket.clientId];
+                }
+                if (this.pictureMap[socket.clientId]) {
+                  guest.picture = this.pictureMap[socket.clientId];
+                }
+                this.broadcastWaitingListToHost();
+              }
+            }
+          }
         }
       });
       socket.on("CMD:host", (data: unknown) => {
-        validateLock() && validateNotExpired() && this.startHosting(socket, String(data));
+        validateAdmitted() && validateLock() && validateNotExpired() && this.startHosting(socket, String(data));
       });
       socket.on("CMD:play", () => {
-        validateLock() && validateNotExpired() && this.playVideo(socket);
+        validateAdmitted() && validateLock() && validateNotExpired() && this.playVideo(socket);
       });
       socket.on("CMD:pause", () => {
-        validateLock() && validateNotExpired() && this.pauseVideo(socket);
+        validateAdmitted() && validateLock() && validateNotExpired() && this.pauseVideo(socket);
       });
       socket.on("CMD:seek", (data: unknown) => {
-        validateLock() && validateNotExpired() && this.seekVideo(socket, Number(data));
+        validateAdmitted() && validateLock() && validateNotExpired() && this.seekVideo(socket, Number(data));
       });
       socket.on("CMD:playbackRate", (data: unknown) => {
-        validateLock() && validateNotExpired() && this.setPlaybackRate(socket, Number(data));
+        validateAdmitted() && validateLock() && validateNotExpired() && this.setPlaybackRate(socket, Number(data));
       });
       socket.on("CMD:loop", (data: unknown) => {
-        validateLock() && validateNotExpired() && this.setLoop(Boolean(data));
+        validateAdmitted() && validateLock() && validateNotExpired() && this.setLoop(Boolean(data));
       });
       socket.on("CMD:ts", (data: unknown) =>
-        validateNotExpired() && this.setTimestamp(socket, Number(data)),
+        validateAdmitted() && validateNotExpired() && this.setTimestamp(socket, Number(data)),
       );
       socket.on("CMD:chat", (data: unknown) =>
-        validateNotExpired() && this.sendChatMessage(socket, String(data)),
+        validateAdmitted() && validateNotExpired() && this.sendChatMessage(socket, String(data)),
       );
       socket.on("CMD:chatV2", (data: unknown) =>
-        validateNotExpired() && this.sendChatMessage(socket, data),
+        validateAdmitted() && validateNotExpired() && this.sendChatMessage(socket, data),
       );
       socket.on("CMD:editMessage", (data: unknown) => {
-        validateNotExpired() && this.editMessage(socket, data);
+        validateAdmitted() && validateNotExpired() && this.editMessage(socket, data);
       });
       socket.on("CMD:addReaction", (data: unknown) =>
-        validateNotExpired() && this.addReaction(socket, data),
+        validateAdmitted() && validateNotExpired() && this.addReaction(socket, data),
       );
       socket.on("CMD:removeReaction", (data: unknown) => {
-        validateNotExpired() && this.removeReaction(socket, data);
+        validateAdmitted() && validateNotExpired() && this.removeReaction(socket, data);
       });
       socket.on("CMD:loadMessages", async (data: any) => {
-        if (!validateNotExpired()) return;
+        if (!validateAdmitted() || !validateNotExpired()) return;
         const beforeCursor = data?.beforeCursor;
         const messages = await loadRoomMessages(this.roomId, 50, beforeCursor);
         const formattedMessages = messages.map((row: any) => ({
@@ -503,29 +586,29 @@ export class Room {
         }));
         socket.emit("ROOM_MESSAGES", formattedMessages.reverse());
       });
-      socket.on("CMD:joinVideo", () => validateNotExpired() && this.joinVideo(socket));
-      socket.on("CMD:leaveVideo", () => validateNotExpired() && this.leaveVideo(socket));
+      socket.on("CMD:joinVideo", () => validateAdmitted() && validateNotExpired() && this.joinVideo(socket));
+      socket.on("CMD:leaveVideo", () => validateAdmitted() && validateNotExpired() && this.leaveVideo(socket));
       socket.on("CMD:joinScreenShare", (data) => {
-        validateLock() && validateNotExpired() && this.joinScreenSharing(socket, data);
+        validateAdmitted() && validateLock() && validateNotExpired() && this.joinScreenSharing(socket, data);
       });
       socket.on("CMD:userMute", (data: unknown) =>
-        validateNotExpired() && this.setUserMute(socket, data),
+        validateAdmitted() && validateNotExpired() && this.setUserMute(socket, data),
       );
-      socket.on("CMD:leaveScreenShare", () => validateNotExpired() && this.leaveScreenSharing(socket));
+      socket.on("CMD:leaveScreenShare", () => validateAdmitted() && validateNotExpired() && this.leaveScreenSharing(socket));
       socket.on("CMD:startVBrowser", (data: unknown) => {
-        validateLock() && validateNotExpired() && this.startVBrowser(socket, data);
+        validateAdmitted() && validateLock() && validateNotExpired() && this.startVBrowser(socket, data);
       });
       socket.on("CMD:stopVBrowser", () => {
-        validateLock() && validateNotExpired() && this.stopVBrowser();
+        validateAdmitted() && validateLock() && validateNotExpired() && this.stopVBrowser();
       });
       socket.on("CMD:changeController", (data: unknown) => {
-        validateLock() && validateNotExpired() && this.changeController(String(data));
+        validateAdmitted() && validateLock() && validateNotExpired() && this.changeController(String(data));
       });
       socket.on("CMD:subtitle", (data: unknown) => {
-        validateLock() && validateNotExpired() && this.addSubtitles(String(data));
+        validateAdmitted() && validateLock() && validateNotExpired() && this.addSubtitles(String(data));
       });
       socket.on("CMD:lock", async (data: unknown) => {
-        if (!validateNotExpired()) return;
+        if (!validateAdmitted() || !validateNotExpired()) return;
         const isOwner = Boolean(this.owner_id && socket.uid === this.owner_id);
         const isCurrentLockHolder = Boolean(this.lock && socket.uid === this.lock);
         if (!this.lock || isOwner || isCurrentLockHolder) {
@@ -535,9 +618,9 @@ export class Room {
         }
       });
       socket.on("CMD:askHost", () => {
-        validateNotExpired() && socket.emit("REC:host", this.getHostState());
+        validateAdmitted() && validateNotExpired() && socket.emit("REC:host", this.getHostState());
       });
-      socket.on("CMD:getRoomState", () => validateNotExpired() && this.getRoomState(socket));
+      socket.on("CMD:getRoomState", () => validateAdmitted() && validateNotExpired() && this.getRoomState(socket));
       socket.on("CMD:setRoomState", async (data: unknown) => {
         socket.emit("errorMessage", "Room settings cannot be changed while the room is active");
       });
@@ -545,16 +628,16 @@ export class Room {
         socket.emit("errorMessage", "Room settings cannot be changed while the room is active");
       });
       socket.on("CMD:playlistNext", (data: unknown) => {
-        validateLock() && validateNotExpired() && this.playlistNext(data);
+        validateAdmitted() && validateLock() && validateNotExpired() && this.playlistNext(data);
       });
       socket.on("CMD:playlistAdd", (data: unknown) => {
-        validateLock() && validateNotExpired() && this.playlistAdd(socket, String(data));
+        validateAdmitted() && validateLock() && validateNotExpired() && this.playlistAdd(socket, String(data));
       });
       socket.on("CMD:playlistMove", (data: unknown) => {
-        validateLock() && validateNotExpired() && this.playlistMove(data);
+        validateAdmitted() && validateLock() && validateNotExpired() && this.playlistMove(data);
       });
       socket.on("CMD:playlistDelete", (data: unknown) => {
-        validateLock() && validateNotExpired() && this.playlistDelete(Number(data));
+        validateAdmitted() && validateLock() && validateNotExpired() && this.playlistDelete(Number(data));
       });
       socket.on("CMD:kickUser", async (data: unknown) => {
         (await validateOwner()) && validateNotExpired() && this.kickUser(data);
@@ -564,13 +647,13 @@ export class Room {
       });
 
       socket.on("signal", (data: unknown) =>
-        validateNotExpired() && this.sendSignal(socket, data, "signal"),
+        validateAdmitted() && validateNotExpired() && this.sendSignal(socket, data, "signal"),
       );
       socket.on("signalSS", (data: unknown) =>
-        validateNotExpired() && this.sendSignal(socket, data, "signalSS"),
+        validateAdmitted() && validateNotExpired() && this.sendSignal(socket, data, "signalSS"),
       );
 
-socket.on("disconnect", () => this.onDisconnect(socket));
+      socket.on("disconnect", () => this.onDisconnect(socket));
 
       // Attempt to resolve profile from auth token if passed in handshake
       const authUid = socket.handshake.auth?.uid;
@@ -602,30 +685,41 @@ socket.on("disconnect", () => this.onDisconnect(socket));
         }
       }
 
-      // Async initialization (must happen after registering synchronous listeners to avoid dropping immediate client emits)
-      socket.emit("REC:host", this.getHostState());
-      socket.emit("REC:nameMap", this.nameMap);
-      socket.emit("REC:pictureMap", this.pictureMap);
-      socket.emit("REC:tsMap", this.tsMap);
-      socket.emit("REC:lock", this.lock);
-      const recentMessages = await loadRoomMessages(this.roomId, 50);
-      const formattedMessages = recentMessages.map((row: any) => ({
-        id: row.metadata?.clientId || 'unknown',
-        msg: row.message,
-        cmd: row.event_type || undefined,
-        timestamp: row.created_at.toISOString(),
-        videoTS: row.metadata?.videoTS,
-        dbId: row.id,
-        name: row.profile_name || row.metadata?.name,
-        picture: row.profile_picture || row.metadata?.picture,
-        userId: row.user_id || undefined,
-        updatedAt: row.updated_at ? row.updated_at.toISOString() : undefined,
-      }));
-      socket.emit("chatinit", formattedMessages.reverse());
-      socket.emit("ROOM_MESSAGES", formattedMessages);
-      socket.emit("playlist", this.playlist);
-      this.getRoomState(socket);
-      io.of(roomId).emit("roster", this.getRosterForApp());
+      if (!this.isAdmitted(socket)) {
+        await this.emitWaitingLoungeState(socket);
+        this.broadcastWaitingListToHost();
+      } else {
+        socket.join("admitted");
+        socket.emit("REC:waitingLounge", { inLounge: false });
+
+        socket.emit("REC:host", this.getHostState());
+        socket.emit("REC:nameMap", this.nameMap);
+        socket.emit("REC:pictureMap", this.pictureMap);
+        socket.emit("REC:tsMap", this.tsMap);
+        socket.emit("REC:lock", this.lock);
+        const recentMessages = await loadRoomMessages(this.roomId, 50);
+        const formattedMessages = recentMessages.map((row: any) => ({
+          id: row.metadata?.clientId || 'unknown',
+          msg: row.message,
+          cmd: row.event_type || undefined,
+          timestamp: row.created_at.toISOString(),
+          videoTS: row.metadata?.videoTS,
+          dbId: row.id,
+          name: row.profile_name || row.metadata?.name,
+          picture: row.profile_picture || row.metadata?.picture,
+          userId: row.user_id || undefined,
+          updatedAt: row.updated_at ? row.updated_at.toISOString() : undefined,
+        }));
+        socket.emit("chatinit", formattedMessages.reverse());
+        socket.emit("ROOM_MESSAGES", formattedMessages);
+        socket.emit("playlist", this.playlist);
+        this.getRoomState(socket);
+        this.emitToRoom("roster", this.getRosterForApp());
+
+        if (socket.uid && this.owner_id && socket.uid === this.owner_id) {
+          socket.emit("REC:waitingList", this.getWaitingList());
+        }
+      }
     });
   }
 
@@ -657,6 +751,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       creator: this.creator,
       playlist: this.playlist,
       loop: this.loop,
+      isWaitingLoungeEnabled: this.isWaitingLoungeEnabled,
     });
   };
 
@@ -693,6 +788,9 @@ socket.on("disconnect", () => this.onDisconnect(socket));
     }
     if (roomObj.loop) {
       this.loop = roomObj.loop;
+    }
+    if (roomObj.isWaitingLoungeEnabled !== undefined) {
+      this.isWaitingLoungeEnabled = roomObj.isWaitingLoungeEnabled;
     }
   };
 
@@ -814,8 +912,8 @@ socket.on("disconnect", () => this.onDisconnect(socket));
     this.tsMap = {};
     this.preventTSUpdate = true;
     setTimeout(() => (this.preventTSUpdate = false), 1000);
-    this.io.of(this.roomId).emit("REC:tsMap", this.tsMap);
-    this.io.of(this.roomId).emit("REC:host", this.getHostState());
+    this.emitToRoom("REC:tsMap", this.tsMap);
+    this.emitToRoom("REC:host", this.getHostState());
     if (socket && data) {
       const chatMsg = { id: socket.clientId, cmd: "host", msg: data };
       this.addChatMessage(socket, chatMsg);
@@ -826,7 +924,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
     // The room video is changing so remove room from vbrowser queue
     this.vBrowserQueue = undefined;
     // Resend the roster (updates screenshare state etc)
-    this.io.of(this.roomId).emit("roster", this.getRosterForApp());
+    this.emitToRoom("roster", this.getRosterForApp());
   };
 
   /**
@@ -880,8 +978,8 @@ socket.on("disconnect", () => this.onDisconnect(socket));
         });
       }
       // System events without a uid are still emitted live but never persisted
-      this.io.of(this.roomId).emit("REC:chat", chatWithTime);
-      this.io.of(this.roomId).emit("ROOM_MESSAGE", chatWithTime);
+      this.emitToRoom("REC:chat", chatWithTime);
+      this.emitToRoom("ROOM_MESSAGE", chatWithTime);
       return;
     }
     
@@ -904,9 +1002,9 @@ socket.on("disconnect", () => this.onDisconnect(socket));
     }
 
     // Still emit REC:chat for legacy UI compatibility while we transition
-    this.io.of(this.roomId).emit("REC:chat", { ...chatWithTime, dbId, userId: socket.uid });
+    this.emitToRoom("REC:chat", { ...chatWithTime, dbId, userId: socket.uid });
     // Emit new ROOM_MESSAGE event for the refactored frontend
-    this.io.of(this.roomId).emit("ROOM_MESSAGE", { ...chatWithTime, dbId, userId: socket.uid });
+    this.emitToRoom("ROOM_MESSAGE", { ...chatWithTime, dbId, userId: socket.uid });
   };
 
   private changeUserName = (socket: Socket, data: string) => {
@@ -917,7 +1015,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       return;
     }
     this.nameMap[socket.clientId] = data;
-    this.io.of(this.roomId).emit("REC:nameMap", this.nameMap);
+    this.emitToRoom("REC:nameMap", this.nameMap);
   };
 
   private changeUserPicture = (socket: Socket, data: string) => {
@@ -925,7 +1023,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       return;
     }
     this.pictureMap[socket.clientId] = data;
-    this.io.of(this.roomId).emit("REC:pictureMap", this.pictureMap);
+    this.emitToRoom("REC:pictureMap", this.pictureMap);
   };
 
   private startHosting = async (socket: Socket, data: string) => {
@@ -1012,7 +1110,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       return;
     }
     const next = this.playlist.shift();
-    this.io.of(this.roomId).emit("playlist", this.playlist);
+    this.emitToRoom("playlist", this.playlist);
     if (next) {
       this.cmdHost(null, next.url);
     }
@@ -1045,7 +1143,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
     } else {
       this.playlist.push(item);
     }
-    this.io.of(this.roomId).emit("playlist", this.playlist);
+    this.emitToRoom("playlist", this.playlist);
     const clientId = socket?.clientId;
     if (clientId) {
       const chatMsg = {
@@ -1063,7 +1161,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
   private playlistDelete = (index: number) => {
     if (index !== -1) {
       this.playlist.splice(index, 1);
-      this.io.of(this.roomId).emit("playlist", this.playlist);
+      this.emitToRoom("playlist", this.playlist);
     }
   };
 
@@ -1075,7 +1173,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
     if (data.index !== -1) {
       const items = this.playlist.splice(data.index, 1);
       this.playlist.splice(data.toIndex, 0, items[0]);
-      this.io.of(this.roomId).emit("playlist", this.playlist);
+      this.emitToRoom("playlist", this.playlist);
     }
   };
 
@@ -1116,7 +1214,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       return;
     }
     this.playbackRate = Number(data);
-    this.io.of(this.roomId).emit("REC:playbackRate", Number(data));
+    this.emitToRoom("REC:playbackRate", Number(data));
     const chatMsg = {
       id: socket.clientId,
       cmd: "playbackRate",
@@ -1130,7 +1228,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       return;
     }
     this.loop = data;
-    this.io.of(this.roomId).emit("REC:loop", data);
+    this.emitToRoom("REC:loop", data);
   };
 
   private setTimestamp = (socket: Socket, data: number) => {
@@ -1252,7 +1350,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
         updatedAt: row.updated_at.toISOString(),
       };
 
-      this.io.of(this.roomId).emit("REC:editMessage", updatedMsg);
+      this.emitToRoom("REC:editMessage", updatedMsg);
     } catch (e) {
       console.error("Failed to edit message:", e);
     }
@@ -1269,7 +1367,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
     }
     const reaction: Reaction = { user: socket.clientId, ...data };
     redisCount("addReaction");
-    this.io.of(this.roomId).emit("REC:addReaction", reaction);
+    this.emitToRoom("REC:addReaction", reaction);
   };
 
   private removeReaction = (socket: Socket, raw: unknown) => {
@@ -1282,7 +1380,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       return;
     }
     const reaction: Reaction = { user: socket.clientId, ...data };
-    this.io.of(this.roomId).emit("REC:removeReaction", reaction);
+    this.emitToRoom("REC:removeReaction", reaction);
   };
 
   private joinVideo = async (socket: Socket) => {
@@ -1291,7 +1389,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       match.isVideoChat = true;
       redisCount("videoChatStarts");
     }
-    this.io.of(this.roomId).emit("roster", this.getRosterForApp());
+    this.emitToRoom("roster", this.getRosterForApp());
   };
 
   private leaveVideo = async (socket: Socket) => {
@@ -1299,7 +1397,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
     if (match) {
       match.isVideoChat = false;
     }
-    this.io.of(this.roomId).emit("roster", this.getRosterForApp());
+    this.emitToRoom("roster", this.getRosterForApp());
   };
 
   private setUserMute = (socket: Socket, raw: unknown) => {
@@ -1311,7 +1409,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
     if (match) {
       match.isMuted = data.isMuted;
     }
-    this.io.of(this.roomId).emit("roster", this.getRosterForApp());
+    this.emitToRoom("roster", this.getRosterForApp());
   };
 
   private joinScreenSharing = (socket: Socket, raw: unknown) => {
@@ -1346,7 +1444,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       );
       redisCount("screenShareStarts");
     }
-    this.io.of(this.roomId).emit("roster", this.getRosterForApp());
+    this.emitToRoom("roster", this.getRosterForApp());
   };
 
   private leaveScreenSharing = (socket: Socket) => {
@@ -1356,7 +1454,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       return;
     }
     this.cmdHost(socket, "");
-    this.io.of(this.roomId).emit("roster", this.getRosterForApp());
+    this.emitToRoom("roster", this.getRosterForApp());
   };
 
   private startVBrowser = async (socket: Socket, raw: unknown) => {
@@ -1511,7 +1609,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
     }
     if (this.vBrowser) {
       this.vBrowser.controllerClient = data;
-      this.io.of(this.roomId).emit("REC:changeController", data);
+      this.emitToRoom("REC:changeController", data);
     }
   };
 
@@ -1520,7 +1618,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       return;
     }
     this.subtitle = data;
-    this.io.of(this.roomId).emit("REC:subtitle", this.subtitle);
+    this.emitToRoom("REC:subtitle", this.subtitle);
   };
 
   private lockRoom = async (socket: Socket, raw: unknown) => {
@@ -1530,7 +1628,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
     }
     const { uid, clientId } = socket;
     this.lock = data.locked ? uid : "";
-    this.io.of(this.roomId).emit("REC:lock", this.lock);
+    this.emitToRoom("REC:lock", this.lock);
     const chatMsg = {
       id: clientId,
       cmd: data.locked ? "lock" : "unlock",
@@ -1634,6 +1732,7 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       roomTitle: first?.roomTitle,
       roomDescription: first?.roomDescription,
       mediaPath: first?.mediaPath,
+      isWaitingLoungeEnabled: this.isWaitingLoungeEnabled,
     });
   };
 
@@ -1717,12 +1816,13 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       ]);
       const row = result.rows[0];
       this.isChatDisabled = Boolean(row?.isChatDisabled);
-      this.io.of(this.roomId).emit("REC:getRoomState", {
+      this.emitToRoom("REC:getRoomState", {
         owner: row?.owner_id,
         isChatDisabled: row?.isChatDisabled,
         roomTitle: row?.roomTitle,
         roomDescription: row?.roomDescription,
         mediaPath: row?.mediaPath,
+        isWaitingLoungeEnabled: this.isWaitingLoungeEnabled,
       });
       socket.emit("successMessage", "Saved admin settings");
     } catch (e) {
@@ -1750,17 +1850,231 @@ socket.on("disconnect", () => this.onDisconnect(socket));
     }
   };
 
+  public emitToRoom = (eventName: string, ...args: any[]) => {
+    this.io.of(this.roomId).to("admitted").emit(eventName, ...args);
+  };
+
+  private isAdmitted = (socket: Socket): boolean => {
+    if (!this.isWaitingLoungeEnabled) {
+      return true;
+    }
+    // Host is always admitted
+    if (socket.uid && this.owner_id && socket.uid === this.owner_id) {
+      return true;
+    }
+    // Authenticated guest: check UID
+    if (socket.uid && this.admittedUids.has(socket.uid)) {
+      return true;
+    }
+    // Anonymous guest fallback: check clientId
+    if (!socket.uid && this.admittedClientIds.has(socket.clientId)) {
+      return true;
+    }
+    return false;
+  };
+
+  private getHostInfo = async (): Promise<{ name: string; picture: string; online: boolean }> => {
+    let online = false;
+    let name = "Host";
+    let picture = "";
+
+    if (this.owner_id) {
+      const sockets = Array.from(this.io.of(this.roomId).sockets.values());
+      const hostSocket = sockets.find((s) => s.uid === this.owner_id);
+      if (hostSocket) {
+        online = true;
+        if (this.nameMap[hostSocket.clientId]) {
+          name = this.nameMap[hostSocket.clientId];
+        }
+        if (this.pictureMap[hostSocket.clientId]) {
+          picture = this.pictureMap[hostSocket.clientId];
+        }
+      }
+
+      if (!picture || name === "Host") {
+        if (postgres) {
+          try {
+            const res = await postgres.query(
+              "SELECT display_name, username, avatar_url FROM profiles WHERE id = $1 LIMIT 1",
+              [this.owner_id]
+            );
+            if (res.rows && res.rows.length > 0) {
+              const row = res.rows[0];
+              if (name === "Host" && (row.display_name || row.username)) {
+                name = (row.display_name?.trim() || row.username?.trim()) || "Host";
+              }
+              if (!picture && row.avatar_url) {
+                picture = row.avatar_url;
+              }
+            }
+          } catch (e) {
+            console.warn("Failed to fetch host profile for waiting lounge", e);
+          }
+        }
+      }
+    }
+
+    return { name, picture, online };
+  };
+
+  private emitWaitingLoungeState = async (socket: Socket) => {
+    const host = await this.getHostInfo();
+    const queueKeys = Array.from(this.waitingLounge.keys());
+    const positionIndex = queueKeys.indexOf(socket.clientId);
+    const position = positionIndex >= 0 ? positionIndex + 1 : 1;
+
+    const payload: WaitingLoungeState = {
+      inLounge: true,
+      waitingCount: this.waitingLounge.size,
+      position,
+      host,
+    };
+    socket.emit("REC:waitingLounge", payload);
+  };
+
+  private broadcastWaitingLoungeStateToWaitingGuests = async () => {
+    if (this.waitingLounge.size === 0) return;
+    const host = await this.getHostInfo();
+    const queueKeys = Array.from(this.waitingLounge.keys());
+
+    for (let i = 0; i < queueKeys.length; i++) {
+      const clientId = queueKeys[i];
+      const socketId = this.socketIdMap[clientId];
+      if (socketId) {
+        const socket = this.io.of(this.roomId).sockets.get(socketId);
+        if (socket) {
+          const payload: WaitingLoungeState = {
+            inLounge: true,
+            waitingCount: this.waitingLounge.size,
+            position: i + 1,
+            host,
+          };
+          socket.emit("REC:waitingLounge", payload);
+        }
+      }
+    }
+  };
+
+  private getWaitingList = (): WaitingGuest[] => {
+    return Array.from(this.waitingLounge.values()).map((guest) => ({
+      clientId: guest.clientId,
+      socketId: guest.socketId,
+      uid: guest.uid,
+      name: this.nameMap[guest.clientId] || guest.name || "Guest",
+      picture: this.pictureMap[guest.clientId] || guest.picture || "",
+      joinedAt: guest.joinedAt,
+    }));
+  };
+
+  private broadcastWaitingListToHost = () => {
+    if (!this.owner_id) return;
+    const list = this.getWaitingList();
+    const sockets = Array.from(this.io.of(this.roomId).sockets.values());
+    const hostSockets = sockets.filter((s) => s.uid === this.owner_id);
+    for (const hostSocket of hostSockets) {
+      hostSocket.emit("REC:waitingList", list);
+    }
+  };
+
+  private admitGuest = async (clientId: string) => {
+    const guest = this.waitingLounge.get(clientId);
+    if (!guest) return;
+
+    this.admittedClientIds.add(clientId);
+    if (guest.uid) {
+      this.admittedUids.add(guest.uid);
+    }
+
+    this.waitingLounge.delete(clientId);
+
+    if (!this.roster.find((u) => u.id === clientId)) {
+      this.roster.push({ id: clientId });
+    }
+
+    const socketId = this.socketIdMap[clientId];
+    const socket = socketId ? this.io.of(this.roomId).sockets.get(socketId) : undefined;
+    if (socket) {
+      socket.join("admitted");
+      socket.emit("REC:waitingLounge", { inLounge: false });
+
+      socket.emit("REC:host", this.getHostState());
+      socket.emit("REC:nameMap", this.nameMap);
+      socket.emit("REC:pictureMap", this.pictureMap);
+      socket.emit("REC:tsMap", this.tsMap);
+      socket.emit("REC:lock", this.lock);
+
+      const recentMessages = await loadRoomMessages(this.roomId, 50);
+      const formattedMessages = recentMessages.map((row: any) => ({
+        id: row.metadata?.clientId || "unknown",
+        msg: row.message,
+        cmd: row.event_type || undefined,
+        timestamp: row.created_at.toISOString(),
+        videoTS: row.metadata?.videoTS,
+        dbId: row.id,
+        name: row.profile_name || row.metadata?.name,
+        picture: row.profile_picture || row.metadata?.picture,
+        userId: row.user_id || undefined,
+        updatedAt: row.updated_at ? row.updated_at.toISOString() : undefined,
+      }));
+      socket.emit("chatinit", formattedMessages.reverse());
+      socket.emit("ROOM_MESSAGES", formattedMessages);
+      socket.emit("playlist", this.playlist);
+      this.getRoomState(socket);
+    }
+
+    this.emitToRoom("roster", this.getRosterForApp());
+    this.broadcastWaitingLoungeStateToWaitingGuests();
+    this.broadcastWaitingListToHost();
+  };
+
+  private admitAllGuests = async () => {
+    const clientIds = Array.from(this.waitingLounge.keys());
+    for (const clientId of clientIds) {
+      await this.admitGuest(clientId);
+    }
+  };
+
+  private declineGuest = (clientId: string) => {
+    const guest = this.waitingLounge.get(clientId);
+    if (!guest) return;
+
+    this.waitingLounge.delete(clientId);
+
+    const socketId = this.socketIdMap[clientId];
+    const socket = socketId ? this.io.of(this.roomId).sockets.get(socketId) : undefined;
+    if (socket) {
+      socket.emit("REC:waitingLounge", {
+        inLounge: true,
+        rejected: true,
+      });
+    }
+
+    this.broadcastWaitingLoungeStateToWaitingGuests();
+    this.broadcastWaitingListToHost();
+  };
+
   private onDisconnect = (socket: Socket) => {
     const { clientId } = socket;
+
+    if (this.waitingLounge.has(clientId)) {
+      this.waitingLounge.delete(clientId);
+      this.broadcastWaitingLoungeStateToWaitingGuests();
+      this.broadcastWaitingListToHost();
+    }
+
     // Disconnecting socket is the current one
     if (socket.id === this.socketIdMap[clientId]) {
       let index = this.roster.findIndex((user) => user.id === clientId);
       if (index > -1) {
         this.roster.splice(index, 1);
       }
-      this.io.of(this.roomId).emit("roster", this.getRosterForApp());
+      this.emitToRoom("roster", this.getRosterForApp());
       delete this.tsMap[clientId];
       delete this.socketIdMap[clientId];
+
+      if (socket.uid && this.owner_id && socket.uid === this.owner_id) {
+        this.broadcastWaitingLoungeStateToWaitingGuests();
+      }
 
       if (this.roster.length === 0) {
         if (this.inactivityTimeout) clearTimeout(this.inactivityTimeout);
@@ -1785,10 +2099,15 @@ socket.on("disconnect", () => this.onDisconnect(socket));
     if (!data) {
       return;
     }
+    this.admittedClientIds.delete(data.userToBeKicked);
     const userToBeKickedSocket = this.io
       .of(this.roomId)
       .sockets.get(this.socketIdMap[data.userToBeKicked]);
     if (userToBeKickedSocket) {
+      if (userToBeKickedSocket.uid) {
+        this.admittedUids.delete(userToBeKickedSocket.uid);
+      }
+      userToBeKickedSocket.leave("admitted");
       userToBeKickedSocket.emit("kicked");
       userToBeKickedSocket.disconnect();
     }
@@ -1828,8 +2147,8 @@ socket.on("disconnect", () => this.onDisconnect(socket));
       videoTS: row.metadata?.videoTS,
       dbId: row.id,
     }));
-    this.io.of(this.roomId).emit("chatinit", formattedMessages.reverse());
-    this.io.of(this.roomId).emit("ROOM_MESSAGES", formattedMessages);
+    this.emitToRoom("chatinit", formattedMessages.reverse());
+    this.emitToRoom("ROOM_MESSAGES", formattedMessages);
   };
 }
 

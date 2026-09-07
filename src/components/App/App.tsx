@@ -48,6 +48,8 @@ import { FileShareModal } from "../Modal/FileShareModal";
 import type { User } from "@supabase/supabase-js";
 import { supabase, safeGetSession } from "../../utils/supabaseClient";
 import { SubtitleModal } from "../Modal/SubtitleModal";
+import { WaitingLounge } from "../WaitingLounge/WaitingLounge";
+import { WaitingLoungeBanner } from "../WaitingLounge/WaitingLoungeBanner";
 import { HTML } from "./HTML";
 import { YouTube } from "./YouTube";
 import styles from "./App.module.css";
@@ -181,6 +183,9 @@ interface AppState {
   isLiveStream: boolean;
   settingsModalOpen: boolean;
   uploadController: AbortController | undefined;
+  waitingLoungeState: WaitingLoungeState | null;
+  waitingList: WaitingGuest[];
+  isWaitingLoungeEnabled: boolean;
 }
 
 export class App extends React.Component<AppProps, AppState> {
@@ -263,6 +268,9 @@ export class App extends React.Component<AppProps, AppState> {
     isLiveStream: false,
     settingsModalOpen: false,
     uploadController: undefined,
+    waitingLoungeState: null,
+    waitingList: [],
+    isWaitingLoungeEnabled: false,
   };
   socket: Socket = null!;
   mediasoupPubSocket: Socket | null = null;
@@ -983,6 +991,15 @@ export class App extends React.Component<AppProps, AppState> {
       },
     );
     socket.on("REC:getRoomState", this.handleRoomState);
+    socket.on("REC:waitingLounge", (data: WaitingLoungeState) => {
+      this.setState({ waitingLoungeState: data });
+    });
+    socket.on("REC:waitingList", (data: WaitingGuest[]) => {
+      this.setState({ waitingList: data || [] });
+    });
+    socket.on("REC:waitingLoungeEnabled", (data: { enabled: boolean }) => {
+      this.setState({ isWaitingLoungeEnabled: data.enabled });
+    });
     window.setInterval(() => {
       if (this.state.roomMedia) {
         const toSend = this.getRoomTSToSet(this.Player().getCurrentTime());
@@ -1108,6 +1125,9 @@ export class App extends React.Component<AppProps, AppState> {
     this.setRoomTitle(data.roomTitle);
     this.setRoomDescription(data.roomDescription);
     this.setMediaPath(data.mediaPath);
+    if (data.isWaitingLoungeEnabled !== undefined) {
+      this.setState({ isWaitingLoungeEnabled: data.isWaitingLoungeEnabled });
+    }
     this.setInviteLink(this.getInviteLink());
     window.history.replaceState("", "", this.getInviteLink());
   };
@@ -1129,6 +1149,23 @@ export class App extends React.Component<AppProps, AppState> {
   };
   setMediaPath = (mediaPath: string | undefined) => {
     this.setState({ mediaPath });
+  };
+
+  admitWaitingUser = (clientId: string) => {
+    this.socket?.emit("CMD:admitUser", { clientId });
+  };
+
+  declineWaitingUser = (clientId: string) => {
+    this.socket?.emit("CMD:declineUser", { clientId });
+  };
+
+  admitAllWaitingUsers = () => {
+    this.socket?.emit("CMD:admitAll");
+  };
+
+  setIsWaitingLoungeEnabled = (enabled: boolean) => {
+    this.socket?.emit("CMD:setWaitingLounge", { enabled });
+    this.setState({ isWaitingLoungeEnabled: enabled });
   };
 
   setRoomLock = async (locked: boolean) => {
@@ -2162,6 +2199,20 @@ export class App extends React.Component<AppProps, AppState> {
       );
     }
 
+    if (this.state.waitingLoungeState?.inLounge) {
+      return (
+        <WaitingLounge
+          state={this.state.waitingLoungeState}
+          roomId={this.state.roomId}
+          roomTitle={this.state.roomTitle}
+          onLeave={() => {
+            this.socket?.emit("CMD:leaveLounge");
+            window.location.href = "/";
+          }}
+        />
+      );
+    }
+
     const sharer = this.state.participants.find((p) => p.isScreenShare);
     const playlist = this.state.playlist;
     const controls = (
@@ -2199,6 +2250,15 @@ export class App extends React.Component<AppProps, AppState> {
     );
     return (
       <React.Fragment>
+        {Boolean(this.state.owner && this.context.user?.id === this.state.owner) &&
+          this.state.waitingList &&
+          this.state.waitingList.length > 0 && (
+            <WaitingLoungeBanner
+              waitingList={this.state.waitingList}
+              onAdmitAll={this.admitAllWaitingUsers}
+              onOpenPeople={() => this.setState({ currentTab: "video", showPeopleColumn: true })}
+            />
+          )}
         {this.state.isMultiSelectModalOpen && (
           <MultiStreamModal
             streams={this.state.fileSelection}
@@ -2296,6 +2356,8 @@ export class App extends React.Component<AppProps, AppState> {
           setRoomDescription={this.setRoomDescription}
           mediaPath={this.state.mediaPath}
           setMediaPath={this.setMediaPath}
+          isWaitingLoungeEnabled={this.state.isWaitingLoungeEnabled}
+          setIsWaitingLoungeEnabled={this.setIsWaitingLoungeEnabled}
         />
         {this.state.errorMessage && (
           <Alert
@@ -2720,6 +2782,15 @@ export class App extends React.Component<AppProps, AppState> {
                   <Tabs.Tab
                     value="people"
                     leftSection={<IconUsersGroup size={16} />}
+                    rightSection={
+                      Boolean(this.state.owner && this.context.user?.id === this.state.owner) &&
+                      this.state.waitingList &&
+                      this.state.waitingList.length > 0 ? (
+                        <Badge size="xs" color="violet" variant="filled" circle>
+                          {this.state.waitingList.length}
+                        </Badge>
+                      ) : undefined
+                    }
                     style={{ flexGrow: 1 }}
                   >
                     People ({this.state.participants.length})
@@ -2759,6 +2830,11 @@ export class App extends React.Component<AppProps, AppState> {
                       owner={this.state.owner}
                       getLeaderTime={this.getLeaderTime}
                       roomId={this.state.roomId}
+                      waitingList={this.state.waitingList}
+                      onAdmitUser={this.admitWaitingUser}
+                      onDeclineUser={this.declineWaitingUser}
+                      onAdmitAll={this.admitAllWaitingUsers}
+                      isOwner={Boolean(this.state.owner && this.context.user?.id === this.state.owner)}
                     />
                   </VideoChatErrorBoundary>
                 </Tabs.Panel>

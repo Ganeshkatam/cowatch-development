@@ -263,3 +263,148 @@
   color: var(--text-muted);
   margin-top: 2px;
 }
+
+/* Waiting Lounge Queue Management */
+.waitingSection {
+  margin-bottom: 14px;
+  background: rgba(139, 92, 246, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: var(--radius-md, 10px);
+  padding: 12px;
+}
+
+.waitingHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.waitingHeaderTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #C4B5FD;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.waitingBadge {
+  background: rgba(139, 92, 246, 0.25);
+  color: #DDD6FE;
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.waitingAdmitAllBtn {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  border: none;
+  border-radius: 6px;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.waitingAdmitAllBtn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.waitingList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.waitingRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(10, 12, 18, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.waitingAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.waitingMeta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.waitingName {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #F8FAFC;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.waitingTime {
+  font-size: 0.72rem;
+  color: #94A3B8;
+}
+
+.waitingActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34D399;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admitBtn:hover {
+  background: #10B981;
+  color: #FFFFFF;
+}
+
+.declineBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #F87171;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.declineBtn:hover {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
