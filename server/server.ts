@@ -489,6 +489,21 @@ app.post("/updateRoomCover", async (req, res) => {
   }
 
   if (postgres) {
+    const roomCheck = await postgres.query(
+      `SELECT status, "expiresAt", "isPermanent" FROM rooms WHERE "roomId" = $1 AND owner_id = $2`,
+      [roomId, decoded.uid]
+    );
+    if (roomCheck.rowCount === 0) {
+      res.status(404).json({ error: "Room not found or unauthorized" });
+      return;
+    }
+    const r = roomCheck.rows[0];
+    const isExpired = r.status === 'expired' || r.status === 'ended' || (!r.isPermanent && r.expiresAt && new Date(r.expiresAt).getTime() <= Date.now());
+    if (isExpired) {
+      res.status(400).json({ error: "Expired rooms cannot be edited." });
+      return;
+    }
+
     const result = await postgres.query(
       `UPDATE rooms SET "coverPhoto" = $1 WHERE "roomId" = $2 AND owner_id = $3 RETURNING "roomId"`,
       [coverPhoto, roomId, decoded.uid]
@@ -550,7 +565,10 @@ app.post("/updateRoomSettings", async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    const existingRoom = await client.query(`SELECT "expiresAt", "isSubRoom", "isPermanent" FROM rooms WHERE "roomId" = $1 AND owner_id = $2 FOR UPDATE`, [roomId, decoded.uid]);
+    const existingRoom = await client.query(
+      `SELECT "expiresAt", "isSubRoom", "isPermanent", status FROM rooms WHERE "roomId" = $1 AND owner_id = $2 FOR UPDATE`,
+      [roomId, decoded.uid]
+    );
 
     if (existingRoom.rowCount === 0) {
       await client.query('ROLLBACK');
@@ -559,6 +577,13 @@ app.post("/updateRoomSettings", async (req, res) => {
     }
 
     const room = existingRoom.rows[0];
+    const isExpired = room.status === 'expired' || room.status === 'ended' || (!room.isPermanent && room.expiresAt && new Date(room.expiresAt).getTime() <= Date.now());
+    if (isExpired) {
+      await client.query('ROLLBACK');
+      res.status(400).json({ error: "Expired rooms cannot be edited." });
+      return;
+    }
+
     const currentlyPermanent = Boolean(room.isPermanent);
 
     let newExpiresAt = room.expiresAt;
@@ -889,8 +914,8 @@ app.post("/endRoom", async (req, res) => {
     }
 
     const roomRow = selectResult.rows[0];
-    if (roomRow.status === "ended") {
-      res.json({ success: true, status: "ended" });
+    if (roomRow.status === "ended" || roomRow.status === "expired") {
+      res.json({ success: true, status: roomRow.status });
       return;
     }
 

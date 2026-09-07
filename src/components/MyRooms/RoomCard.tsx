@@ -17,6 +17,7 @@ import {
   Box,
   FileButton,
   Tooltip,
+  Alert,
 } from "@mantine/core";
 import {
   IconTrash,
@@ -33,6 +34,7 @@ import {
   IconEye,
   IconEyeOff,
   IconCheck,
+  IconAlertCircle,
 } from "@tabler/icons-react";
 import { type RoomSummary } from "./MyRooms";
 import {
@@ -109,6 +111,15 @@ export const EditRoomModal = ({
   onClose: () => void;
   onSuccess: () => void;
 }) => {
+  const computedState = getComputedState(room);
+  const isExpired = Boolean(
+    computedState === "Expired" ||
+    computedState === "Ended" ||
+    room.status === "expired" ||
+    room.status === "ended" ||
+    (!room.isPermanent && room.expiresAt && new Date(room.expiresAt).getTime() <= Date.now())
+  );
+
   const cleanId = room.roomId.startsWith("/") ? room.roomId.substring(1) : room.roomId;
   const initialPasscode =
     room.currentPasscode ||
@@ -168,6 +179,7 @@ export const EditRoomModal = ({
   };
 
   const handleFileChange = (payload: File | null) => {
+    if (isExpired) return;
     if (payload) {
       if (payload.size > 5 * 1024 * 1024) {
         setError("Cover photo too large (max 5MB).");
@@ -179,6 +191,10 @@ export const EditRoomModal = ({
   };
 
   const handleSave = async () => {
+    if (isExpired) {
+      setError("This room has expired and can no longer be edited.");
+      return;
+    }
     setError("");
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
@@ -273,13 +289,18 @@ export const EditRoomModal = ({
     <Modal opened={opened} onClose={onClose} title="Edit Room" size="lg" radius="md">
       <Stack gap="xl">
         <Text size="sm" c="dimmed" mt="-md">Update how your room appears and behaves.</Text>
+        {isExpired && (
+          <Alert color="red" variant="light" title="Room Closed" icon={<IconAlertCircle size={16} />}>
+            This room has expired or ended. Closed rooms can no longer be edited.
+          </Alert>
+        )}
         {error && <Text color="red" size="sm">{error}</Text>}
         
-        <Box>
+        <Box style={isExpired ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
           <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} mb="md">Room Identity</Text>
           <Stack gap="md">
-            <TextInput label="Room Title" value={title} onChange={(e) => setTitle(e.currentTarget.value)} maxLength={50} required />
-            <Textarea label="Description" value={description} onChange={(e) => setDescription(e.currentTarget.value)} maxLength={500} autosize minRows={2} />
+            <TextInput label="Room Title" value={title} onChange={(e) => setTitle(e.currentTarget.value)} maxLength={50} required disabled={isExpired} />
+            <Textarea label="Description" value={description} onChange={(e) => setDescription(e.currentTarget.value)} maxLength={500} autosize minRows={2} disabled={isExpired} />
             
             <Box>
               <Text size="sm" fw={500} mb={4}>Cover Photo</Text>
@@ -291,9 +312,11 @@ export const EditRoomModal = ({
                     <Text size="xs" c="dimmed" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>No cover</Text>
                   )}
                 </Box>
-                <FileButton onChange={handleFileChange} accept="image/png,image/jpeg,image/webp">
-                  {(props) => <Button variant="default" size="sm" {...props}>Change cover</Button>}
-                </FileButton>
+                {!isExpired && (
+                  <FileButton onChange={handleFileChange} accept="image/png,image/jpeg,image/webp">
+                    {(props) => <Button variant="default" size="sm" {...props}>Change cover</Button>}
+                  </FileButton>
+                )}
               </Group>
             </Box>
           </Stack>
@@ -301,7 +324,7 @@ export const EditRoomModal = ({
 
         <Divider />
 
-        <Box>
+        <Box style={isExpired ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
           <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} mb="md">Room Behavior</Text>
           <Stack gap="md">
             <Group justify="space-between" align="center">
@@ -309,21 +332,21 @@ export const EditRoomModal = ({
                 <Text fw={500}>Permanent Room</Text>
                 <Text size="sm" c="dimmed">No automatic expiration</Text>
               </Box>
-              <Switch checked={isPermanent} onChange={(e) => setIsPermanent(e.currentTarget.checked)} color="violet" size="lg" />
+              <Switch checked={isPermanent} onChange={(e) => setIsPermanent(e.currentTarget.checked)} color="violet" size="lg" disabled={isExpired} />
             </Group>
             
             <Group justify="space-between" align="center">
               <Box>
                 <Text fw={500}>Chat Enabled</Text>
               </Box>
-              <Switch checked={!isChatDisabled} onChange={(e) => setIsChatDisabled(!e.currentTarget.checked)} color="violet" size="lg" />
+              <Switch checked={!isChatDisabled} onChange={(e) => setIsChatDisabled(!e.currentTarget.checked)} color="violet" size="lg" disabled={isExpired} />
             </Group>
           </Stack>
         </Box>
 
         <Divider />
 
-        <Box>
+        <Box style={isExpired ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
           <Group justify="space-between" align="center" mb="md">
             <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1}>Password Protection</Text>
             {room.isPasscodeProtected && !removeProtection ? (
@@ -359,6 +382,7 @@ export const EditRoomModal = ({
                         variant="subtle"
                         color={removeProtection ? "violet" : "red"}
                         size="xs"
+                        disabled={isExpired}
                         onClick={() => {
                           setRemoveProtection(!removeProtection);
                           if (!removeProtection) {
@@ -419,6 +443,7 @@ export const EditRoomModal = ({
                         variant="subtle"
                         color={removeProtection ? "violet" : "red"}
                         size="xs"
+                        disabled={isExpired}
                         onClick={() => {
                           setRemoveProtection(!removeProtection);
                           if (!removeProtection) {
@@ -456,6 +481,7 @@ export const EditRoomModal = ({
                   placeholder={room.isPasscodeProtected ? "Leave blank to keep current" : "Enter password (optional)"}
                   value={password}
                   onChange={(e) => setPassword(e.currentTarget.value)}
+                  disabled={isExpired}
                 />
                 {password.length > 0 && (
                   <PasswordInput
@@ -463,6 +489,7 @@ export const EditRoomModal = ({
                     placeholder="Confirm new password"
                     value={passwordConfirm}
                     onChange={(e) => setPasswordConfirm(e.currentTarget.value)}
+                    disabled={isExpired}
                   />
                 )}
               </Stack>
@@ -472,7 +499,9 @@ export const EditRoomModal = ({
         
         <Group justify="flex-end" mt="md">
           <Button variant="default" onClick={onClose} disabled={isSaving}>Cancel</Button>
-          <Button onClick={handleSave} loading={isSaving} color="violet">Save Changes</Button>
+          <Button onClick={handleSave} loading={isSaving} disabled={isExpired} color="violet">
+            Save Changes
+          </Button>
         </Group>
       </Stack>
     </Modal>
@@ -553,6 +582,13 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
     const file = event.target.files?.[0];
     if (!file || !onUpdateCover) return;
     
+    const computedState = getComputedState(room);
+    if (computedState === 'Expired' || computedState === 'Ended' || room.status === 'expired' || room.status === 'ended' || (!room.isPermanent && room.expiresAt && new Date(room.expiresAt).getTime() <= Date.now())) {
+      setActionError("Expired rooms cannot be edited.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     setIsUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -735,6 +771,7 @@ const GridRoomCard = ({
 }) => {
   const actions = useRoomActions(room, onDelete, onRefresh, onUpdateCover);
   const isPermanent = Boolean(room.isPermanent);
+  const isClosed = Boolean(room.status === 'expired' || room.status === 'ended' || (!isPermanent && room.expiresAt && new Date(room.expiresAt).getTime() <= Date.now()));
   const creationDate = new Date(room.creationTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
   return (
@@ -750,7 +787,7 @@ const GridRoomCard = ({
           <RoomStatusBadge status={room.status} isPermanent={isPermanent} />
         </div>
 
-        {onUpdateCover && (
+        {!isClosed && onUpdateCover && (
           <>
             <ActionIcon
               variant="filled" color="dark" size="md" radius="md" loading={actions.isUploading}
@@ -833,6 +870,7 @@ const StackRoomCard = ({
 }) => {
   const actions = useRoomActions(room, onDelete, onRefresh, onUpdateCover);
   const isPermanent = Boolean(room.isPermanent);
+  const isClosed = Boolean(room.status === 'expired' || room.status === 'ended' || (!isPermanent && room.expiresAt && new Date(room.expiresAt).getTime() <= Date.now()));
   const creationDate = new Date(room.creationTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
   return (
@@ -844,7 +882,7 @@ const StackRoomCard = ({
           <div className={styles.coverPlaceholder}>WATCH PARTY</div>
         )}
 
-        {onUpdateCover && (
+        {!isClosed && onUpdateCover && (
           <>
             <ActionIcon
               variant="filled" color="dark" size="sm" radius="md" loading={actions.isUploading}
