@@ -244,10 +244,12 @@ export const RoomDetails = () => {
       if (response.ok) {
         history.push("/rooms");
       } else {
-        throw new Error("Failed to delete room");
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.error?.message || errData?.error || "Failed to delete room");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setActionError(e.message || "Failed to delete room");
       setIsDeleting(false);
       setDeleteConfirm(false);
     }

@@ -81,7 +81,7 @@ CREATE INDEX IF NOT EXISTS rooms_inactivity_idx
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.room_lifecycle_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  "roomId" text NOT NULL REFERENCES public.rooms("roomId") ON DELETE RESTRICT,
+  "roomId" text NOT NULL REFERENCES public.rooms("roomId") ON DELETE CASCADE,
   actor text NOT NULL,
   event text NOT NULL,
   "previousStatus" text,

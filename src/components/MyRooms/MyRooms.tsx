@@ -162,10 +162,11 @@ const useRooms = (user: any) => {
         setRooms(prev => prev.filter(r => r.roomId !== roomId));
         return true;
       }
-      return false;
-    } catch (e) {
-      console.error(e);
-      return false;
+      const errData = await response.json().catch(() => null);
+      throw new Error(errData?.error?.message || errData?.error || "Failed to delete room");
+    } catch (e: any) {
+      console.error("deleteRoom error:", e);
+      throw e;
     }
   };
 

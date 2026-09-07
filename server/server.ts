@@ -948,35 +948,51 @@ app.post("/endRoom", async (req, res) => {
 });
 
 app.delete("/deleteRoom", async (req, res) => {
-  const decoded = await validateUserToken(
-    String(req.query?.uid),
-    String(req.query?.token),
-  );
-  if (decoded === "EMAIL_NOT_VERIFIED") {
-    res.status(403).json({ error: { code: "EMAIL_NOT_VERIFIED", message: "Email verification is required." } });
-    return;
-  }
-  if (!decoded) {
-    res.status(400).json({ error: "invalid user token" });
-    return;
-  }
-  if (postgres) {
-    const roomResult = await postgres.query(`SELECT status, "expiresAt" FROM rooms WHERE owner_id = $1 AND "roomId" = $2`, [decoded.uid, req.query.roomId]);
-    if (roomResult.rows.length > 0) {
-      const roomRow = roomResult.rows[0];
-      await postgres.query(`
-        INSERT INTO room_lifecycle_events 
-        ("roomId", actor, event, "previousStatus", "newStatus", "previousExpiresAt", "newExpiresAt", reason)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `, [req.query.roomId, decoded.uid, 'room.deleted', roomRow.status, 'deleted', roomRow.expiresAt, roomRow.expiresAt, 'user deleted room']);
+  try {
+    const decoded = await validateUserToken(
+      String(req.query?.uid),
+      String(req.query?.token),
+    );
+    if (decoded === "EMAIL_NOT_VERIFIED") {
+      res.status(403).json({ error: { code: "EMAIL_NOT_VERIFIED", message: "Email verification is required." } });
+      return;
     }
-  }
+    if (!decoded) {
+      res.status(400).json({ error: "invalid user token" });
+      return;
+    }
 
-  const result = await postgres?.query(
-    `DELETE from rooms WHERE owner_id = $1 and "roomId" = $2`,
-    [decoded.uid, req.query.roomId],
-  );
-  res.json(result?.rows);
+    const roomId = String(req.query?.roomId || "").trim();
+    if (!roomId) {
+      res.status(400).json({ error: "roomId is required" });
+      return;
+    }
+
+    if (postgres) {
+      // First clean up related records for defense-in-depth
+      await postgres.query(`DELETE FROM room_lifecycle_events WHERE "roomId" = $1`, [roomId]);
+      await postgres.query(`DELETE FROM room_messages WHERE room_id = $1`, [roomId]);
+      const result = await postgres.query(
+        `DELETE from rooms WHERE owner_id = $1 and "roomId" = $2 RETURNING "roomId"`,
+        [decoded.uid, roomId],
+      );
+
+      const memoryRoom = rooms.get(roomId);
+      if (memoryRoom) {
+        memoryRoom.destroy();
+        rooms.delete(roomId);
+        io._nsps.delete(roomId);
+      }
+
+      res.json({ success: true, deleted: result?.rows });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (e: any) {
+    console.error("Error deleting room:", e);
+    res.status(500).json({ error: e.message || "Internal server error" });
+  }
 });
 
 
