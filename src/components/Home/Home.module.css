@@ -377,97 +377,102 @@
     margin: 0;
   }
 
-  /* Watch party room widget inside Card 1 */
-  .partyWidget {
+  /* Watch party controller dock inside Card 1 */
+  .deckWidget {
     background: var(--bg-elevated);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
-    padding: 18px 20px;
+    padding: 20px 22px;
     display: flex;
     flex-direction: column;
     gap: 16px;
   }
 
-  .partyWidgetHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .partyRoomLabel {
+  .deckControlBar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-primary);
+    gap: 14px;
+    width: 100%;
   }
 
-  .partyLiveBadge {
+  .deckBtnCircle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid rgba(139, 92, 246, 0.35);
     display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .deckTrack {
+    flex: 1;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    position: relative;
+    overflow: visible;
+  }
+
+  html[data-color-scheme="light"] .deckTrack {
+    background: #e2e8f0;
+  }
+
+  .deckTrackFill {
+    height: 100%;
+    width: 48%;
+    background: linear-gradient(90deg, var(--color-violet), var(--color-pink));
+    border-radius: 9999px;
+  }
+
+  .deckPlayheadDot {
+    position: absolute;
+    left: 48%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.6), 0 2px 4px rgba(0, 0, 0, 0.25);
+    border: 2px solid var(--color-violet);
+  }
+
+  .deckLiveIndicator {
+    display: inline-flex;
     align-items: center;
     gap: 6px;
     font-size: 11px;
     font-weight: 700;
     color: var(--color-live);
     background: rgba(16, 185, 129, 0.12);
-    padding: 3px 10px;
+    padding: 4px 12px;
     border-radius: 9999px;
     border: 1px solid rgba(16, 185, 129, 0.3);
-    text-transform: uppercase;
     letter-spacing: 0.5px;
+    flex-shrink: 0;
   }
 
-  .partyMembersRow {
+  .deckPillGrid {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     align-items: center;
   }
 
-  .partyMember {
-    display: flex;
+  .deckPill {
+    display: inline-flex;
     align-items: center;
     gap: 8px;
     background: var(--bg-surface-soft);
-    padding: 4px 10px 4px 5px;
-    border-radius: 9999px;
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--border-subtle);
-  }
-
-  .partyMemberName {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     color: var(--text-secondary);
-  }
-
-  .partyScrubberRow {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding-top: 4px;
-  }
-
-  .partyProgressBar {
-    flex: 1;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 9999px;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .partyProgressFill {
-    height: 100%;
-    width: 35%;
-    background: linear-gradient(90deg, var(--color-violet), var(--color-pink));
-    border-radius: 9999px;
-  }
-
-  .partyTimeLabel {
-    font-size: 11px;
-    font-family: monospace;
-    color: var(--text-muted);
   }
 
   /* Card 2: Square card - Voice & Lounge */

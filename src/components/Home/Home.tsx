@@ -201,44 +201,35 @@ export const Home = () => {
               </p>
             </div>
 
-            {/* Shared Lounge Room Card */}
-            <div className={styles.partyWidget}>
-              <div className={styles.partyWidgetHeader}>
-                <div className={styles.partyRoomLabel}>
-                  <IconDeviceTv size={16} color="var(--color-violet)" />
-                  <span>Weekend Watch Party</span>
+            {/* Watch Party Control Deck */}
+            <div className={styles.deckWidget}>
+              <div className={styles.deckControlBar}>
+                <div className={styles.deckBtnCircle}>
+                  <IconPlayerPlayFilled size={14} color="#8B5CF6" />
                 </div>
-                <div className={styles.partyLiveBadge}>
+                <div className={styles.deckTrack}>
+                  <div className={styles.deckTrackFill} />
+                  <div className={styles.deckPlayheadDot} />
+                </div>
+                <div className={styles.deckLiveIndicator}>
                   <span className={styles.pulseDot} />
-                  <span>4 in room</span>
+                  <span>WATCH PARTY</span>
                 </div>
               </div>
 
-              <div className={styles.partyMembersRow}>
-                <div className={styles.partyMember}>
-                  <div className={styles.friendAvatar} style={{ background: "#8B5CF6", width: 28, height: 28, fontSize: 11 }}>You</div>
-                  <span className={styles.partyMemberName}>You (Host)</span>
+              <div className={styles.deckPillGrid}>
+                <div className={styles.deckPill}>
+                  <IconCircleCheck size={15} color="var(--color-success)" />
+                  <span>Shared Playhead</span>
                 </div>
-                <div className={styles.partyMember}>
-                  <div className={styles.friendAvatar} style={{ background: "#EC4899", width: 28, height: 28, fontSize: 11 }}>M</div>
-                  <span className={styles.partyMemberName}>Maya</span>
+                <div className={styles.deckPill}>
+                  <IconCircleCheck size={15} color="var(--color-success)" />
+                  <span>Instant Link Invites</span>
                 </div>
-                <div className={styles.partyMember}>
-                  <div className={styles.friendAvatar} style={{ background: "#10B981", width: 28, height: 28, fontSize: 11 }}>S</div>
-                  <span className={styles.partyMemberName}>Sam</span>
+                <div className={styles.deckPill}>
+                  <IconCircleCheck size={15} color="var(--color-success)" />
+                  <span>Group Text Chat</span>
                 </div>
-                <div className={styles.partyMember}>
-                  <div className={styles.friendAvatar} style={{ background: "#3B82F6", width: 28, height: 28, fontSize: 11 }}>A</div>
-                  <span className={styles.partyMemberName}>Alex</span>
-                </div>
-              </div>
-
-              <div className={styles.partyScrubberRow}>
-                <IconPlayerPlayFilled size={14} color="var(--color-violet)" />
-                <div className={styles.partyProgressBar}>
-                  <div className={styles.partyProgressFill} />
-                </div>
-                <span className={styles.partyTimeLabel}>34:12 / 1:42:00</span>
               </div>
             </div>
           </div>
