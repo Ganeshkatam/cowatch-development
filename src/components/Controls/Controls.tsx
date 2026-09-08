@@ -14,6 +14,7 @@ import {
   IconVolume,
   IconTheater,
   IconMaximize,
+  IconPictureInPicture,
   IconPlayerSkipForwardFilled,
 } from "@tabler/icons-react";
 
@@ -28,6 +29,7 @@ interface ControlsProps {
   disabled?: boolean;
   leaderTime?: number;
   isPauseDisabled?: boolean;
+  localTogglePiP?: () => void;
   playbackRate: number;
   roomPlaybackRate: number;
   isYouTube: boolean;
@@ -355,6 +357,13 @@ export const Controls = (props: ControlsProps) => {
           className={` ${styles.action}`}
           title="Captions"
           color={subtitled ? "green" : softWhite}
+        />
+      )}
+      {props.localTogglePiP && (
+        <IconPictureInPicture
+          onClick={props.localTogglePiP}
+          className={`${styles.action} ${styles.desktopOnly}`}
+          title="Picture in Picture"
         />
       )}
       <IconTheater

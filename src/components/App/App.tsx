@@ -43,7 +43,6 @@ import { FileShareModal } from "../Modal/FileShareModal";
 import type { User } from "@supabase/supabase-js";
 import { supabase, safeGetSession, getAccessToken } from "../../utils/supabaseClient";
 import { SubtitleModal } from "../Modal/SubtitleModal";
-import { MiniLiveRoomPopover } from "../Modal/MiniLiveRoomPopover";
 import { WaitingLounge } from "../WaitingLounge/WaitingLounge";
 import { WaitingLoungeBanner } from "../WaitingLounge/WaitingLoungeBanner";
 import { HTML } from "./HTML";
@@ -179,7 +178,7 @@ interface AppState {
   waitingLoungeState: WaitingLoungeState | null;
   waitingList: WaitingGuest[];
   isWaitingLoungeEnabled: boolean;
-  isRoomMinimized: boolean;
+  isRoomMinimized?: boolean;
   // Room lifecycle state (authoritative from server)
   roomStatus: string;
   roomStartedAt: string | null;
@@ -341,9 +340,11 @@ export class App extends React.Component<AppProps, AppState> {
     this.focusRestoreTimeout = window.setTimeout(() => {
       this.focusRestoreTimeout = null;
       if (!this.isLeaving && this.isActiveRoom() && this.state.isRoomMinimized) {
-        this.setState({ isRoomMinimized: false });
+        if (!document.hidden && document.hasFocus()) {
+          this.setState({ isRoomMinimized: false });
+        }
       }
-    }, 100);
+    }, 60);
   };
 
   handleExitClick = () => {
@@ -409,55 +410,69 @@ export class App extends React.Component<AppProps, AppState> {
     window.location.href = isOwner ? "/home" : "/";
   };
 
+  localTogglePiP = async () => {
+    try {
+      const videoEl = document.getElementById("leftVideo") as HTMLVideoElement | null;
+      if (videoEl && document.pictureInPictureEnabled) {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else {
+          await videoEl.requestPictureInPicture();
+        }
+      }
+    } catch (e) {
+      console.warn("[App] Error toggling Picture-in-Picture:", e);
+    }
+  };
+
+  enterPictureInPicture = async () => {
+    if (this.isLeaving || !this.isActiveRoom()) return;
+    try {
+      const videoEl = document.getElementById("leftVideo") as HTMLVideoElement | null;
+      if (
+        videoEl &&
+        document.pictureInPictureEnabled &&
+        !videoEl.paused &&
+        !videoEl.ended &&
+        videoEl.readyState >= 2
+      ) {
+        if (document.pictureInPictureElement !== videoEl) {
+          await videoEl.requestPictureInPicture();
+        }
+      }
+    } catch (e) {
+      // Ignore background or permission errors
+    }
+  };
+
+  exitPictureInPicture = async () => {
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      }
+    } catch (e) {
+      // Ignore exit errors
+    }
+  };
+
   handleVisibilityChange = () => {
     if (this.isLeaving || !this.isActiveRoom()) return;
 
     if (document.hidden) {
-      this.hasLostFocus = true;
-      if (this.focusRestoreTimeout) {
-        window.clearTimeout(this.focusRestoreTimeout);
-        this.focusRestoreTimeout = null;
-      }
-      if (!this.state.isRoomMinimized) {
-        this.setState({ isRoomMinimized: true });
-      }
+      this.enterPictureInPicture();
     } else {
-      if (this.hasLostFocus || this.state.isRoomMinimized) {
-        this.hasLostFocus = false;
-        this.debounceRestore();
-      }
+      this.exitPictureInPicture();
     }
   };
 
   handleWindowBlur = () => {
     if (this.isLeaving || !this.isActiveRoom()) return;
-    this.hasLostFocus = true;
-    if (this.focusRestoreTimeout) {
-      window.clearTimeout(this.focusRestoreTimeout);
-      this.focusRestoreTimeout = null;
-    }
-    if (!this.state.isRoomMinimized) {
-      this.setState({ isRoomMinimized: true });
-    }
+    this.enterPictureInPicture();
   };
 
   handleWindowFocus = () => {
     if (this.isLeaving || !this.isActiveRoom()) return;
-    if (this.hasLostFocus || this.state.isRoomMinimized) {
-      this.hasLostFocus = false;
-      this.debounceRestore();
-    }
-  };
-
-  handleMouseLeave = (e: MouseEvent) => {
-    if (this.isLeaving || !this.isActiveRoom()) return;
-    if (e.clientY <= 0) {
-      const now = Date.now();
-      if (now >= this.exitIntentCooldownUntil && !this.state.isRoomMinimized) {
-        this.exitIntentCooldownUntil = now + 5000;
-        this.setState({ isRoomMinimized: true });
-      }
-    }
+    this.exitPictureInPicture();
   };
 
   isMicEnabled = (): boolean => {
@@ -530,7 +545,6 @@ export class App extends React.Component<AppProps, AppState> {
     document.addEventListener("visibilitychange", this.handleVisibilityChange);
     window.addEventListener("blur", this.handleWindowBlur);
     window.addEventListener("focus", this.handleWindowFocus);
-    document.addEventListener("mouseleave", this.handleMouseLeave);
 
     // Send heartbeat to the server
     this.heartbeat = window.setInterval(
@@ -553,7 +567,6 @@ export class App extends React.Component<AppProps, AppState> {
     document.removeEventListener("visibilitychange", this.handleVisibilityChange);
     window.removeEventListener("blur", this.handleWindowBlur);
     window.removeEventListener("focus", this.handleWindowFocus);
-    document.removeEventListener("mouseleave", this.handleMouseLeave);
     window.clearInterval(this.heartbeat);
     if (this.focusRestoreTimeout) {
       window.clearTimeout(this.focusRestoreTimeout);
@@ -2670,6 +2683,7 @@ export class App extends React.Component<AppProps, AppState> {
         roomSeek={this.roomSeek}
         roomSetPlaybackRate={this.roomSetPlaybackRate}
         localFullScreen={this.localFullScreen}
+        localTogglePiP={this.localTogglePiP}
         localToggleMute={this.localToggleMute}
         localSubtitleModal={this.localSubtitleModal}
         localSetVolume={this.localSetVolume}
@@ -2731,19 +2745,7 @@ export class App extends React.Component<AppProps, AppState> {
             getSubtitleMode={this.Player().getSubtitleMode}
           />
         )}
-        <MiniLiveRoomPopover
-          visible={this.state.isRoomMinimized && this.isActiveRoom()}
-          roomTitle={this.state.roomTitle}
-          currentMedia={this.state.roomMedia}
-          mediaDisplayName={this.getMediaDisplayName(this.state.roomMedia)}
-          participantCount={this.state.participants.length}
-          isMicEnabled={this.isMicEnabled()}
-          isVideoEnabled={this.isVideoEnabled()}
-          onReturnToRoom={this.handleReturnToRoom}
-          onToggleMic={this.handleToggleMic}
-          onToggleVideo={this.handleToggleVideo}
-          onLeaveRoom={this.handleExitClick}
-        />
+
 
         {this.state.state === "starting" && (
           <Overlay
@@ -3202,7 +3204,7 @@ export class App extends React.Component<AppProps, AppState> {
                       className={styles.videoContent}
                       allowFullScreen
                       frameBorder="0"
-                      allow="autoplay; encrypted-media"
+                      allow="autoplay; encrypted-media; picture-in-picture"
                       src="https://www.youtube.com/embed/?enablejsapi=1&controls=0&rel=0"
                     />
                     {this.playingVBrowser() &&
@@ -3238,6 +3240,7 @@ export class App extends React.Component<AppProps, AppState> {
                         id="leftVideo"
                         onEnded={(e) => this.onVideoEnded(e.currentTarget.src)}
                         playsInline
+                        {...({ autoPictureInPicture: "true" } as any)}
                         onClick={this.roomTogglePlay}
                       ></video>
                     )}
