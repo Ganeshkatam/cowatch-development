@@ -231,10 +231,10 @@ export class SignInButton extends React.Component<SignInButtonProps> {
             <Menu.Label>Account</Menu.Label>
             <Menu.Item
               component={Link}
-              to="/settings"
+              to="/account/profile"
               leftSection={<IconSettings size={16} stroke={1.5} />}
             >
-              Settings
+              Account settings
             </Menu.Item>
             <Menu.Item
               component={Link}

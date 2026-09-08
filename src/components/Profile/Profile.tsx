@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { Modal, Button, Avatar, Switch, Text, TextInput, SegmentedControl } from "@mantine/core";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation, useParams, Link } from "react-router-dom";
 import { supabase } from "../../utils/supabaseClient";
 import { serverPath, openFileSelector } from "../../utils/utils";
 import { MetadataContext } from "../../MetadataContext";
@@ -42,15 +42,18 @@ const AppearanceSelector = () => {
 export const Profile: React.FC = () => {
   const metadata = useContext(MetadataContext);
   const { user, profile, displayName: ctxDisplayName, avatarUrl: ctxAvatarUrl, setMetadata } = metadata;
+  const { section } = useParams<{ section?: string }>();
   const history = useHistory();
+  const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState<"profile" | "preferences" | "security">(() => {
-    const saved = window.localStorage.getItem("cowatch-profile-tab");
-    if (saved === "general" || saved === "profile") return "profile";
-    if (saved === "preferences") return "preferences";
-    if (saved === "security") return "security";
+  const getActiveTab = (): "profile" | "preferences" | "security" => {
+    const raw = (section || location.pathname.split("/").filter(Boolean).pop() || "").toLowerCase();
+    if (raw === "preferences") return "preferences";
+    if (raw === "security" || raw === "login-and-security") return "security";
     return "profile";
-  });
+  };
+
+  const activeTab = getActiveTab();
 
   const [resetDisabled, setResetDisabled] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -86,8 +89,15 @@ export const Profile: React.FC = () => {
   }, [user, profile, ctxDisplayName]);
 
   const handleTabChange = (tab: "profile" | "preferences" | "security") => {
-    setActiveTab(tab);
-    window.localStorage.setItem("cowatch-profile-tab", tab);
+    const targetUrl =
+      tab === "preferences"
+        ? "/account/preferences"
+        : tab === "security"
+        ? "/account/security"
+        : "/account/profile";
+    if (location.pathname !== targetUrl) {
+      history.push(targetUrl);
+    }
   };
 
   const handleBack = () => {
@@ -355,46 +365,43 @@ export const Profile: React.FC = () => {
             {/* Account Category */}
             <div className={styles.navGroup}>
               <span className={styles.navGroupHeader}>Account</span>
-              <button
-                type="button"
+              <Link
+                to="/account/profile"
                 className={`${styles.navItem} ${activeTab === "profile" ? styles.navItemActive : ""}`}
-                onClick={() => handleTabChange("profile")}
               >
                 <span className={styles.navIcon}>
                   <IconUser size={18} stroke={1.75} />
                 </span>
                 <span>Your profile</span>
-              </button>
+              </Link>
             </div>
 
             {/* App Experience Category */}
             <div className={styles.navGroup}>
               <span className={styles.navGroupHeader}>App experience</span>
-              <button
-                type="button"
+              <Link
+                to="/account/preferences"
                 className={`${styles.navItem} ${activeTab === "preferences" ? styles.navItemActive : ""}`}
-                onClick={() => handleTabChange("preferences")}
               >
                 <span className={styles.navIcon}>
                   <IconSettings size={18} stroke={1.75} />
                 </span>
                 <span>Preferences</span>
-              </button>
+              </Link>
             </div>
 
             {/* Security & Sign In Category */}
             <div className={styles.navGroup}>
               <span className={styles.navGroupHeader}>Security & sign in</span>
-              <button
-                type="button"
+              <Link
+                to="/account/security"
                 className={`${styles.navItem} ${activeTab === "security" ? styles.navItemActive : ""}`}
-                onClick={() => handleTabChange("security")}
               >
                 <span className={styles.navIcon}>
                   <IconLock size={18} stroke={1.75} />
                 </span>
                 <span>Login & security</span>
-              </button>
+              </Link>
             </div>
           </aside>
 

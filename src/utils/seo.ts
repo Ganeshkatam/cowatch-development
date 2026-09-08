@@ -13,14 +13,24 @@ const ROUTE_SEO: Record<string, PageSEO> = {
     description:
       "Stream and sync videos with friends in real time. Watch YouTube, personal video files, or virtual browsers with live chat, voice, and instant sync.",
   },
-  "/settings": {
+  "/account": {
     title: "Account Settings | CoWatch",
     description: "Manage your CoWatch profile, display name, video/audio preferences, and account security.",
     noindex: true,
   },
-  "/profile": {
-    title: "Account Settings | CoWatch",
-    description: "Manage your CoWatch profile, display name, and preferences.",
+  "/account/profile": {
+    title: "Your Profile | CoWatch",
+    description: "Manage your CoWatch profile, display name, and avatar.",
+    noindex: true,
+  },
+  "/account/preferences": {
+    title: "App Preferences | CoWatch",
+    description: "Manage your CoWatch media defaults, room layout, and theme appearance.",
+    noindex: true,
+  },
+  "/account/security": {
+    title: "Login & Security | CoWatch",
+    description: "Manage your CoWatch password, active sessions, and account protection.",
     noindex: true,
   },
   "/myrooms": {
