@@ -37,7 +37,7 @@ export async function createRoom(user: User | null | undefined, openNewTab: bool
   if (openNewTab) window.open(`/watch/${safeName}`); else window.location.assign(`/watch/${safeName}`);
 }
 
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 
 export const NewRoomButton = (props: { size?: string; openNewTab?: boolean }) => {
   const history = useHistory();
@@ -95,21 +95,33 @@ export const ListRoomsButton = () => {
 
 export const TopBar = (props: { hideNewRoom?: boolean; hideSignin?: boolean; hideMyRooms?: boolean; showExit?: boolean; onOpenSettings?: () => void; roomTitle?: string; roomDescription?: string }) => {
   const context = useContext(MetadataContext);
+  const location = useLocation();
+  const path = location.pathname;
+
   return (
     <div className={styles.topBar}>
-      <a href="/" className={styles.brandGroup}>
+      <Link to="/" className={styles.brandGroup}>
         <img className={`cowatch-brand-logo ${styles.logo}`} src="/logo192.png" alt="CoWatch" />
         {!props.roomTitle && !props.roomDescription && <div className={styles.brandName}>CoWatch</div>}
-      </a>
-      {(props.roomTitle || props.roomDescription) && (
+      </Link>
+      
+      {(props.roomTitle || props.roomDescription) ? (
         <div className={styles.roomContext}>
           <div className={styles.roomContextTitle}>{props.roomTitle?.toUpperCase()}</div>
           {props.roomDescription && <Text size="sm" c="dimmed">{props.roomDescription}</Text>}
         </div>
+      ) : (
+        <nav className={styles.centerNav}>
+          <Link to="/" className={`${styles.navLink} ${path === '/' ? styles.navLinkActive : ''}`}>Home</Link>
+          <Link to="/discover" className={`${styles.navLink} ${path === '/discover' ? styles.navLinkActive : ''}`}>Discover</Link>
+          {context.user && !props.hideMyRooms && (
+            <Link to="/myrooms" className={`${styles.navLink} ${path.startsWith('/myrooms') ? styles.navLinkActive : ''}`}>My Rooms</Link>
+          )}
+        </nav>
       )}
+
       <Announce />
       <div className={styles.actionsGroup}>
-        {!props.hideMyRooms && context.user && <ListRoomsButton />}
         {!props.hideNewRoom && context.user && <NewRoomButton size="sm" />}
         {props.showExit && <Button color="red" variant="subtle" onClick={() => window.location.assign("/")} leftSection={<IconX size={16} />}>Exit</Button>}
         {props.onOpenSettings && <Button color="violet" variant="subtle" onClick={props.onOpenSettings} leftSection={<IconSettings size={16} />}>Settings</Button>}
