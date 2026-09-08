@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect, useMemo } from "react";
 import { useHistory } from "react-router-dom";
-import { Badge, Alert, TextInput, Text } from "@mantine/core";
+import { Badge, Alert, Text } from "@mantine/core";
 import {
   IconArrowLeft,
   IconCalendarEvent,
@@ -17,6 +17,8 @@ import {
 
 import { SharedRoomFields } from "../Create/SharedRoomFields";
 import { SharedRoomPreview } from "../Create/SharedRoomPreview";
+import { DatePickerDropdown } from "./DatePickerDropdown";
+import { TimePickerDropdown } from "./TimePickerDropdown";
 import createStyles from "../Create/Create.module.css";
 import scheduleStyles from "./ScheduleRoom.module.css";
 
@@ -177,21 +179,10 @@ export const ScheduleRoom: React.FC = () => {
                     <Text size="xs" fw={700} c="var(--text-secondary)" tt="uppercase" lts={0.5} mb={6}>
                       Date
                     </Text>
-                    <TextInput
-                      type="date"
+                    <DatePickerDropdown
                       value={scheduleDate}
-                      onChange={(e) => handleDateChange(e.target.value)}
-                      min={minDate}
-                      required
-                      size="md"
-                      styles={{
-                        input: {
-                          backgroundColor: "var(--surface-secondary)",
-                          borderColor: "var(--border-subtle)",
-                          color: "var(--text-primary)",
-                          fontWeight: 600,
-                        },
-                      }}
+                      onChange={handleDateChange}
+                      minDate={minDate}
                     />
                   </div>
 
@@ -199,20 +190,9 @@ export const ScheduleRoom: React.FC = () => {
                     <Text size="xs" fw={700} c="var(--text-secondary)" tt="uppercase" lts={0.5} mb={6}>
                       Time
                     </Text>
-                    <TextInput
-                      type="time"
+                    <TimePickerDropdown
                       value={scheduleTime}
-                      onChange={(e) => handleTimeChange(e.target.value)}
-                      required
-                      size="md"
-                      styles={{
-                        input: {
-                          backgroundColor: "var(--surface-secondary)",
-                          borderColor: "var(--border-subtle)",
-                          color: "var(--text-primary)",
-                          fontWeight: 600,
-                        },
-                      }}
+                      onChange={handleTimeChange}
                     />
                   </div>
                 </div>
