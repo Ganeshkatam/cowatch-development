@@ -20,6 +20,8 @@ import {
   IconUsers,
   IconCirclePlusFilled,
   IconVolume,
+  IconUserPlus,
+  IconUserCheck,
 } from "@tabler/icons-react";
 import { SignInButton } from "../TopBar/TopBar";
 import styles from "./Home.module.css";
@@ -77,25 +79,55 @@ export const Home = () => {
             </h1>
 
             <p className={styles.heroSubtitle}>
-              Start a private room in seconds, invite your friends, and watch
-              videos together in perfect sync. No counting down, no delay, and
-              no sign-up needed for guests.
+              Create a free account in seconds, invite your friends, and watch
+              videos together in perfect sync. No counting down, no delay.
             </p>
 
             <div className={styles.actionArea}>
               <div className={styles.actionRow}>
-                <Button
-                  size="lg"
-                  variant="gradient"
-                  gradient={{ from: "#8B5CF6", to: "#EC4899", deg: 135 }}
-                  leftSection={<IconCirclePlusFilled size={20} />}
-                  onClick={() => history.push("/room/new")}
-                  style={{ fontWeight: 600 }}
-                >
-                  Start a Watch Party
-                </Button>
-
-                {!user && <SignInButton />}
+                {user ? (
+                  <>
+                    <Button
+                      size="lg"
+                      variant="gradient"
+                      gradient={{ from: "#8B5CF6", to: "#EC4899", deg: 135 }}
+                      leftSection={<IconCirclePlusFilled size={20} />}
+                      onClick={() => history.push("/room/new")}
+                      style={{ fontWeight: 600 }}
+                    >
+                      Start a Watch Party
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="default"
+                      component={Link}
+                      to="/myrooms"
+                    >
+                      My Rooms
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      size="lg"
+                      variant="gradient"
+                      gradient={{ from: "#8B5CF6", to: "#EC4899", deg: 135 }}
+                      leftSection={<IconUserPlus size={20} />}
+                      onClick={() => history.push("/signup")}
+                      style={{ fontWeight: 600 }}
+                    >
+                      Create Free Account
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="default"
+                      component={Link}
+                      to="/login"
+                    >
+                      Sign In
+                    </Button>
+                  </>
+                )}
               </div>
 
               {/* Direct Room Code Join Bar */}
@@ -120,13 +152,13 @@ export const Home = () => {
 
               <div className={styles.perksRow}>
                 <span className={styles.perkItem}>
-                  <IconCircleCheck size={16} color="var(--color-success)" /> Free to use
+                  <IconCircleCheck size={16} color="var(--color-success)" /> 100% Free account
                 </span>
                 <span className={styles.perkItem}>
-                  <IconCircleCheck size={16} color="var(--color-success)" /> No downloads required
+                  <IconCircleCheck size={16} color="var(--color-success)" /> Quick email verification
                 </span>
                 <span className={styles.perkItem}>
-                  <IconCircleCheck size={16} color="var(--color-success)" /> Guests join with 1 click
+                  <IconCircleCheck size={16} color="var(--color-success)" /> Save your rooms & history
                 </span>
               </div>
             </div>
@@ -172,9 +204,9 @@ export const Home = () => {
             text="Lock your room with a password or turn on the waiting lounge so only your invited friends can enter."
           />
           <FeatureCard
-            icon={<IconLink size={26} />}
-            title="Zero Setup for Friends"
-            text="Send your friends a room link and they can join immediately with one tap, without creating an account or downloading an app."
+            icon={<IconUserCheck size={26} />}
+            title="Safe & Verified Rooms"
+            text="Every viewer has a verified account. This protects your watch party from strangers, lets you manage member permissions, and saves your rooms."
           />
           <FeatureCard
             icon={<IconDevices size={26} />}
@@ -197,25 +229,25 @@ export const Home = () => {
         <div className={styles.stepsGrid}>
           <div className={styles.stepCard}>
             <div className={styles.stepNumber}>01</div>
-            <h3 className={styles.stepTitle}>Start a Room</h3>
+            <h3 className={styles.stepTitle}>Create Your Free Account</h3>
             <p className={styles.stepDesc}>
-              Click "Start a Watch Party" to launch your personal private room. You can give it a title and optional password.
+              Sign up in seconds and verify your email to unlock your personal rooms, custom profile, and watch history.
             </p>
           </div>
 
           <div className={styles.stepCard}>
             <div className={styles.stepNumber}>02</div>
-            <h3 className={styles.stepTitle}>Pick What to Watch</h3>
+            <h3 className={styles.stepTitle}>Start or Join a Room</h3>
             <p className={styles.stepDesc}>
-              Choose a YouTube video, drop in a web stream link, or select a video file right from your device.
+              Launch your own room with optional password protection, or paste a friend's room code to jump in.
             </p>
           </div>
 
           <div className={styles.stepCard}>
             <div className={styles.stepNumber}>03</div>
-            <h3 className={styles.stepTitle}>Invite & Enjoy</h3>
+            <h3 className={styles.stepTitle}>Invite & Enjoy in Sync</h3>
             <p className={styles.stepDesc}>
-              Copy your room link and send it to your friends. Grab your snacks and enjoy the show together in sync.
+              Pick what to watch, share your room link with friends, and enjoy the show together in perfect sync.
             </p>
           </div>
         </div>
@@ -290,10 +322,10 @@ export const Home = () => {
           <Accordion variant="separated" radius="md">
             <Accordion.Item value="account-required">
               <Accordion.Control>
-                Do my friends need to create an account to join?
+                Do I need an account to watch or host?
               </Accordion.Control>
               <Accordion.Panel>
-                No. Your friends can simply click your shared room link and join as guests right away without signing up or creating an account.
+                Yes. Both hosts and viewers need a free CoWatch account with a verified email. This keeps all watch parties safe and spam-free, while letting you customize your profile and save your favorite rooms.
               </Accordion.Panel>
             </Accordion.Item>
 
@@ -302,7 +334,7 @@ export const Home = () => {
                 Is CoWatch free to use?
               </Accordion.Control>
               <Accordion.Panel>
-                Yes, CoWatch is completely free to use. You can start rooms and invite friends whenever you like.
+                Yes, CoWatch is completely free. You can create an account, start rooms, and invite your friends whenever you like.
               </Accordion.Panel>
             </Accordion.Item>
 
@@ -341,26 +373,40 @@ export const Home = () => {
         <div className={styles.ctaCard}>
           <h2 className={styles.ctaTitle}>Ready for movie night?</h2>
           <p className={styles.ctaSubtitle}>
-            Gather your favorite people and start your private watch party right now.
+            Create your free account today and start watching with your friends in sync.
           </p>
           <div className={styles.ctaButtons}>
-            <Button
-              size="lg"
-              variant="gradient"
-              gradient={{ from: "#8B5CF6", to: "#EC4899", deg: 135 }}
-              leftSection={<IconCirclePlusFilled size={20} />}
-              onClick={() => history.push("/room/new")}
-            >
-              Start a Watch Party
-            </Button>
-            <Button
-              size="lg"
-              variant="default"
-              component={Link}
-              to="/faq"
-            >
-              Learn More
-            </Button>
+            {user ? (
+              <Button
+                size="lg"
+                variant="gradient"
+                gradient={{ from: "#8B5CF6", to: "#EC4899", deg: 135 }}
+                leftSection={<IconCirclePlusFilled size={20} />}
+                onClick={() => history.push("/room/new")}
+              >
+                Start a Watch Party
+              </Button>
+            ) : (
+              <>
+                <Button
+                  size="lg"
+                  variant="gradient"
+                  gradient={{ from: "#8B5CF6", to: "#EC4899", deg: 135 }}
+                  leftSection={<IconUserPlus size={20} />}
+                  onClick={() => history.push("/signup")}
+                >
+                  Create Free Account
+                </Button>
+                <Button
+                  size="lg"
+                  variant="default"
+                  component={Link}
+                  to="/login"
+                >
+                  Sign In
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
