@@ -23,11 +23,12 @@ export interface RoomSummary {
   isChatDisabled: boolean;
   isSubRoom: boolean;
   isWaitingLoungeEnabled?: boolean;
-  status: "scheduled" | "active" | "inactive" | "expiring" | "expired" | "ended";
+  status: "waiting" | "scheduled" | "active" | "inactive" | "expiring" | "expired" | "ended";
   startedAt: string | null;
   expiresAt: string | null;
   endedAt: string | null;
   isPermanent?: boolean;
+  durationMinutes?: number | null;
 }
 
 const areRoomsEqual = (a: RoomSummary[], b: RoomSummary[]): boolean => {

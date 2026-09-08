@@ -25,6 +25,7 @@ import {
   encryptPasscodeForOwner,
   decryptPasscodeForOwner,
 } from "./utils/roomPasscode.ts";
+import { initRoomLifecycle, startRoomLifecycle } from "./roomLifecycle.ts";
 
 process.on("uncaughtException", (err) => {
   console.error("Uncaught exception in server process:", err);
@@ -92,10 +93,12 @@ io.engine.use(async (req: any, res: Response, next: () => void) => {
       if (data) {
         const room = new Room(io, key, data);
         if (persistedRoom) {
-          room.status = persistedRoom.status || 'active';
+          room.status = persistedRoom.status || 'waiting';
+          room.startedAt = persistedRoom.startedAt ? new Date(persistedRoom.startedAt as string) : undefined;
           room.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;
           room.owner_id = persistedRoom.owner_id;
           room.isPermanent = persistedRoom.isPermanent || false;
+          room.durationMinutes = persistedRoom.durationMinutes ?? (persistedRoom.isPermanent ? null : 180);
         }
         rooms.set(key, room);
         console.log(
@@ -108,7 +111,9 @@ io.engine.use(async (req: any, res: Response, next: () => void) => {
       const memoryRoom = rooms.get(key);
       if (memoryRoom) {
         memoryRoom.isPermanent = persistedRoom.isPermanent || false;
+        memoryRoom.startedAt = persistedRoom.startedAt ? new Date(persistedRoom.startedAt as string) : undefined;
         memoryRoom.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;
+        memoryRoom.durationMinutes = persistedRoom.durationMinutes ?? (persistedRoom.isPermanent ? null : 180);
         if (persistedRoom.status === 'active' && memoryRoom.status === 'expired') {
           memoryRoom.status = 'active';
         }
@@ -119,6 +124,7 @@ io.engine.use(async (req: any, res: Response, next: () => void) => {
 });
 
 const rooms = new Map<string, Room>();
+initRoomLifecycle(io, rooms);
 // Following functions iterate over in-memory rooms
 setInterval(minuteMetrics, 60 * 1000);
 setInterval(release, releaseInterval);
@@ -448,11 +454,24 @@ app.post("/createRoom", async (req, res) => {
 
   const isPermanent = Boolean(req.body?.isPermanent);
   const now = new Date();
-  const expiresAt = isPermanent ? undefined : new Date(now.getTime() + 3 * 60 * 60 * 1000); // 3 hours from now
-  newRoom.expiresAt = expiresAt;
-  newRoom.status = 'active';
+  // Validate and parse durationMinutes for temporary rooms
+  let durationMinutes: number | null = null;
+  if (!isPermanent) {
+    const rawDuration = Number(req.body?.durationMinutes);
+    if (!Number.isFinite(rawDuration) || rawDuration < 15 || rawDuration > 1440) {
+      durationMinutes = 180; // default 3 hours
+    } else {
+      durationMinutes = Math.round(rawDuration);
+    }
+  }
+  // CREATE != START: Room begins in 'waiting' status.
+  // startedAt and expiresAt are null until the host starts the room.
+  newRoom.status = 'waiting';
+  newRoom.startedAt = undefined;
+  newRoom.expiresAt = undefined;
   newRoom.owner_id = decoded.uid;
   newRoom.isPermanent = isPermanent;
+  newRoom.durationMinutes = durationMinutes;
 
   if (postgres) {
     const rawPasscode = req.body?.passcode;
@@ -468,10 +487,11 @@ app.post("/createRoom", async (req, res) => {
       roomDescription: req.body?.roomDescription || null,
       owner_id: decoded.uid,
       isSubRoom: isPermanent,
-      status: 'active',
-      startedAt: now,
-      expiresAt: expiresAt ?? null,
+      status: 'waiting',
+      startedAt: null,
+      expiresAt: null,
       isPermanent: isPermanent,
+      durationMinutes: durationMinutes,
       isWaitingLoungeEnabled: Boolean(req.body?.isWaitingLoungeEnabled),
     };
     try {
@@ -480,7 +500,7 @@ app.post("/createRoom", async (req, res) => {
         INSERT INTO room_lifecycle_events 
         ("roomId", actor, event, "newStatus", "newExpiresAt", reason)
         VALUES ($1, $2, $3, $4, $5, $6)
-      `, [newRoom.roomId, decoded.uid, 'room.created', 'active', expiresAt ?? null, isPermanent ? 'permanent room creation' : 'temporary room creation']);
+      `, [newRoom.roomId, decoded.uid, 'room.created', 'waiting', null, isPermanent ? 'permanent room creation' : `temporary room creation (${durationMinutes}min)`]);
     } catch (e) {
       redisCount("createRoomError");
       throw e;
@@ -502,6 +522,26 @@ app.post("/createRoom", async (req, res) => {
   }
   rooms.set(name, newRoom);
   res.json({ name });
+});
+
+app.post("/startRoom", async (req, res) => {
+  const decoded = await validateUserToken(req.body?.uid, req.body?.token, false);
+  if (!decoded || decoded === "EMAIL_NOT_VERIFIED") {
+    res.status(401).json({ error: "Authentication required." });
+    return;
+  }
+  const roomId = req.body?.roomId;
+  if (!roomId) {
+    res.status(400).json({ error: "Missing roomId parameter." });
+    return;
+  }
+  try {
+    const result = await startRoomLifecycle(roomId, decoded.uid);
+    res.json(result);
+  } catch (e: any) {
+    console.error("startRoom error:", e);
+    res.status(400).json({ error: e.message || "Failed to start room." });
+  }
 });
 
 app.post("/updateRoomCover", async (req, res) => {
@@ -556,9 +596,11 @@ app.post("/updateRoomSettings", async (req, res) => {
     return;
   }
 
-  const { roomId, roomTitle, roomDescription, isPermanent, isChatDisabled, password, removePassword } = req.body;
+  // Lifecycle fields (isPermanent, durationMinutes, status, expiresAt, startedAt) are NOT mutable here.
+  // They are set at creation and controlled by startRoomLifecycle.
+  const { roomId, roomTitle, roomDescription, isChatDisabled, password, removePassword } = req.body;
 
-  if (!roomId || typeof roomTitle !== 'string' || typeof isPermanent !== 'boolean' || typeof isChatDisabled !== 'boolean') {
+  if (!roomId || typeof roomTitle !== 'string' || typeof isChatDisabled !== 'boolean') {
     res.status(400).json({ error: "Invalid payload" });
     return;
   }
@@ -615,26 +657,9 @@ app.post("/updateRoomSettings", async (req, res) => {
       return;
     }
 
-    const currentlyPermanent = Boolean(room.isPermanent);
-
-    let newExpiresAt = room.expiresAt;
-    let newIsSubRoom = room.isSubRoom;
-    let permanenceChanged = false;
-
-    if (isPermanent && !currentlyPermanent) {
-      newExpiresAt = null;
-      newIsSubRoom = true;
-      permanenceChanged = true;
-    } else if (!isPermanent && currentlyPermanent) {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      newExpiresAt = tomorrow;
-      newIsSubRoom = false;
-      permanenceChanged = true;
-    }
-
-    let updateQuery = `UPDATE rooms SET "roomTitle" = $1, "roomDescription" = $2, "expiresAt" = $3, "isSubRoom" = $4, "isChatDisabled" = $5, "isPermanent" = $6`;
-    const updateValues: any[] = [titleTrimmed, roomDescription || null, newExpiresAt, newIsSubRoom, isChatDisabled, isPermanent];
+    // Only update non-lifecycle fields: title, description, chat, password
+    let updateQuery = `UPDATE rooms SET "roomTitle" = $1, "roomDescription" = $2, "isChatDisabled" = $3`;
+    const updateValues: any[] = [titleTrimmed, roomDescription || null, isChatDisabled];
 
     if (isClearingPassword) {
       updateQuery += `, passcode = NULL, owner_passcode = NULL`;
@@ -648,28 +673,8 @@ app.post("/updateRoomSettings", async (req, res) => {
 
     await client.query(updateQuery, updateValues);
 
-    if (permanenceChanged) {
-      await client.query(
-        `INSERT INTO room_lifecycle_events 
-         ("roomId", actor, event, "previousStatus", "newStatus", "previousExpiresAt", "newExpiresAt", reason)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [
-          roomId,
-          decoded.uid,
-          'room.permanence_changed',
-          room.status,
-          room.status,
-          room.expiresAt,
-          newExpiresAt,
-          isPermanent ? "Room converted from temporary to permanent" : "Room converted from permanent to temporary"
-        ]
-      );
-    }
-
     const memoryRoom = rooms.get(roomId);
     if (memoryRoom) {
-      memoryRoom.isPermanent = isPermanent;
-      memoryRoom.expiresAt = newExpiresAt ? new Date(newExpiresAt) : undefined;
       memoryRoom.isChatDisabled = isChatDisabled;
     }
 
@@ -791,7 +796,7 @@ app.get("/listRooms", async (req, res) => {
     const result = await postgres.query(
       `SELECT "roomId", (passcode IS NOT NULL AND passcode <> '') AS "isPasscodeProtected",
                 "creationTime", "roomTitle", "roomDescription", "coverPhoto", "isChatDisabled", "isSubRoom",
-                status, "startedAt", "expiresAt", "endedAt", "isPermanent", owner_passcode
+                status, "startedAt", "expiresAt", "endedAt", "isPermanent", "durationMinutes", owner_passcode
          FROM rooms WHERE owner_id = $1 ORDER BY "creationTime" DESC`,
       [decoded.uid],
     );

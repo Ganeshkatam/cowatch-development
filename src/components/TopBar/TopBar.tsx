@@ -5,7 +5,6 @@ import { getAccessToken, supabase } from "../../utils/supabaseClient";
 import { Avatar, Button, Menu, Text, Tooltip } from "@mantine/core";
 import type { User } from "@supabase/supabase-js";
 import Announce from "../Announce/Announce";
-import appStyles from "../App/App.module.css";
 import styles from "./TopBar.module.css";
 import { MetadataContext } from "../../MetadataContext";
 import {
@@ -90,6 +89,7 @@ export async function createRoom(
     roomDescription?: string;
     passcode?: string;
     isPermanent?: boolean;
+    durationMinutes?: number;
     isChatDisabled?: boolean;
     isWaitingLoungeEnabled?: boolean;
     lock?: boolean;
@@ -123,11 +123,11 @@ export async function createRoom(
   if (options.passcode && name) {
     addAndSavePasscode(name, options.passcode);
   }
-  
+
   if (options?.noRedirect) {
     return name;
   }
-  
+
   const safeName = name.startsWith("/") ? name.substring(1) : name;
   if (openNewTab) {
     window.open(`/watch/${safeName}`);
@@ -231,14 +231,14 @@ export class SignInButton extends React.Component<SignInButtonProps> {
             <Menu.Label>Account</Menu.Label>
             <Menu.Item
               component={Link}
-              to="/profile"
+              to="/settings"
               leftSection={<IconSettings size={16} stroke={1.5} />}
             >
               Settings
             </Menu.Item>
             <Menu.Item
               component={Link}
-              to="/rooms"
+              to="/myrooms"
               leftSection={<IconDatabase size={16} stroke={1.5} />}
             >
               My rooms
@@ -297,7 +297,7 @@ export const ListRoomsButton = () => {
   return (
     <Button
       component={Link}
-      to="/rooms"
+      to="/myrooms"
       variant="light"
       color="violet"
       leftSection={<IconDatabase size={16} />}

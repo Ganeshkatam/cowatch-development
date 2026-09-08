@@ -53,6 +53,7 @@ import { YouTube } from "./YouTube";
 import styles from "./App.module.css";
 import { EmptyWatchState, NonPlayableMediaState } from "./EmptyWatchState";
 import { RoomHeader } from "../TopBar/RoomHeader";
+import { WaitingForHostOverlay } from "../WaitingForHost/WaitingForHostOverlay";
 import { MediaDock } from "./MediaDock";
 import config from "../../config";
 import { MetadataContext } from "../../MetadataContext";
@@ -181,6 +182,13 @@ interface AppState {
   waitingList: WaitingGuest[];
   isWaitingLoungeEnabled: boolean;
   isRoomMinimized: boolean;
+  // Room lifecycle state (authoritative from server)
+  roomStatus: string;
+  roomStartedAt: string | null;
+  roomExpiresAt: string | null;
+  roomIsPermanent: boolean;
+  roomDurationMinutes: number | null;
+  roomServerNow: number | null;
 }
 
 export class App extends React.Component<AppProps, AppState> {
@@ -267,6 +275,13 @@ export class App extends React.Component<AppProps, AppState> {
     waitingList: [],
     isWaitingLoungeEnabled: false,
     isRoomMinimized: false,
+    // Room lifecycle initial state
+    roomStatus: "waiting",
+    roomStartedAt: null,
+    roomExpiresAt: null,
+    roomIsPermanent: false,
+    roomDurationMinutes: null,
+    roomServerNow: null,
   };
   private hasLostFocus = false;
   private exitIntentCooldownUntil = 0;
@@ -1243,6 +1258,17 @@ export class App extends React.Component<AppProps, AppState> {
         },
       );
       socket.on("REC:getRoomState", this.handleRoomState);
+      socket.on("REC:roomStarted", (data: any) => {
+        console.log("[App] REC:roomStarted received:", data);
+        this.setState({
+          roomStatus: data.status || "active",
+          roomStartedAt: data.startedAt || null,
+          roomExpiresAt: data.expiresAt || null,
+          roomIsPermanent: Boolean(data.isPermanent),
+          roomDurationMinutes: data.durationMinutes ?? null,
+          roomServerNow: data.serverNow || null,
+        });
+      });
       socket.on("REC:waitingLounge", (data: WaitingLoungeState) => {
         const wasInLounge = this.state.waitingLoungeState?.inLounge;
         this.setState({ waitingLoungeState: data }, () => {
@@ -1431,6 +1457,17 @@ export class App extends React.Component<AppProps, AppState> {
     this.setMediaPath(data.mediaPath);
     if (data.isWaitingLoungeEnabled !== undefined) {
       this.setState({ isWaitingLoungeEnabled: data.isWaitingLoungeEnabled });
+    }
+    // Lifecycle fields from server (authoritative)
+    if (data.status !== undefined) {
+      this.setState({
+        roomStatus: data.status,
+        roomStartedAt: data.startedAt || null,
+        roomExpiresAt: data.expiresAt || null,
+        roomIsPermanent: Boolean(data.isPermanent),
+        roomDurationMinutes: data.durationMinutes ?? null,
+        roomServerNow: data.serverNow || null,
+      });
     }
     this.setInviteLink(this.getInviteLink());
     window.history.replaceState("", "", this.getInviteLink());
@@ -2694,6 +2731,19 @@ export class App extends React.Component<AppProps, AppState> {
               </Text>
             </div>
           </Overlay>
+        )}
+
+        {this.state.roomStatus === "waiting" && this.state.state !== "starting" && (
+          <WaitingForHostOverlay
+            roomId={this.state.roomId}
+            roomTitle={this.state.roomTitle}
+            owner={this.state.owner}
+            roomStatus={this.state.roomStatus}
+            roomDurationMinutes={this.state.roomDurationMinutes}
+            roomIsPermanent={this.state.roomIsPermanent}
+            participantCount={this.state.participants.length}
+            socket={this.socket}
+          />
         )}
 
         {this.state.overlayMsg && <ErrorModal error={this.state.overlayMsg} />}

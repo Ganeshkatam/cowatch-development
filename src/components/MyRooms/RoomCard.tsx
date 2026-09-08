@@ -54,6 +54,7 @@ import styles from "./MyRooms.module.css";
 const getComputedState = (room: RoomSummary) => {
   if (room.status === "expired") return "Expired";
   if (room.status === "ended") return "Ended";
+  if (room.status === "waiting") return "Waiting";
   if (room.isPermanent) return "Permanent";
   if (!room.expiresAt) return "Permanent";
   const now = Date.now();
@@ -63,6 +64,7 @@ const getComputedState = (room: RoomSummary) => {
 };
 
 const RoomStatusBadge = ({ status, isPermanent }: { status: string; isPermanent: boolean }) => {
+  if (status === "waiting") return <Badge color="yellow" variant="filled" size="sm">● WAITING</Badge>;
   if (status === "active") return <Badge color="teal" variant="filled" size="sm">● ACTIVE</Badge>;
   if (status === "expiring") return <Badge color="orange" variant="filled" size="sm">● EXPIRING SOON</Badge>;
   if (status === "expired" || status === "ended") return <Badge color="gray" variant="filled" size="sm">● ENDED</Badge>;
@@ -70,8 +72,34 @@ const RoomStatusBadge = ({ status, isPermanent }: { status: string; isPermanent:
   return <Badge color="yellow" variant="filled" size="sm">● INACTIVE</Badge>;
 };
 
-const formatTimeLeft = (expiresAt: string | null, status: string, isPermanent: boolean) => {
+const formatDurationLabel = (minutes: number | null | undefined): string => {
+  if (!minutes) return "";
+  if (minutes < 60) return `${minutes}m session`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (m === 0) return h === 1 ? "1h session" : `${h}h session`;
+  return `${h}h ${m}m session`;
+};
+
+const formatTimeLeft = (expiresAt: string | null, status: string, isPermanent: boolean, durationMinutes?: number | null) => {
   if (status === "expired" || status === "ended") return <span className={styles.lifecycleText}>Room ended</span>;
+  if (status === "waiting") {
+    if (isPermanent) {
+      return (
+        <span className={styles.lifecycleBadge}>
+          <IconInfinity size={13} color="var(--color-teal)" />
+          <span>Permanent (not started)</span>
+        </span>
+      );
+    }
+    const durationLabel = formatDurationLabel(durationMinutes);
+    return (
+      <span className={styles.lifecycleBadge}>
+        <IconClock size={13} color="var(--color-yellow)" />
+        <span>{durationLabel ? `${durationLabel} -- not started` : "Not started"}</span>
+      </span>
+    );
+  }
   if (isPermanent) {
     return (
       <span className={styles.lifecycleBadge}>
@@ -140,7 +168,6 @@ export const EditRoomModal = ({
 
   const [title, setTitle] = useState(room.roomTitle || "");
   const [description, setDescription] = useState(room.roomDescription || "");
-  const [isPermanent, setIsPermanent] = useState(Boolean(room.isPermanent));
   const [isChatDisabled, setIsChatDisabled] = useState(room.isChatDisabled || false);
 
   // Password management
@@ -175,7 +202,6 @@ export const EditRoomModal = ({
       setError("");
       setTitle(room.roomTitle || "");
       setDescription(room.roomDescription || "");
-      setIsPermanent(Boolean(room.isPermanent));
       setIsChatDisabled(room.isChatDisabled || false);
       setCoverPreview(room.coverPhoto || null);
       setCoverFile(null);
@@ -253,17 +279,17 @@ export const EditRoomModal = ({
           if (oldFiles && oldFiles.length > 0) {
             await supabase.storage.from('room_covers').remove(oldFiles.map(f => `${folderPath}/${f.name}`));
           }
-        } catch (_) {}
+        } catch (_) { }
 
         const filePath = `${folderPath}/cover.${fileExt}`;
         const { error: uploadError } = await supabase.storage
           .from('room_covers')
           .upload(filePath, coverFile, { upsert: true });
-        
+
         if (uploadError) {
           throw uploadError;
         }
-        
+
         const { data: publicUrlData } = supabase.storage.from('room_covers').getPublicUrl(filePath);
         finalCoverUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
       }
@@ -279,7 +305,6 @@ export const EditRoomModal = ({
           roomId: room.roomId,
           roomTitle: trimmedTitle,
           roomDescription: description,
-          isPermanent,
           isChatDisabled,
           removePassword: removeProtection,
           password: payloadPassword,
@@ -304,11 +329,11 @@ export const EditRoomModal = ({
           body: JSON.stringify({ uid: user.id, token, roomId: room.roomId, coverPhoto: null }),
         });
       } else if (coverFile && finalCoverUrl && finalCoverUrl !== room.coverPhoto) {
-         await fetch(`${serverPath}/updateRoomCover`, {
-           method: 'POST',
-           headers: { 'Content-Type': 'application/json' },
-           body: JSON.stringify({ uid: user.id, token, roomId: room.roomId, coverPhoto: finalCoverUrl }),
-         });
+        await fetch(`${serverPath}/updateRoomCover`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: user.id, token, roomId: room.roomId, coverPhoto: finalCoverUrl }),
+        });
       }
 
       onSuccess();
@@ -521,21 +546,6 @@ export const EditRoomModal = ({
             Room Behavior
           </Text>
           <Stack gap="md">
-            <Group justify="space-between" align="center" wrap="nowrap" gap="sm" style={{ width: "100%" }}>
-              <Box style={{ flex: "1 1 auto", minWidth: 0, paddingRight: "8px" }}>
-                <Text fw={500}>Permanent Room</Text>
-                <Text size="sm" c="dimmed">No automatic expiration</Text>
-              </Box>
-              <Switch
-                checked={isPermanent}
-                onChange={(e) => setIsPermanent(e.currentTarget.checked)}
-                color="violet"
-                size="md"
-                disabled={isExpired}
-                style={{ flexShrink: 0 }}
-              />
-            </Group>
-
             <Group justify="space-between" align="center" wrap="nowrap" gap="sm" style={{ width: "100%" }}>
               <Box style={{ flex: "1 1 auto", minWidth: 0, paddingRight: "8px" }}>
                 <Text fw={500}>Chat Enabled</Text>
@@ -825,7 +835,7 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !onUpdateCover) return;
-    
+
     const computedState = getComputedState(room);
     if (computedState === 'Expired' || computedState === 'Ended' || room.status === 'expired' || room.status === 'ended' || (!room.isPermanent && room.expiresAt && new Date(room.expiresAt).getTime() <= Date.now())) {
       setActionError("Expired rooms cannot be edited.");
@@ -849,12 +859,12 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
         if (oldFiles && oldFiles.length > 0) {
           await supabase.storage.from('room_covers').remove(oldFiles.map(f => `${folderPath}/${f.name}`));
         }
-      } catch (_) {}
+      } catch (_) { }
 
       const filePath = `${folderPath}/cover.${fileExt}`;
       const { error: uploadError } = await supabase.storage.from('room_covers').upload(filePath, file, { upsert: true });
       if (uploadError) throw uploadError;
-      
+
       const { data: publicUrlData } = supabase.storage.from('room_covers').getPublicUrl(filePath);
       onUpdateCover(room.roomId, `${publicUrlData.publicUrl}?t=${Date.now()}`);
     } catch (e: any) {
@@ -868,7 +878,7 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
   const computedState = getComputedState(room);
   const isPermanent = computedState === 'Permanent';
   const urlPath = `/watch/${room.roomId.replace(/^\//, '')}`;
-  const detailsPath = `/rooms/${room.roomId}`;
+  const detailsPath = `/myrooms/${room.roomId}`;
 
   const renderPrimary = () => {
     if (computedState === 'Expired' || computedState === 'Ended') {
@@ -1101,7 +1111,7 @@ const GridRoomCard = ({
         </div>
 
         <div className={styles.roomLifecycle}>
-          {formatTimeLeft(room.expiresAt, room.status, isPermanent)}
+          {formatTimeLeft(room.expiresAt, room.status, isPermanent, room.durationMinutes)}
         </div>
       </div>
 
@@ -1179,7 +1189,7 @@ const StackRoomCard = ({
 
           <div className={styles.stackCardLifecycleBox}>
             <RoomStatusBadge status={room.status} isPermanent={isPermanent} />
-            {formatTimeLeft(room.expiresAt, room.status, isPermanent)}
+            {formatTimeLeft(room.expiresAt, room.status, isPermanent, room.durationMinutes)}
           </div>
         </div>
 

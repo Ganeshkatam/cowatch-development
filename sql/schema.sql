@@ -51,18 +51,19 @@ CREATE TABLE IF NOT EXISTS public.rooms (
   "roomTitle" text NOT NULL,
   "roomDescription" text,
   "mediaPath" text,
-  status text NOT NULL DEFAULT 'active'::text,
-  "startedAt" timestamp with time zone NOT NULL,
+  status text NOT NULL DEFAULT 'waiting'::text,
+  "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
   "endedAt" timestamp with time zone,
   "isPermanent" boolean NOT NULL DEFAULT false,
+  "durationMinutes" integer DEFAULT 180,
   "lastActiveAt" timestamp with time zone,
   owner_passcode text,
-  CONSTRAINT room_status_check CHECK (status IN ('scheduled', 'active', 'inactive', 'ended', 'expired')),
+  CONSTRAINT room_status_check CHECK (status IN ('waiting', 'scheduled', 'active', 'inactive', 'ended', 'expired')),
   CONSTRAINT room_title_not_empty CHECK (btrim("roomTitle") <> ''),
   CONSTRAINT rooms_expiration_policy_check CHECK (
     (("isPermanent" = true) AND ("expiresAt" IS NULL)) OR 
-    (("isPermanent" = false) AND ("expiresAt" IS NOT NULL))
+    (("isPermanent" = false) AND (status IN ('waiting', 'scheduled') OR ("expiresAt" IS NOT NULL)))
   )
 );
 

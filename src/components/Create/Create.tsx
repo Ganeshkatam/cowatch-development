@@ -15,6 +15,8 @@ import {
   Stack,
   Box,
   Divider,
+  NumberInput,
+  Select,
 } from "@mantine/core";
 import { supabase, getAccessToken } from "../../utils/supabaseClient";
 import { serverPath, addAndSavePasscode } from "../../utils/utils";
@@ -51,6 +53,7 @@ export const Create = () => {
   const [lock, setLock] = useState(false);
   const [isPermanent, setIsPermanent] = useState(false);
   const [isWaitingLoungeEnabled, setIsWaitingLoungeEnabled] = useState(false);
+  const [durationMinutes, setDurationMinutes] = useState<string>("180");
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
@@ -90,6 +93,7 @@ export const Create = () => {
           roomDescription: roomDescription || undefined,
           passcode: passcode || undefined,
           isPermanent,
+          durationMinutes: isPermanent ? undefined : Number(durationMinutes),
           isChatDisabled,
           isWaitingLoungeEnabled,
           lock,
@@ -111,7 +115,7 @@ export const Create = () => {
           const { error: uploadError } = await supabase.storage
             .from('room_covers')
             .upload(filePath, coverPhotoFile);
-            
+
           if (!uploadError) {
             const { data: publicUrlData } = supabase.storage.from('room_covers').getPublicUrl(filePath);
             await fetch(`${serverPath}/updateRoomCover`, {
@@ -147,7 +151,7 @@ export const Create = () => {
           <button
             type="button"
             className={styles.breadcrumbLink}
-            onClick={() => history.push("/rooms")}
+            onClick={() => history.push("/myrooms")}
           >
             <IconArrowLeft size={16} />
             <span>Back to My Rooms</span>
@@ -358,7 +362,7 @@ export const Create = () => {
                               Permanent Room
                             </Text>
                             <Text size="xs" c="dimmed" mt={2}>
-                              Never expires automatically (temporary rooms expire in 3 hours)
+                              Never expires automatically
                             </Text>
                           </div>
                         </Group>
@@ -370,6 +374,44 @@ export const Create = () => {
                         />
                       </Group>
                     </div>
+
+                    {!isPermanent && (
+                      <div className={styles.switchCard}>
+                        <Group gap="md" wrap="nowrap" mb="xs">
+                          <div className={styles.switchIconWrap}>
+                            <IconClock size={18} />
+                          </div>
+                          <div style={{ flex: "1 1 auto" }}>
+                            <Text fw={600} size="sm" c="var(--text-primary)">
+                              Session Duration
+                            </Text>
+                            <Text size="xs" c="dimmed" mt={2}>
+                              How long the room stays active once the host starts it
+                            </Text>
+                          </div>
+                        </Group>
+                        <Select
+                          value={durationMinutes}
+                          onChange={(val) => val && setDurationMinutes(val)}
+                          data={[
+                            { value: "30", label: "30 minutes" },
+                            { value: "60", label: "1 hour" },
+                            { value: "120", label: "2 hours" },
+                            { value: "180", label: "3 hours" },
+                            { value: "360", label: "6 hours" },
+                            { value: "720", label: "12 hours" },
+                            { value: "1440", label: "24 hours" },
+                          ]}
+                          styles={{
+                            input: {
+                              backgroundColor: "var(--surface-secondary)",
+                              borderColor: "var(--border-subtle)",
+                              color: "var(--text-primary)",
+                            },
+                          }}
+                        />
+                      </div>
+                    )}
                   </Stack>
                 </Box>
               </Stack>

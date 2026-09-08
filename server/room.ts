@@ -7,6 +7,7 @@ import { type AssignedVM } from "./vm/base.ts";
 import { getStartOfDay } from "./utils/time.ts";
 import { postgres, updateObject, upsertObject } from "./utils/postgres.ts";
 import { hashRoomPasscode, verifyRoomPasscode, isBcryptHash } from "./utils/roomPasscode.ts";
+import { startRoomLifecycle } from "./roomLifecycle.ts";
 import {
   fetchYoutubeVideo,
   getYoutubeVideoID,
@@ -149,10 +150,12 @@ export class Room {
   private tsInterval: NodeJS.Timeout | undefined = undefined;
   private inactivityTimeout: NodeJS.Timeout | undefined = undefined;
   public isChatDisabled: boolean | undefined = undefined;
-  public status: 'scheduled' | 'active' | 'inactive' | 'ended' | 'expired' = 'active';
+  public status: 'waiting' | 'scheduled' | 'active' | 'inactive' | 'ended' | 'expired' = 'waiting';
+  public startedAt: Date | undefined = undefined;
   public expiresAt: Date | undefined = undefined;
   public owner_id: string = '';
   public isPermanent: boolean = false;
+  public durationMinutes: number | null = null;
   public lastUpdateTime: Date = new Date();
   private preventTSUpdate = false;
   // Not really a queue since there's no ordering, we just retry as long as this is set
@@ -554,23 +557,47 @@ export class Room {
           }
         }
       });
+      // Validates that the room is not in 'waiting' state (media playback locked until host starts)
+      const validateNotWaiting = () => {
+        if (this.status === 'waiting') {
+          socket.emit("errorMessage", "The host has not started the watch party yet.");
+          return false;
+        }
+        return true;
+      };
+
+      // CMD:startRoom - Host starts the watch party (delegates to shared startRoomLifecycle)
+      socket.on("CMD:startRoom", async () => {
+        if (!socket.uid) {
+          socket.emit("errorMessage", "Authentication required to start the room.");
+          return;
+        }
+        try {
+          const result = await startRoomLifecycle(this.roomId, socket.uid);
+          // The startRoomLifecycle function handles broadcast, in-memory update, and persistence
+          console.log("[Room] CMD:startRoom succeeded for room %s by user %s", this.roomId, socket.uid);
+        } catch (err: any) {
+          socket.emit("errorMessage", err.message || "Failed to start room.");
+        }
+      });
+
       socket.on("CMD:host", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.startHosting(socket, String(data));
+        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.startHosting(socket, String(data));
       });
       socket.on("CMD:play", () => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.playVideo(socket);
+        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.playVideo(socket);
       });
       socket.on("CMD:pause", () => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.pauseVideo(socket);
+        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.pauseVideo(socket);
       });
       socket.on("CMD:seek", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.seekVideo(socket, Number(data));
+        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.seekVideo(socket, Number(data));
       });
       socket.on("CMD:playbackRate", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.setPlaybackRate(socket, Number(data));
+        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.setPlaybackRate(socket, Number(data));
       });
       socket.on("CMD:loop", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.setLoop(Boolean(data));
+        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.setLoop(Boolean(data));
       });
       socket.on("CMD:ts", (data: unknown) =>
         validateAdmitted() && validateNotExpired() && this.setTimestamp(socket, Number(data)),
@@ -1789,6 +1816,13 @@ export class Room {
       roomDescription: first?.roomDescription,
       mediaPath: first?.mediaPath,
       isWaitingLoungeEnabled: this.isWaitingLoungeEnabled,
+      // Lifecycle fields - authoritative from server
+      status: this.status,
+      startedAt: this.startedAt ? this.startedAt.toISOString() : null,
+      expiresAt: this.expiresAt ? this.expiresAt.toISOString() : null,
+      isPermanent: this.isPermanent,
+      durationMinutes: this.durationMinutes,
+      serverNow: Date.now(),
     });
   };
 

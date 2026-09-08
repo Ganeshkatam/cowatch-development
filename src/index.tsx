@@ -146,7 +146,7 @@ try {
   if (raw) {
     cachedProfileData = JSON.parse(raw);
   }
-} catch (e) {}
+} catch (e) { }
 
 const initialResolved = cachedUser ? resolveProfile(null, cachedUser) : null;
 const initialDisplayName = cachedProfileData.displayName || initialResolved?.displayName || "Guest";
@@ -184,7 +184,7 @@ class CoWatch extends React.Component {
       const parsed = cached ? JSON.parse(cached) : {};
       parsed.pref_appearance_mode = appearance;
       window.localStorage.setItem("cowatch-cached-profile", JSON.stringify(parsed));
-    } catch (e) {}
+    } catch (e) { }
 
     const { user } = this.state;
     if (user) {
@@ -331,7 +331,7 @@ class CoWatch extends React.Component {
                 const settings = JSON.parse(settingsStr);
                 settings.disableChatSound = profile.pref_disable_chat_sound;
                 window.localStorage.setItem("cowatch-setting", JSON.stringify(settings));
-              } catch (e) {}
+              } catch (e) { }
             }
 
             const activeAppearance = (() => {
@@ -354,7 +354,7 @@ class CoWatch extends React.Component {
                 })
               );
               window.localStorage.setItem("cowatch-appearance", activeAppearance);
-            } catch (e) {}
+            } catch (e) { }
 
             if (profile && user && activeAppearance && profile.pref_appearance_mode !== activeAppearance) {
               Promise.resolve(
@@ -378,7 +378,7 @@ class CoWatch extends React.Component {
           } else {
             try {
               window.localStorage.removeItem("cowatch-cached-profile");
-            } catch (e) {}
+            } catch (e) { }
             this.setState({ user: null, profile: null, displayName: "Guest", avatarUrl: null });
           }
         } catch (fatalErr) {
@@ -499,19 +499,26 @@ class CoWatch extends React.Component {
                         <FAQ />
                       </>
                     </Route>
-                    <Route path="/profile">
+                    <Route
+                      path="/profile"
+                      exact
+                      render={({ location }) => (
+                        <Redirect to={{ pathname: "/settings", search: location.search }} />
+                      )}
+                    />
+                    <Route path="/settings" exact>
                       <RequireVerifiedEmail>
                         <TopBar hideNewRoom />
                         <Profile />
                       </RequireVerifiedEmail>
                     </Route>
-                    <Route path="/rooms" exact>
+                    <Route path="/myrooms" exact>
                       <RequireVerifiedEmail>
                         <TopBar hideMyRooms />
                         <MyRooms />
                       </RequireVerifiedEmail>
                     </Route>
-                    <Route path="/rooms/:roomId">
+                    <Route path="/myrooms/:roomId">
                       <RequireVerifiedEmail>
                         <TopBar />
                         <RoomDetails />

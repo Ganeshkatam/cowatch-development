@@ -99,10 +99,11 @@ interface PersistentRoom {
   coverPhoto?: string | null;
   isSubRoom?: boolean;
   isPermanent?: boolean;
+  durationMinutes?: number | null;
   data?: any;
   owner?: string;
   owner_id: string;
-  status?: 'scheduled' | 'active' | 'inactive' | 'ended' | 'expired';
+  status?: 'waiting' | 'scheduled' | 'active' | 'inactive' | 'ended' | 'expired';
   startedAt?: Date | string;
   expiresAt?: Date | string;
   endedAt?: Date | string;

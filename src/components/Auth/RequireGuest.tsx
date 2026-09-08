@@ -35,6 +35,6 @@ export const RequireGuest = ({ children }: { children: React.ReactNode }) => {
   }
 
   const params = new URLSearchParams(location.search);
-  const redirect = params.get("redirect") || "/rooms";
+  const redirect = params.get("redirect") || "/myrooms";
   return <Redirect to={redirect.startsWith("/") ? redirect : `/${redirect}`} />;
 };

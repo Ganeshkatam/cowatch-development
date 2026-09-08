@@ -65,11 +65,12 @@ interface RoomDetailsData {
   coverPhoto: string | null;
   isChatDisabled: boolean;
   isSubRoom: boolean;
-  status: "scheduled" | "active" | "inactive" | "expiring" | "expired" | "ended";
+  status: "waiting" | "scheduled" | "active" | "inactive" | "expiring" | "expired" | "ended";
   startedAt: string | null;
   expiresAt: string | null;
   endedAt: string | null;
   isPermanent: boolean;
+  durationMinutes?: number | null;
   owner_id?: string;
   lifecycleEvents: LifecycleEvent[];
   chatSummary?: {
@@ -94,6 +95,14 @@ interface ChatMessageItem {
 
 const getStatusConfig = (status: RoomDetailsData["status"]) => {
   switch (status) {
+    case "waiting":
+      return {
+        label: "Waiting to Start",
+        color: "yellow",
+        dotClass: styles.inactive,
+        description: "Created and ready. The timer begins when the host starts the party.",
+        badgeColor: "yellow",
+      };
     case "active":
       return {
         label: "Active",
@@ -259,7 +268,7 @@ export const RoomDetails = () => {
         method: "DELETE",
       });
       if (response.ok) {
-        history.push("/rooms");
+        history.push("/myrooms");
       } else {
         const errData = await response.json().catch(() => null);
         throw new Error(errData?.error?.message || errData?.error || "Failed to delete room");
@@ -318,7 +327,7 @@ export const RoomDetails = () => {
   if (error || !room) {
     return (
       <div className={styles.container}>
-        <Button variant="subtle" leftSection={<IconArrowLeft size={16} />} onClick={() => history.push("/rooms")} mb="xl">
+        <Button variant="subtle" leftSection={<IconArrowLeft size={16} />} onClick={() => history.push("/myrooms")} mb="xl">
           Back to My Rooms
         </Button>
         <Paper withBorder p="xl" radius="md" style={{ textAlign: "center" }}>
@@ -352,7 +361,7 @@ export const RoomDetails = () => {
     <div className={styles.container}>
       {/* BREADCRUMBS */}
       <div className={styles.breadcrumb}>
-        <span className={styles.breadcrumbLink} onClick={() => history.push("/rooms")}>
+        <span className={styles.breadcrumbLink} onClick={() => history.push("/myrooms")}>
           <IconArrowLeft size={15} /> My Rooms
         </span>
         <span className={styles.breadcrumbSeparator}>/</span>
@@ -483,18 +492,22 @@ export const RoomDetails = () => {
             <span className={styles.statValue}>
               {room.isPermanent
                 ? "Never Expires"
-                : room.status === "expired" || expiresInText === "Expired"
-                ? "Expired"
-                : room.status === "ended"
-                ? "Ended"
-                : expiresInText || "Temporary"}
+                : room.status === "waiting"
+                  ? (room.durationMinutes ? `${room.durationMinutes}m session` : "Not started")
+                  : room.status === "expired" || expiresInText === "Expired"
+                    ? "Expired"
+                    : room.status === "ended"
+                      ? "Ended"
+                      : expiresInText || "Temporary"}
             </span>
             <span className={styles.statSubtitle}>
               {room.isPermanent
                 ? "Saved forever"
-                : room.status === "expired" || expiresInText === "Expired" || room.status === "ended"
-                ? "Room is closed"
-                : "Temporary room"}
+                : room.status === "waiting"
+                  ? "Timer begins on start"
+                  : room.status === "expired" || expiresInText === "Expired" || room.status === "ended"
+                    ? "Room is closed"
+                    : "Temporary room"}
             </span>
           </div>
         </div>
@@ -753,8 +766,8 @@ export const RoomDetails = () => {
                       border: isClosed
                         ? "1px solid rgba(156, 163, 175, 0.25)"
                         : room.isChatDisabled
-                        ? "1px solid rgba(156, 163, 175, 0.25)"
-                        : "1px solid rgba(16, 185, 129, 0.25)",
+                          ? "1px solid rgba(156, 163, 175, 0.25)"
+                          : "1px solid rgba(16, 185, 129, 0.25)",
                     }}
                   >
                     {isClosed ? "Disabled" : room.isChatDisabled ? "Turned Off" : "Turned On"}
@@ -847,38 +860,41 @@ export const RoomDetails = () => {
             </div>
 
             <div
-              className={`${styles.lifecycleBanner} ${
-                room.isPermanent
+              className={`${styles.lifecycleBanner} ${room.isPermanent
                   ? styles.permanent
                   : room.status === "active"
-                  ? styles.active
-                  : room.status === "expired" || room.status === "ended"
-                  ? styles.ended
-                  : styles.inactive
-              }`}
+                    ? styles.active
+                    : room.status === "expired" || room.status === "ended"
+                      ? styles.ended
+                      : styles.inactive
+                }`}
             >
               <div>
                 <Text fw={700} size="sm" c="var(--text-primary)">
                   {room.isPermanent
                     ? "Permanent Room"
-                    : room.status === "active"
-                    ? "Party in Progress"
-                    : room.status === "expired"
-                    ? "Room Expired"
-                    : room.status === "ended"
-                    ? "Room Ended"
-                    : "Room is Paused"}
+                    : room.status === "waiting"
+                      ? "Waiting to Start"
+                      : room.status === "active"
+                        ? "Party in Progress"
+                        : room.status === "expired"
+                          ? "Room Expired"
+                          : room.status === "ended"
+                            ? "Room Ended"
+                            : "Room is Paused"}
                 </Text>
                 <Text size="xs" c="var(--text-secondary)" mt={4} style={{ lineHeight: 1.5 }}>
                   {room.isPermanent
                     ? "This room is saved forever. You and your friends can come back and watch together anytime."
-                    : room.status === "active"
-                    ? "People are currently in this room watching together."
-                    : room.status === "expired"
-                    ? "This temporary room has reached its end of life and is now closed."
-                    : room.status === "ended"
-                    ? "This watch party has been ended by the host."
-                    : "Nobody is in the room right now. It automatically wakes up as soon as someone joins."}
+                    : room.status === "waiting"
+                      ? "This watch party is ready. The countdown timer starts as soon as the host begins."
+                      : room.status === "active"
+                        ? "People are currently in this room watching together."
+                        : room.status === "expired"
+                          ? "This temporary room has reached its end of life and is now closed."
+                          : room.status === "ended"
+                            ? "This watch party has been ended by the host."
+                            : "Nobody is in the room right now. It automatically wakes up as soon as someone joins."}
                 </Text>
               </div>
             </div>
@@ -898,11 +914,11 @@ export const RoomDetails = () => {
                 <span className={styles.tileValue}>
                   {room.lifecycleEvents && room.lifecycleEvents.length > 0
                     ? new Date(room.lifecycleEvents[0].timestamp).toLocaleString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                     : "Never used yet"}
                 </span>
               </div>
