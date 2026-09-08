@@ -14,7 +14,7 @@ import {
   formatDate,
 } from "../Create/roomCreationDomain";
 
-import { SharedRoomFields } from "../Create/SharedRoomFields";
+import { SharedRoomFields, DurationSelect } from "../Create/SharedRoomFields";
 import { DatePickerDropdown } from "./DatePickerDropdown";
 import { TimePickerDropdown } from "./TimePickerDropdown";
 import createStyles from "../Create/Create.module.css";
@@ -169,60 +169,66 @@ export const ScheduleRoom: React.FC = () => {
             )}
 
             <form id="schedule-room-form" onSubmit={handleSubmit}>
-              {/* Shared Room Fields with When section placed directly after Room Title */}
+              {/* Shared Room Fields with When section & Duration placed directly after Room Title */}
               <SharedRoomFields
                 formState={formState}
+                hideDuration
                 afterTitle={
-                  <div style={{ margin: "4px 0" }}>
-                    <Text size="sm" fw={500} c="var(--text-primary)" mb={10}>
-                      When
-                    </Text>
+                  <>
+                    <div style={{ margin: "4px 0" }}>
+                      <Text size="sm" fw={500} c="var(--text-primary)" mb={10}>
+                        When
+                      </Text>
 
-                    <div className={scheduleStyles.dateTimeGrid}>
-                      <div>
-                        <Text size="xs" fw={600} c="var(--text-secondary)" mb={6}>
-                          Date
-                        </Text>
-                        <DatePickerDropdown
-                          value={scheduleDate}
-                          onChange={handleDateChange}
-                          minDate={minDate}
-                        />
+                      <div className={scheduleStyles.dateTimeGrid}>
+                        <div>
+                          <Text size="xs" fw={600} c="var(--text-secondary)" mb={6}>
+                            Date
+                          </Text>
+                          <DatePickerDropdown
+                            value={scheduleDate}
+                            onChange={handleDateChange}
+                            minDate={minDate}
+                          />
+                        </div>
+
+                        <div>
+                          <Text size="xs" fw={600} c="var(--text-secondary)" mb={6}>
+                            Time
+                          </Text>
+                          <TimePickerDropdown
+                            value={scheduleTime}
+                            onChange={handleTimeChange}
+                            selectedDate={scheduleDate}
+                          />
+                        </div>
                       </div>
 
-                      <div>
-                        <Text size="xs" fw={600} c="var(--text-secondary)" mb={6}>
-                          Time
-                        </Text>
-                        <TimePickerDropdown
-                          value={scheduleTime}
-                          onChange={handleTimeChange}
-                          selectedDate={scheduleDate}
-                        />
+                      <div className={scheduleStyles.timezoneNote}>
+                        <IconWorld size={14} />
+                        <span>{timezoneDisplay}</span>
                       </div>
                     </div>
 
-                    <div className={scheduleStyles.timezoneNote}>
-                      <IconWorld size={14} />
-                      <span>{timezoneDisplay}</span>
-                    </div>
-                  </div>
+                    <DurationSelect formState={formState} />
+                  </>
                 }
               />
 
-              <Button
-                type="submit"
-                size="lg"
-                variant="gradient"
-                gradient={{ from: "violet", to: "grape", deg: 135 }}
-                disabled={loading || !formState.roomTitle.trim()}
-                leftSection={loading ? <Loader size={20} color="white" /> : <IconCalendarEvent size={20} />}
-                className={createStyles.createBtnPrimary}
-                fullWidth
-                mt="xl"
-              >
-                {loading ? "Scheduling..." : "Schedule Watch Party"}
-              </Button>
+              <div className={createStyles.stickyFooter}>
+                <Button
+                  type="submit"
+                  size="lg"
+                  variant="gradient"
+                  gradient={{ from: "violet", to: "grape", deg: 135 }}
+                  disabled={loading || !formState.roomTitle.trim()}
+                  leftSection={loading ? <Loader size={20} color="white" /> : <IconCalendarEvent size={20} />}
+                  className={createStyles.createBtnPrimary}
+                  fullWidth
+                >
+                  {loading ? "Scheduling..." : "Schedule Watch Party"}
+                </Button>
+              </div>
             </form>
           </div>
         </div>

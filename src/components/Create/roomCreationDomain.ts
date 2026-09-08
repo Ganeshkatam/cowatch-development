@@ -29,7 +29,7 @@ export interface RoomFormState {
 }
 
 export function useRoomFormState(): RoomFormState {
-  const [roomTitle, setRoomTitle] = useState("");
+  const [roomTitle, setRoomTitle] = useState("Watch Party");
   const [roomDescription, setRoomDescription] = useState("");
   const [passcode, setPasscode] = useState("");
 

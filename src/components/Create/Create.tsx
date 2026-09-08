@@ -78,19 +78,20 @@ export const Create: React.FC = () => {
             <form id="create-room-form" onSubmit={handleSubmit}>
               <SharedRoomFields formState={formState} />
 
-              <Button
-                type="submit"
-                size="lg"
-                variant="gradient"
-                gradient={{ from: "violet", to: "grape", deg: 135 }}
-                disabled={loading || !formState.roomTitle.trim()}
-                leftSection={loading ? <Loader size={20} color="white" /> : <IconCirclePlusFilled size={20} />}
-                className={styles.createBtnPrimary}
-                fullWidth
-                mt="xl"
-              >
-                {loading ? "Creating..." : "Start Watch Party"}
-              </Button>
+              <div className={styles.stickyFooter}>
+                <Button
+                  type="submit"
+                  size="lg"
+                  variant="gradient"
+                  gradient={{ from: "violet", to: "grape", deg: 135 }}
+                  disabled={loading || !formState.roomTitle.trim()}
+                  leftSection={loading ? <Loader size={20} color="white" /> : <IconCirclePlusFilled size={20} />}
+                  className={styles.createBtnPrimary}
+                  fullWidth
+                >
+                  {loading ? "Creating..." : "Start Watch Party"}
+                </Button>
+              </div>
             </form>
           </div>
         </div>
