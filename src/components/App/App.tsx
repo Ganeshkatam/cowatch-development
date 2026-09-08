@@ -1006,8 +1006,11 @@ export class App extends React.Component<AppProps, AppState> {
     });
     window.setInterval(() => {
       if (this.state.roomMedia) {
-        const toSend = this.getRoomTSToSet(this.Player().getCurrentTime());
-        this.socket.emit("CMD:ts", toSend);
+        const curr = this.Player().getCurrentTime();
+        if (typeof curr === "number" && isFinite(curr) && curr >= 0) {
+          const toSend = this.getRoomTSToSet(curr);
+          this.socket.emit("CMD:ts", toSend);
+        }
       }
     }, 1000);
     } catch (criticalErr) {
@@ -1866,9 +1869,13 @@ export class App extends React.Component<AppProps, AppState> {
     if (this.state.isLiveStream) {
       target = this.Player().getDuration() + (customTime ?? 0);
     }
-    if (target >= 0 && target < Infinity) {
+    if (typeof target === "number" && isFinite(target) && target >= 0) {
       console.log("syncing self to leader or custom:", target);
       this.Player().seekVideo(target);
+      if (!this.state.roomPaused && this.Player().shouldPlay()) {
+        this.localPlay();
+      }
+      this.refreshControls();
     }
   };
 
@@ -2153,10 +2160,41 @@ export class App extends React.Component<AppProps, AppState> {
   };
 
   getLeaderTime = () => {
-    if (this.state.participants.length > 2) {
-      return calculateMedian(Object.values(this.state.tsMap));
+    const selfId = getOrCreateClientId();
+    const tsEntries = Object.entries(this.state.tsMap || {}).filter(
+      ([_, ts]) => typeof ts === "number" && !isNaN(ts) && isFinite(ts) && ts >= 0,
+    );
+
+    // If room has an owner/host and their timestamp is reported, prioritize owner's time
+    if (this.state.owner) {
+      const ownerParticipant = this.state.participants.find(
+        (p) => p.id === this.state.owner,
+      );
+      if (
+        ownerParticipant &&
+        typeof this.state.tsMap[ownerParticipant.id] === "number" &&
+        isFinite(this.state.tsMap[ownerParticipant.id])
+      ) {
+        return this.state.tsMap[ownerParticipant.id];
+      }
     }
-    return Math.max(...Object.values(this.state.tsMap));
+
+    // Filter out our own timestamp if other peers have valid timestamps
+    const otherEntries = tsEntries.filter(([id]) => id !== selfId);
+    const validTimestamps = (otherEntries.length > 0 ? otherEntries : tsEntries).map(
+      ([_, ts]) => ts,
+    );
+
+    if (validTimestamps.length > 0) {
+      if (validTimestamps.length > 2) {
+        return calculateMedian([...validTimestamps]);
+      }
+      return Math.max(...validTimestamps);
+    }
+
+    // Fallback to local player's current time if no remote timestamps available
+    const localTime = this.Player().getCurrentTime();
+    return typeof localTime === "number" && isFinite(localTime) ? localTime : 0;
   };
 
   onVideoEnded = (url: string) => {

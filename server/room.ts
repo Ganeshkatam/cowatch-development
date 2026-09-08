@@ -1246,6 +1246,9 @@ export class Room {
   };
 
   private setTimestamp = (socket: Socket, data: number) => {
+    if (typeof data !== "number" || isNaN(data) || !isFinite(data)) {
+      return;
+    }
     if (String(data).length > 100) {
       return;
     }

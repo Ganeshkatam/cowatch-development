@@ -41,7 +41,7 @@ interface ControlsProps {
   localFullScreen: (fs: boolean) => void;
   localToggleMute: () => void;
   localSubtitleModal: () => void;
-  localSeek: () => void;
+  localSeek: (time?: number) => void;
   localSetVolume: (volume: number) => void;
   localSetSubtitleMode: (mode: TextTrackMode, lang?: string) => void;
   roomPlaylistPlay: (index: number) => void;
@@ -54,6 +54,7 @@ export const Controls = (props: ControlsProps) => {
     hoverPos: 0,
   });
   const [showTimestamp, setShowTimestamp] = useState(false);
+  const [synced, setSynced] = useState(false);
   const getEnd = () => props.duration;
   const getStart = () => 0;
   const getLength = () => getEnd() - getStart();
@@ -105,11 +106,12 @@ export const Controls = (props: ControlsProps) => {
   } = props;
   // console.log(leaderTime, currentTime);
   const behindThreshold = 10;
+  const isLeaderTimeValid = typeof leaderTime === "number" && isFinite(leaderTime) && leaderTime >= 0;
   const behindTime =
-    !isLiveStream && leaderTime && leaderTime < Infinity
+    !isLiveStream && isLeaderTimeValid
       ? leaderTime - currentTime
       : getEnd() - getCurrent();
-  const isBehind = behindTime > behindThreshold;
+  const isBehind = isLeaderTimeValid ? behindTime > behindThreshold : false;
   const buffers = timeRanges.map(({ start, end }) => {
     const buffStartPct = (start / getLength()) * 100;
     const buffLengthPct = ((end - start) / getLength()) * 100;
@@ -161,22 +163,32 @@ export const Controls = (props: ControlsProps) => {
       >
         <Button
           size="compact-xs"
-          color={isBehind ? "blue" : "grey"}
-          title="Sync"
+          color={synced ? "teal" : isBehind ? "blue" : "gray"}
+          variant={synced || isBehind ? "filled" : "light"}
+          title={!disabled ? "Sync room to current playback time" : "Sync playback with host"}
           onClick={() => {
+            setSynced(true);
+            setTimeout(() => setSynced(false), 1500);
+
             if (isLiveStream) {
-              // in live case we want to seek the entire room to edge
               roomSeek(props.duration);
+              localSeek();
+            } else if (!disabled) {
+              // User has room control (Host): sync all participants in room to current time
+              const target =
+                isBehind && isLeaderTimeValid
+                  ? (leaderTime as number)
+                  : getCurrent();
+              roomSeek(target);
+              localSeek(target);
             } else {
+              // Guest syncing to host / leader
               localSeek();
             }
           }}
         >
-          Sync
+          {synced ? "Synced!" : "Sync"}
         </Button>
-        {/* <div style={{ position: 'absolute', fontSize: '6px', zIndex: -1 }}>
-            {Math.max(Math.floor(behindTime), 0)}
-          </div> */}
       </div>
       <div className={` ${styles.text}`}>
         {formatTimestamp(getCurrent(), isLiveStream ? zeroTime : undefined)}
