@@ -254,6 +254,61 @@
   color: #5c38c6;
 }
 
+.errorMessage {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  text-align: left;
+  line-height: 1.4;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+:global([data-color-scheme="light"]) .errorMessage {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #dc2626;
+}
+
+.roomCodeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(139, 92, 246, 0.14);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  color: #c084fc;
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+:global([data-color-scheme="light"]) .roomCodeBadge {
+  background: rgba(112, 72, 232, 0.08);
+  border-color: rgba(112, 72, 232, 0.2);
+  color: #7048e8;
+}
+
+.changeCodeBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  transition: color 0.15s ease;
+  align-self: flex-start;
+}
+
+.changeCodeBtn:hover {
+  color: var(--text-primary);
+}
+
 @media (max-width: 480px) {
   .container {
     padding: 16px 14px 32px;

@@ -104,26 +104,27 @@ io.engine.use(async (req: any, res: Response, next: () => void) => {
   // Don't await after this because we may have a race condition where 2 rquests both try to load the room
   if (isCorrectShard) {
     if (!rooms.has(key)) {
-      const data = persistedRoom?.data
-        ? JSON.stringify(persistedRoom.data)
-        : undefined;
-      if (data) {
+      if (persistedRoom) {
+        const data = persistedRoom.data
+          ? JSON.stringify(persistedRoom.data)
+          : undefined;
         const room = new Room(io, key, data);
-        if (persistedRoom) {
-          const isExpired =
-            persistedRoom.status === 'expired' ||
-            persistedRoom.status === 'ended' ||
-            (!persistedRoom.isPermanent &&
-              persistedRoom.expiresAt &&
-              new Date(persistedRoom.expiresAt as string).getTime() <= Date.now());
+        const isExpired =
+          persistedRoom.status === 'expired' ||
+          persistedRoom.status === 'ended' ||
+          (!persistedRoom.isPermanent &&
+            persistedRoom.expiresAt &&
+            new Date(persistedRoom.expiresAt as string).getTime() <= Date.now());
 
-          room.status = isExpired ? 'expired' : (persistedRoom.status || 'waiting');
-          room.startedAt = persistedRoom.startedAt ? new Date(persistedRoom.startedAt as string) : undefined;
-          room.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;
-          room.owner_id = persistedRoom.owner_id;
-          room.isPermanent = persistedRoom.isPermanent || false;
-          room.durationMinutes = persistedRoom.isPermanent ? null : (persistedRoom.durationMinutes ?? null);
-        }
+        room.status = isExpired ? 'expired' : (persistedRoom.status || 'waiting');
+        room.startedAt = persistedRoom.startedAt ? new Date(persistedRoom.startedAt as string) : undefined;
+        room.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;
+        room.owner_id = persistedRoom.owner_id;
+        room.isPermanent = persistedRoom.isPermanent || false;
+        room.durationMinutes = persistedRoom.isPermanent ? null : (persistedRoom.durationMinutes ?? null);
+        room.isWaitingLoungeEnabled = persistedRoom.isWaitingLoungeEnabled !== undefined
+          ? Boolean(persistedRoom.isWaitingLoungeEnabled)
+          : true;
         rooms.set(key, room);
         console.log(
           "loading room %s into memory on shard %s",
@@ -138,6 +139,9 @@ io.engine.use(async (req: any, res: Response, next: () => void) => {
         memoryRoom.startedAt = persistedRoom.startedAt ? new Date(persistedRoom.startedAt as string) : undefined;
         memoryRoom.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;
         memoryRoom.durationMinutes = persistedRoom.isPermanent ? null : (persistedRoom.durationMinutes ?? null);
+        if (persistedRoom.isWaitingLoungeEnabled !== undefined) {
+          memoryRoom.isWaitingLoungeEnabled = Boolean(persistedRoom.isWaitingLoungeEnabled);
+        }
         if (
           memoryRoom.status === 'expired' ||
           persistedRoom.status === 'expired' ||
@@ -960,7 +964,7 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
     if (postgres) {
       const result = await postgres.query(
         `SELECT "roomId", "roomTitle", "roomDescription", status, "startedAt", "scheduledStartsAt", "expiresAt", "endedAt", 
-                "isPermanent", "isSubRoom", owner_id,
+                "isPermanent", "isSubRoom", owner_id, "isWaitingLoungeEnabled",
                 (passcode IS NOT NULL AND passcode <> '') AS "isPasscodeProtected"
          FROM rooms WHERE "roomId" = $1`,
         [roomId]
@@ -984,6 +988,7 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
           isPermanent: memoryRoom.isPermanent || false,
           isSubRoom: false,
           owner_id: memoryRoom.owner_id || null,
+          isWaitingLoungeEnabled: memoryRoom.isWaitingLoungeEnabled !== undefined ? memoryRoom.isWaitingLoungeEnabled : true,
           isPasscodeProtected: Boolean(memAny.passcode),
         };
       }
@@ -1036,6 +1041,7 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
         access: {
           requiresAuthentication: false, // Defaulting for now until explicit auth field exists
           requiresPasscode: room.isPasscodeProtected,
+          isWaitingLoungeEnabled: room.isWaitingLoungeEnabled !== undefined ? Boolean(room.isWaitingLoungeEnabled) : true,
           isOwner: false, // We'll compute this securely in verifyPasscode or a separate authenticated flow if needed
         }
       }

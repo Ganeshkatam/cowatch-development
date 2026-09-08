@@ -223,13 +223,14 @@ export class Room {
 
       if (postgres) {
         const result = await postgres.query(
-          `SELECT passcode, owner_id, "isSubRoom", status, "expiresAt" FROM rooms where "roomId" = $1`,
+          `SELECT passcode, owner_id, "isSubRoom", status, "expiresAt", "isWaitingLoungeEnabled" FROM rooms where "roomId" = $1`,
           [cleanRoomId],
         );
         const owner_id = result.rows[0]?.owner_id;
         const status = result.rows[0]?.status;
         const expiresAt = result.rows[0]?.expiresAt;
         const isSubRoom = result.rows[0]?.isSubRoom;
+        const isWaitingLoungeEnabled = result.rows[0]?.isWaitingLoungeEnabled;
 
         if (!result.rows[0]) {
           next(new Error("ROOM_NOT_FOUND"));
@@ -238,6 +239,9 @@ export class Room {
 
         if (owner_id) {
           this.owner_id = owner_id;
+        }
+        if (isWaitingLoungeEnabled !== undefined && isWaitingLoungeEnabled !== null) {
+          this.isWaitingLoungeEnabled = Boolean(isWaitingLoungeEnabled);
         }
 
         // Validate lifecycle

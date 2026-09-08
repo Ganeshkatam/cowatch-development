@@ -40,6 +40,7 @@ interface RoomMetadata {
   access: {
     requiresAuthentication: boolean;
     requiresPasscode: boolean;
+    isWaitingLoungeEnabled?: boolean;
     isOwner: boolean;
   };
 }
@@ -274,6 +275,24 @@ export default function JoinRoom() {
               Hosted by {room.host.displayName || room.host.username || "Anonymous"}
             </span>
           </div>
+
+          {room.access?.isWaitingLoungeEnabled && room.status !== "ended" && room.status !== "expired" && room.status !== "cancelled" && (
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "4px 10px",
+              borderRadius: "8px",
+              fontSize: "12px",
+              fontWeight: 500,
+              background: "rgba(139, 92, 246, 0.12)",
+              color: "var(--color-violet)",
+              border: "1px solid rgba(139, 92, 246, 0.25)",
+              margin: "2px 0 10px",
+            }}>
+              <span>Waiting Room enabled • Host admits guests</span>
+            </div>
+          )}
 
           {room.status === "active" && (
             <div className={`${styles.statusIndicator} ${styles.statusLive}`}>

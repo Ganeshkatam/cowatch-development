@@ -90,6 +90,7 @@ interface HostState {
 }
 
 interface PersistentRoom {
+  isWaitingLoungeEnabled?: boolean;
   roomId: string;
   creationTime: string;
   passcode?: string;
