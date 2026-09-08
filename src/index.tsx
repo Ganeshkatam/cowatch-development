@@ -494,18 +494,13 @@ class CoWatch extends React.Component {
                       <Route
                         path="/"
                         exact
-                        render={(_props: any) => {
-                          if (this.state.user) {
-                            return <Redirect to="/home" />;
-                          }
-                          return (
-                            <React.Fragment>
-                              <TopBar />
-                              <Home />
-                              <Footer />
-                            </React.Fragment>
-                          );
-                        }}
+                        render={(_props: any) => (
+                          <React.Fragment>
+                            <TopBar />
+                            <Home />
+                            <Footer />
+                          </React.Fragment>
+                        )}
                       />
                       <Route
                         path="/home"

@@ -126,7 +126,7 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
             <span className={styles.logoText}>CoWatch</span>
           </button>
         ) : (
-          <Link to="/home" className={styles.logoLink} title="Go to home">
+          <Link to="/" className={styles.logoLink} title="Go to home">
             <img src="/logo192.png" alt="CoWatch" className={styles.logoImg} />
             <span className={styles.logoText}>CoWatch</span>
           </Link>

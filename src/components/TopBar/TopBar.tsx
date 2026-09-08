@@ -153,7 +153,7 @@ export class SignInButton extends React.Component {
               Account settings
             </Menu.Item>
             <Menu.Item component={Link} to="/home" leftSection={<IconDeviceTv size={16} stroke={1.5} />}>
-              Home
+              Dashboard
             </Menu.Item>
             <Menu.Item component={Link} to="/myrooms" leftSection={<IconDatabase size={16} stroke={1.5} />}>
               My rooms
@@ -240,7 +240,7 @@ export const TopBar = (props: {
       <div className={styles.topBarContainer}>
         {/* Left Section: Brand Logo + Name + optional Room Breadcrumb */}
         <div className={styles.leftSection}>
-          <Link to={context.user ? "/home" : "/"} className={styles.brandGroup}>
+          <Link to="/" className={styles.brandGroup}>
             <img className={`cowatch-brand-logo ${styles.logo}`} src="/logo192.png" alt="CoWatch" />
             <span className={styles.brandName}>CoWatch</span>
           </Link>
