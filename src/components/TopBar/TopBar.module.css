@@ -2,7 +2,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 24px;
+  gap: 20px;
+  padding: 10px 20px;
   min-height: 64px;
   position: sticky;
   top: 0;
@@ -25,8 +26,9 @@
 .brandGroup {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .logo {
@@ -36,14 +38,12 @@
   transition: transform 0.2s ease;
 }
 
-.brandGroup:hover .logo {
-  transform: scale(1.05);
-}
+.brandGroup:hover .logo { transform: scale(1.04); }
 
 .brandName {
   text-transform: uppercase;
   font-weight: 800;
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1;
   letter-spacing: -0.02em;
   background: linear-gradient(135deg, #14B8A6 0%, #3B82F6 100%);
@@ -52,38 +52,53 @@
   color: transparent;
 }
 
+.roomContext {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  flex: 1;
+  margin-left: 4px;
+}
+
+.roomContextTitle {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .actionsGroup {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
-/* User Profile Pill */
-.profilePill {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 12px 4px 4px;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-subtle);
+.avatarBtn {
+  width: 36px;
+  height: 36px;
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
   cursor: pointer;
-  user-select: none;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: var(--shadow-sm);
+  display: grid;
+  place-items: center;
+  transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
-:global([data-color-scheme="light"]) .profilePill {
-  background: #ffffff;
-  border-color: #e2e8f0;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
-}
-
-.profilePill:hover {
+.avatarBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
   transform: translateY(-1px);
-  border-color: var(--color-violet);
-  box-shadow: 0 4px 14px rgba(112, 72, 232, 0.18);
 }
+
+:global([data-color-scheme="light"]) .avatarBtn:hover { background: #f1f5f9; }
 
 .avatarWrap {
   position: relative;
@@ -96,88 +111,26 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #10B981;
   border: 2px solid var(--bg-surface);
   box-shadow: 0 0 4px rgba(16, 185, 129, 0.6);
 }
 
-:global([data-color-scheme="light"]) .statusDot {
-  border-color: #ffffff;
-}
-
-.profileInfo {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-
-.profileName {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text-primary);
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chevron {
-  color: var(--text-muted);
-  transition: transform 0.2s ease, color 0.2s ease;
-}
-
-.profilePill:hover .chevron {
-  color: var(--color-violet);
-  transform: translateY(1px);
-}
-
-/* Quick Theme Toggle Button */
-.themeToggleBtn {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  padding: 0;
-}
-
-:global([data-color-scheme="light"]) .themeToggleBtn {
-  background: #ffffff;
-  border-color: #e2e8f0;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
-}
-
-.themeToggleBtn:hover {
-  color: var(--color-violet);
-  border-color: var(--color-violet);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(112, 72, 232, 0.15);
-}
+:global([data-color-scheme="light"]) .statusDot { border-color: #ffffff; }
 
 @media (max-width: 768px) {
-  .topBar {
-    padding: 8px 12px;
-    min-height: 56px;
-  }
-  .brandName {
-    font-size: 20px;
-  }
-  .actionsGroup {
-    gap: 8px;
-  }
-  .profileInfo,
-  .chevron {
-    display: none;
-  }
-  .profilePill {
-    padding: 2px;
-  }
+  .topBar { padding: 8px 12px; min-height: 56px; gap: 10px; }
+  .brandName { font-size: 18px; }
+  .actionsGroup { gap: 2px; }
+  .roomContextTitle { font-size: 14px; }
+}
+
+@media (max-width: 480px) {
+  .topBar { padding: 8px 10px; }
+  .brandName { display: none; }
+  .roomContext { margin-left: 0; }
+  .roomContextTitle { font-size: 13px; }
 }
