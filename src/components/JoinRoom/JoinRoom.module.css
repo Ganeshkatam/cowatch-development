@@ -1,406 +1,709 @@
-.container {
+/* ==========================================================================
+   CoWatch Cinema Pre-Flight Lobby Styles
+   Cinema-grade, atmospheric screening stage & focused command console
+   ========================================================================== */
+
+.lobbyContainer {
+  min-height: calc(100vh - 64px);
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 64px);
-  padding: 20px;
+  padding: 48px 32px;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  background: radial-gradient(
+    ellipse at 50% 15%,
+    rgba(139, 92, 246, 0.08) 0%,
+    rgba(10, 11, 16, 0.98) 65%
+  );
+  box-sizing: border-box;
 }
 
-.glowContainer {
+/* Ambient Theater Lighting */
+.ambientGlowContainer {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 0;
+  inset: 0;
   pointer-events: none;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 30%, rgba(132, 94, 247, 0.05), transparent 60%);
+  z-index: 0;
 }
 
-.glowLeft {
+.ambientGlowLeft {
   position: absolute;
-  top: 20%;
-  left: 10%;
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(132, 94, 247, 0.15), transparent 70%);
-  border-radius: 50%;
-  filter: blur(80px);
-}
-
-.glowRight {
-  position: absolute;
-  bottom: 10%;
-  right: 10%;
+  top: 15%;
+  left: 5%;
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(230, 73, 128, 0.1), transparent 70%);
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.12) 0%, transparent 70%);
   border-radius: 50%;
   filter: blur(100px);
 }
 
-.card {
+.ambientGlowRight {
+  position: absolute;
+  bottom: 10%;
+  right: 5%;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(110px);
+}
+
+/* Two-Column Lobby Grid */
+.lobbyGrid {
   position: relative;
   z-index: 1;
+  display: grid;
+  grid-template-columns: 6fr 4fr;
+  gap: 56px;
+  max-width: 1140px;
   width: 100%;
-  max-width: 490px;
-  background: rgba(18, 19, 26, 0.85);
+  align-items: center;
+}
+
+/* ==========================================================================
+   LEFT PANE: Immersive Room Stage (Direct visual canvas, no card)
+   ========================================================================== */
+
+.lobbyStage {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+/* Lifecycle Eyebrows */
+.eyebrowContainer {
+  margin-bottom: 14px;
+}
+
+.eyebrowLive {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #fa5252;
+  background: rgba(250, 82, 82, 0.1);
+  border: 1px solid rgba(250, 82, 82, 0.25);
+  padding: 4px 12px;
+  border-radius: 9999px;
+}
+
+.eyebrowScheduled {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  padding: 4px 12px;
+  border-radius: 9999px;
+}
+
+.eyebrowPast {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 4px 12px;
+  border-radius: 9999px;
+}
+
+.eyebrowCancelled {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 4px 12px;
+  border-radius: 9999px;
+}
+
+.livePulseDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #fa5252;
+  box-shadow: 0 0 10px #fa5252;
+  animation: pulseAnimation 2s infinite;
+}
+
+@keyframes pulseAnimation {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(250, 82, 82, 0.7);
+  }
+  70% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 6px rgba(250, 82, 82, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(250, 82, 82, 0);
+  }
+}
+
+/* Dominant Room Title */
+.roomTitle {
+  font-size: 38px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin: 0 0 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
+}
+
+.roomDescription {
+  font-size: 15px;
+  color: #94a3b8;
+  line-height: 1.55;
+  margin: 0 0 20px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  max-width: 580px;
+}
+
+/* Understated Host Identity */
+.hostRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.hostAvatar {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.hostLabel {
+  font-size: 14px;
+  color: #cbd5e1;
+  font-weight: 400;
+}
+
+.hostName {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.hostPill {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: #c4b5fd;
+}
+
+/* Ambient Cinema Stage Preview */
+.cinemaStageBox {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  height: 180px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(20, 22, 33, 0.8) 0%, rgba(12, 14, 22, 0.9) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.cinemaScreenGlow {
+  position: absolute;
+  top: -20%;
+  left: 10%;
+  right: 10%;
+  height: 80px;
+  background: radial-gradient(ellipse at top, rgba(139, 92, 246, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cinemaScreenInner {
+  position: relative;
+  z-index: 1;
+}
+
+.screenActiveIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 1.5px;
+  color: #f87171;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 8px 18px;
+  border-radius: 9999px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.screenScheduledIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #c4b5fd;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 8px 18px;
+  border-radius: 9999px;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.screenEndedIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #94a3b8;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 8px 18px;
+  border-radius: 9999px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.screenCancelledIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fbbf24;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 8px 18px;
+  border-radius: 9999px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+/* Compact Feature Metadata Tags */
+.featureTagsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.featureTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 5px 12px;
+  border-radius: 8px;
+}
+
+/* ==========================================================================
+   RIGHT PANE: Purpose-Built Command Console (Control booth, not dashboard)
+   ========================================================================== */
+
+.consolePanel {
+  min-width: 0;
+  background: rgba(18, 20, 28, 0.88);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 24px;
-  padding: 38px 32px;
-  text-align: center;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 40px 32px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
 }
 
-@media (max-width: 600px) {
-  .card {
-    padding: 28px 20px;
-  }
-}
-
-.title {
-  font-size: 26px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  color: #fff;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
-}
-
-.subtitle {
-  font-size: 15px;
-  color: var(--text-muted);
+.consoleHeader {
   margin-bottom: 24px;
-}
-
-.hostBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 5px 12px 5px 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 9999px;
-  margin-bottom: 20px;
-  max-width: 100%;
-}
-
-.hostName {
-  font-size: 13px;
-  color: #e2e8f0;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.statusIndicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 4px 10px;
-  border-radius: 6px;
-  margin-bottom: 32px;
-}
-
-.statusLive {
-  background: rgba(250, 82, 82, 0.1);
-  color: #fa5252;
-}
-
-.statusUpcoming {
-  background: rgba(255, 255, 255, 0.1);
-  color: #e9ecef;
-}
-
-.statusEnded {
-  background: rgba(134, 142, 150, 0.1);
-  color: #adb5bd;
-}
-
-.statusIndicator svg {
-  width: 14px;
-  height: 14px;
-}
-
-.formGroup {
-  margin-top: 24px;
   text-align: left;
 }
 
-.actionButton {
-  margin-top: 24px;
-  width: 100%;
-}
-
-.errorAlert {
-  margin-top: 24px;
-  text-align: left;
-}
-
-.divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 32px 0;
-}
-
-.postShowContainer {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 16px;
-  padding: 40px;
-  border-radius: 20px;
-  background:
-    radial-gradient(
-      circle at 50% 35%,
-      var(--lifecycle-ended-glow),
-      transparent 42%
-    ),
-    var(--surface-background);
-  border: 1px solid var(--lifecycle-ended-border);
-}
-
-.postShowContainer::before {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: radial-gradient(circle at 50% -20%, rgba(139, 147, 184, 0.05), transparent 70%);
-  pointer-events: none;
-  z-index: -1;
-}
-
-.postShowTitle {
-  font-size: 28px;
-  letter-spacing: -0.035em;
-  font-weight: 650;
-  line-height: 1.05;
-  color: #fff;
-  margin-bottom: 8px;
-  text-align: center;
-}
-
-.postShowSubtitle {
-  font-size: 15px;
-  color: var(--lifecycle-ended);
-  margin-bottom: 32px;
-  text-align: center;
-}
-
-.postShowMetadata {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 32px;
-  margin: 16px 0 40px;
-  padding-top: 32px;
-  border-top: 1px solid var(--lifecycle-ended-border);
-  width: 100%;
-}
-
-.postShowStat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  opacity: 0;
-  transform: translateY(8px);
-  animation: postShowStatIn 500ms cubic-bezier(.22, 1, .36, 1) forwards;
-}
-
-.postShowStat:nth-child(1) { animation-delay: 100ms; }
-.postShowStat:nth-child(2) { animation-delay: 180ms; }
-.postShowStat:nth-child(3) { animation-delay: 260ms; }
-.postShowStat:nth-child(4) { animation-delay: 340ms; }
-.postShowStat:nth-child(5) { animation-delay: 420ms; }
-
-@keyframes postShowStatIn {
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .postShowStat {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.postShowStatLabel {
+.consoleEyebrow {
+  display: block;
   font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--lifecycle-ended-muted);
-  font-weight: 700;
-}
-
-.postShowStatValue {
-  font-size: 16px;
-  color: #e9ecef;
-  font-weight: 500;
-}
-
-.postShowDivider {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.hostAgainButton {
-  margin-top: 8px;
-  border: 1px solid transparent;
-  background:
-    linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
-    linear-gradient(
-      110deg,
-      var(--brand-primary),
-      var(--lifecycle-ended),
-      var(--brand-primary)
-    ) border-box;
-  transition: transform 200ms ease, box-shadow 200ms ease;
-}
-
-@media (hover: hover) {
-  .hostAgainButton:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 36px var(--lifecycle-ended-glow);
-  }
-}
-
-.hostRoomTag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: #c4b5fd;
-  margin-bottom: 12px;
-  padding: 4px 14px;
-  border-radius: 9999px;
-  background: rgba(139, 92, 246, 0.15);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-}
-
-.ownerRoleBadge {
-  margin-left: 6px;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 700;
-  background: rgba(139, 92, 246, 0.22);
-  border: 1px solid rgba(139, 92, 246, 0.38);
-  color: #c4b5fd;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-}
-
-.privilegeBanner {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  text-align: left;
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 12px;
-  background: rgba(139, 92, 246, 0.12);
-  border: 1px solid rgba(139, 92, 246, 0.28);
-  margin: 6px 0 10px;
-}
-
-.privilegeTitle {
-  font-weight: 650;
-  color: #f8fafc;
-  font-size: 13px;
-  line-height: 1.3;
-}
-
-.privilegeDesc {
-  color: #cbd5e1;
-  font-size: 12px;
-  line-height: 1.45;
-  margin-top: 3px;
-}
-
-.ownerToolbar {
-  display: flex;
-  gap: 10px;
-  margin-top: 14px;
-  width: 100%;
-}
-
-.toolbarBtn {
-  flex: 1;
-  white-space: nowrap;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.scheduledNoticeBox {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 20px;
-  margin-bottom: 20px;
-}
-
-.scheduledHeader {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   color: #a78bfa;
-  margin-bottom: 8px;
-}
-
-.countdownValue {
-  font-size: 32px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: 2px;
-  margin: 10px 0;
-  text-shadow: 0 0 16px rgba(139, 92, 246, 0.3);
-}
-
-.scheduledTimeLabel {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary, #fff);
   margin-bottom: 6px;
 }
 
-.scheduledExplainer {
-  font-size: 12px;
-  color: var(--text-muted, #a7a3b8);
+.consoleHeading {
+  font-size: 24px;
+  font-weight: 750;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+  line-height: 1.25;
+}
+
+.consoleSubheading {
+  font-size: 14px;
+  color: #94a3b8;
   line-height: 1.5;
   margin: 0;
 }
 
-.postShowExplainer {
-  font-size: 13px;
-  color: var(--text-muted, #a7a3b8);
-  margin: 0 0 20px;
-  line-height: 1.5;
+.errorBanner {
+  margin-bottom: 20px;
+  text-align: left;
+  border-radius: 12px;
 }
 
+/* Primary Action Button */
+.primaryActionButton {
+  height: 52px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border: none;
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.primaryActionButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(124, 58, 237, 0.45);
+}
+
+/* Operational Status Items */
+.operationalStatusGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.operationalItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.22);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.statusIconViolet {
+  color: #c4b5fd;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.operationalText {
+  display: flex;
+  flex-direction: column;
+}
+
+.statusTitle {
+  font-size: 13px;
+  font-weight: 650;
+  color: #f8fafc;
+  line-height: 1.3;
+}
+
+.statusDesc {
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.45;
+  margin-top: 3px;
+}
+
+/* Supporting Toolbar */
+.supportingToolbar {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.secondaryButton {
+  flex: 1;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.tertiaryButton {
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+/* Guest Admission Form */
+.admissionForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+
+.formFieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.passcodeInput {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-radius: 10px;
+}
+
+.passcodeInput:focus {
+  border-color: #a78bfa;
+}
+
+.loungeAdvisory {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.authActionGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Scheduled Countdown Card */
+.countdownCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 22px 18px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.countdownEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #a78bfa;
+  margin-bottom: 6px;
+}
+
+.countdownTimer {
+  font-size: 34px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+  margin: 6px 0;
+  text-shadow: 0 0 20px rgba(139, 92, 246, 0.35);
+}
+
+.scheduledTimestamp {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.guestWaitingNotice {
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.guestWaitingNotice p {
+  margin: 0;
+}
+
+/* Historical Post-Show Box */
+.historicalStatsBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 18px 12px;
+  margin-bottom: 20px;
+}
+
+.historicalStatItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.statLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+}
+
+.statValue {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.statSeparator {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.postShowNavGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Loading & Infrastructure Error Screen */
+.statusScreenContainer {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  position: relative;
+  text-align: center;
+}
+
+.statusScreenTitle {
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 16px 0 8px;
+}
+
+.statusScreenMessage {
+  font-size: 15px;
+  color: #94a3b8;
+  max-width: 440px;
+  line-height: 1.5;
+  margin: 0 0 24px;
+}
+
+/* ==========================================================================
+   Responsive Adaptations
+   ========================================================================== */
+
+@media (max-width: 1099px) {
+  .lobbyGrid {
+    grid-template-columns: 55fr 45fr;
+    gap: 40px;
+  }
+
+  .roomTitle {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 899px) {
+  .lobbyContainer {
+    padding: 32px 20px;
+    align-items: flex-start;
+  }
+
+  .lobbyGrid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .cinemaStageBox {
+    height: 150px;
+    max-width: 100%;
+  }
+
+  .consolePanel {
+    padding: 32px 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .lobbyContainer {
+    padding: 24px 16px;
+  }
+
+  .roomTitle {
+    font-size: 28px;
+  }
+
+  .cinemaStageBox {
+    height: 130px;
+  }
+
+  .consolePanel {
+    padding: 24px 18px;
+    border-radius: 18px;
+  }
+
+  .supportingToolbar {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .countdownTimer {
+    font-size: 28px;
+  }
+}
