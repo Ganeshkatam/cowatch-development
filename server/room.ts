@@ -328,6 +328,10 @@ export class Room {
         if (!this.roster.find((user) => user.id === clientId)) {
           this.roster.push({ id: clientId });
         }
+        this.admittedClientIds.add(clientId);
+        if (socket.uid) {
+          this.admittedUids.add(socket.uid);
+        }
       } else {
         const existing = this.waitingLounge.get(clientId);
         this.waitingLounge.set(clientId, {
@@ -527,6 +531,10 @@ export class Room {
             }
           }
 
+          if (decoded.uid && this.admittedClientIds.has(socket.clientId)) {
+            this.admittedUids.add(decoded.uid);
+          }
+
           if (this.waitingLounge.has(socket.clientId)) {
             if (this.isAdmitted(socket)) {
               await this.admitGuest(socket.clientId);
@@ -607,6 +615,9 @@ export class Room {
       });
       socket.on("CMD:userMute", (data: unknown) =>
         validateAdmitted() && validateNotExpired() && this.setUserMute(socket, data),
+      );
+      socket.on("CMD:userVideoMute", (data: unknown) =>
+        validateAdmitted() && validateNotExpired() && this.setUserVideoMute(socket, data),
       );
       socket.on("CMD:leaveScreenShare", () => validateAdmitted() && validateNotExpired() && this.leaveScreenSharing(socket));
       socket.on("CMD:startVBrowser", (data: unknown) => {
@@ -862,9 +873,19 @@ export class Room {
   };
 
   private getHostState = (): HostState => {
+    let currentTS = this.videoTS;
+    const sockets = Array.from(this.io.of(this.roomId).sockets.values());
+    const hostSocket = this.owner_id ? sockets.find((s) => s.uid === this.owner_id) : undefined;
+    const controllerClient = this.vBrowser?.controllerClient;
+    if (hostSocket && this.tsMap[hostSocket.clientId] !== undefined) {
+      currentTS = this.tsMap[hostSocket.clientId];
+    } else if (controllerClient && this.tsMap[controllerClient] !== undefined) {
+      currentTS = this.tsMap[controllerClient];
+    }
+
     return {
       video: this.video ?? "",
-      videoTS: this.videoTS,
+      videoTS: currentTS,
       subtitle: this.subtitle,
       playbackRate: this.playbackRate,
       paused: this.paused,
@@ -1435,6 +1456,18 @@ export class Room {
     this.emitToRoom("roster", this.getRosterForApp());
   };
 
+  private setUserVideoMute = (socket: Socket, raw: unknown) => {
+    const data = raw as { isVideoMuted: boolean };
+    if (!data) {
+      return;
+    }
+    const match = this.roster.find((user) => user.id === socket.clientId);
+    if (match) {
+      match.isVideoMuted = Boolean(data.isVideoMuted);
+    }
+    this.emitToRoom("roster", this.getRosterForApp());
+  };
+
   private joinScreenSharing = (socket: Socket, raw: unknown) => {
     const data = raw as { file: boolean; mediasoup?: boolean };
     if (!data) {
@@ -1885,12 +1918,12 @@ export class Room {
     if (socket.uid && this.owner_id && socket.uid === this.owner_id) {
       return true;
     }
-    // Authenticated guest: check UID
-    if (socket.uid && this.admittedUids.has(socket.uid)) {
+    // Check by clientId unconditionally (session-based admission)
+    if (socket.clientId && this.admittedClientIds.has(socket.clientId)) {
       return true;
     }
-    // Anonymous guest fallback: check clientId
-    if (!socket.uid && this.admittedClientIds.has(socket.clientId)) {
+    // Authenticated guest: check UID
+    if (socket.uid && this.admittedUids.has(socket.uid)) {
       return true;
     }
     return false;
@@ -2017,6 +2050,9 @@ export class Room {
     const socketId = this.socketIdMap[clientId];
     const socket = socketId ? this.io.of(this.roomId).sockets.get(socketId) : undefined;
     if (socket) {
+      if (socket.uid) {
+        this.admittedUids.add(socket.uid);
+      }
       socket.join("admitted");
       socket.emit("REC:waitingLounge", { inLounge: false });
 

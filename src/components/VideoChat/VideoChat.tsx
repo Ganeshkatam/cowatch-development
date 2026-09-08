@@ -175,6 +175,12 @@ export class VideoChat extends React.Component<VideoChatProps> {
     // If ourStream is already initialized, establish or refresh connections
     if (window.cowatch?.ourStream) {
       this.updateWebRTC();
+    } else {
+      const prefCameraOn = this.context.profile?.pref_camera_on ?? false;
+      const prefMicOn = this.context.profile?.pref_mic_on ?? false;
+      if (prefCameraOn || prefMicOn) {
+        this.setupWebRTC();
+      }
     }
   }
 
@@ -189,7 +195,17 @@ export class VideoChat extends React.Component<VideoChatProps> {
       this.socket?.on("signal", this.handleSignal);
     }
 
-    if (this.props.rosterUpdateTS !== prevProps.rosterUpdateTS) {
+    const participantsChanged =
+      this.props.rosterUpdateTS !== prevProps.rosterUpdateTS ||
+      this.props.participants.length !== prevProps.participants.length ||
+      this.props.participants.some(
+        (p) =>
+          p.isVideoChat !== prevProps.participants.find((pp) => pp.id === p.id)?.isVideoChat ||
+          p.isVideoMuted !== prevProps.participants.find((pp) => pp.id === p.id)?.isVideoMuted ||
+          p.isMuted !== prevProps.participants.find((pp) => pp.id === p.id)?.isMuted
+      );
+
+    if (participantsChanged) {
       this.updateWebRTC();
     }
 
@@ -214,6 +230,10 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
   emitUserMute = () => {
     this.socket.emit("CMD:userMute", { isMuted: !this.getAudioWebRTC() });
+  };
+
+  emitUserVideoMute = () => {
+    this.socket.emit("CMD:userVideoMute", { isVideoMuted: !this.getVideoWebRTC() });
   };
 
   createPeerConnection = (id: string): RTCPeerConnection => {
@@ -500,6 +520,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
       // alert server we've joined video chat
       this.socket?.emit("CMD:joinVideo");
       this.emitUserMute();
+      this.emitUserVideoMute();
       this.updateWebRTC();
       this.forceUpdate();
     } catch (err) {
@@ -582,6 +603,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
         console.warn("Failed to acquire video track dynamically", e);
       }
     }
+    this.emitUserVideoMute();
     this.forceUpdate();
   };
 
@@ -704,6 +726,25 @@ export class VideoChat extends React.Component<VideoChatProps> {
               }
             }
           });
+        }
+
+        // Recover any active receiver tracks from this PC into remoteStreams
+        if (pc && pc.getReceivers) {
+          const tracks = pc.getReceivers().map((r: any) => r.track).filter(Boolean);
+          if (tracks.length > 0) {
+            let stream = window.cowatch.remoteStreams?.[id] || this.remoteStreams[id];
+            if (!stream) {
+              stream = new MediaStream(tracks);
+            } else {
+              tracks.forEach((t: MediaStreamTrack) => {
+                if (!stream.getTracks().includes(t)) stream.addTrack(t);
+              });
+            }
+            this.remoteStreams[id] = stream;
+            if (window.cowatch.remoteStreams) {
+              window.cowatch.remoteStreams[id] = stream;
+            }
+          }
         }
       });
     } catch (err) {
@@ -857,8 +898,9 @@ export class VideoChat extends React.Component<VideoChatProps> {
           // to avoid displaying a black rectangle.
           const peerHasVideoStream = Boolean(
             isPeerInCall &&
+            !p.isVideoMuted &&
             remoteStream &&
-            remoteStream.getVideoTracks().some((t) => t.readyState === "live" || t.enabled)
+            remoteStream.getVideoTracks().some((t) => t.readyState === "live" && t.enabled && !t.muted)
           );
           const showVideoFeed = isSelf ? isSelfVideoActive : peerHasVideoStream;
 
@@ -1072,8 +1114,15 @@ export class VideoChat extends React.Component<VideoChatProps> {
                   {!isSelf && (
                     <div className={styles.peerIndicators}>
                       {p.isVideoChat && (
-                        <div className={styles.indicatorItem} title="Camera connected">
-                          <IconVideo size={13} color="var(--color-live)" />
+                        <div
+                          className={styles.indicatorItem}
+                          title={p.isVideoMuted ? "Camera off" : "Camera connected"}
+                        >
+                          {p.isVideoMuted ? (
+                            <IconVideoOff size={13} color="var(--color-danger, #EF4444)" />
+                          ) : (
+                            <IconVideo size={13} color="var(--color-live)" />
+                          )}
                         </div>
                       )}
                       {p.isMuted ? (

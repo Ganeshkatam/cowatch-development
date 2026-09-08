@@ -649,8 +649,18 @@ export class App extends React.Component<AppProps, AppState> {
           }
           if (this.usingYoutube() && !this.YouTubeInterface.isReady()) {
             console.log(
-              "YT player not ready, onReady callback will retry when it is",
+              "YT player not ready, initializing and retrying via ensureYouTubePlayerReady",
             );
+            this.ensureYouTubePlayerReady(() => {
+              if (this.usingYoutube()) {
+                this.socket?.emit("CMD:askHost");
+              }
+            });
+            setTimeout(() => {
+              if (this.usingYoutube() && !this.YouTubeInterface.isReady()) {
+                this.ensureYouTubePlayerReady();
+              }
+            }, 1000);
             return;
           }
           const src = data.video;
@@ -1062,7 +1072,15 @@ export class App extends React.Component<AppProps, AppState> {
     );
     socket.on("REC:getRoomState", this.handleRoomState);
     socket.on("REC:waitingLounge", (data: WaitingLoungeState) => {
-      this.setState({ waitingLoungeState: data });
+      const wasInLounge = this.state.waitingLoungeState?.inLounge;
+      this.setState({ waitingLoungeState: data }, () => {
+        if (wasInLounge && !data.inLounge) {
+          console.log("[App] REC:waitingLounge admitted user, initializing media");
+          this.ensureYouTubePlayerReady();
+          this.socket?.emit("CMD:askHost");
+          this.socket?.emit("CMD:getRoomState");
+        }
+      });
     });
     socket.on("REC:waitingList", (data: WaitingGuest[]) => {
       this.setState({ waitingList: data || [] });
@@ -1115,7 +1133,7 @@ export class App extends React.Component<AppProps, AppState> {
     }
   };
 
-  componentDidUpdate() {
+  componentDidUpdate(prevProps: any, prevState: AppState) {
     const contextName = this.context.displayName || "";
     const contextPicture = this.context.avatarUrl || "";
     if (contextName && contextName !== this.state.myName) {
@@ -1124,32 +1142,56 @@ export class App extends React.Component<AppProps, AppState> {
     if (contextPicture !== this.state.myPicture) {
       this.updatePicture(contextPicture);
     }
+
+    // If user just transitioned from Waiting Lounge to Admitted Room, initialize player and ask host state
+    if (prevState?.waitingLoungeState?.inLounge && !this.state.waitingLoungeState?.inLounge) {
+      console.log("[App] Admitted from waiting lounge in componentDidUpdate, initializing media");
+      this.ensureYouTubePlayerReady();
+      this.socket?.emit("CMD:askHost");
+      this.socket?.emit("CMD:getRoomState");
+    }
+
+    // If admitted and using YouTube, ensure player is ready
+    if (!this.state.waitingLoungeState?.inLounge && this.usingYoutube() && (!this.YouTubeInterface || !this.YouTubeInterface.isReady())) {
+      this.ensureYouTubePlayerReady();
+    }
   }
 
-  loadYouTube = () => {
-    // This code loads the IFrame Player API code asynchronously.
-    const tag = document.createElement("script");
-    tag.src = "https://www.youtube.com/iframe_api";
-    tag.onerror = () => {
-      console.warn("YouTube iframe API failed to load");
-      this.setState({ loading: false });
-    };
-    document.body.append(tag);
-    window.onYouTubeIframeAPIReady = () => {
-      // Note: this fails silently if the element is not available
+  private ytInitInProgress = false;
+
+  ensureYouTubePlayerReady = (callback?: () => void) => {
+    if (this.YouTubeInterface && this.YouTubeInterface.isReady()) {
+      callback?.();
+      return;
+    }
+    if (this.ytInitInProgress) {
+      return;
+    }
+    const el = document.getElementById("leftYt");
+    if (!el) {
+      setTimeout(() => this.ensureYouTubePlayerReady(callback), 150);
+      return;
+    }
+    if (!window.YT || !window.YT.Player) {
+      return;
+    }
+
+    try {
+      this.ytInitInProgress = true;
       const ytPlayer = new window.YT.Player("leftYt", {
         events: {
           onReady: () => {
-            console.log("yt onReady");
+            console.log("[App] YouTube player onReady initialized successfully");
+            this.ytInitInProgress = false;
             this.YouTubeInterface = new YouTube(ytPlayer);
             this.setState({ loading: false });
-            // We might have failed to play YT originally, ask for the current video again
+            callback?.();
             if (this.usingYoutube()) {
-              console.log("requesting host data again after ytReady");
+              console.log("[App] requesting host data again after ytReady");
               this.socket?.emit("CMD:askHost");
             }
           },
-          onStateChange: (e) => {
+          onStateChange: (e: any) => {
             if (
               this.usingYoutube() &&
               e.data === window.YT?.PlayerState?.CUED
@@ -1183,6 +1225,23 @@ export class App extends React.Component<AppProps, AppState> {
           },
         },
       });
+    } catch (e) {
+      this.ytInitInProgress = false;
+      console.warn("[App] Error initializing YouTube player:", e);
+    }
+  };
+
+  loadYouTube = () => {
+    // This code loads the IFrame Player API code asynchronously.
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    tag.onerror = () => {
+      console.warn("YouTube iframe API failed to load");
+      this.setState({ loading: false });
+    };
+    document.body.append(tag);
+    window.onYouTubeIframeAPIReady = () => {
+      this.ensureYouTubePlayerReady();
     };
   };
 
