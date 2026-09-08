@@ -353,6 +353,18 @@ export class Room {
       }
 
       if (this.status === 'inactive') {
+        if (!this.isPermanent && this.expiresAt && this.expiresAt.getTime() <= Date.now()) {
+          this.status = 'expired';
+          if (postgres) {
+            postgres.query(
+              `UPDATE rooms SET status = 'expired', "endedAt" = NOW() WHERE "roomId" = $1`,
+              [this.roomId]
+            ).catch(console.error);
+          }
+          next(new Error("This room has ended or expired."));
+          return;
+        }
+
         this.status = 'active';
         this.lastUpdateTime = new Date();
         if (postgres) {
@@ -392,21 +404,7 @@ export class Room {
 
       // Check if this room is expired
       const validateNotExpired = () => {
-        if (this.status === 'expired') {
-          if (!this.isPermanent && this.expiresAt && this.expiresAt.getTime() > Date.now()) {
-            this.status = 'active';
-            if (postgres) {
-              postgres.query(
-                `UPDATE rooms SET status = 'active', "endedAt" = NULL WHERE "roomId" = $1`,
-                [this.roomId]
-              ).catch(console.error);
-            }
-          } else {
-            socket.emit("errorMessage", "This room has ended or expired.");
-            return false;
-          }
-        }
-        if (this.status === 'ended') {
+        if (this.status === 'expired' || this.status === 'ended') {
           socket.emit("errorMessage", "This room has ended or expired.");
           return false;
         }

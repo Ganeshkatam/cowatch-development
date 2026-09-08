@@ -410,6 +410,9 @@ export const Create = () => {
                             },
                           }}
                         />
+                        <Text size="xs" c="dimmed" mt={6}>
+                          The expiration countdown starts only when you start the watch party.
+                        </Text>
                       </div>
                     )}
                   </Stack>

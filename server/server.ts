@@ -25,7 +25,11 @@ import {
   encryptPasscodeForOwner,
   decryptPasscodeForOwner,
 } from "./utils/roomPasscode.ts";
-import { initRoomLifecycle, startRoomLifecycle } from "./roomLifecycle.ts";
+import {
+  initRoomLifecycle,
+  startRoomLifecycle,
+  validateTemporaryDuration,
+} from "./roomLifecycle.ts";
 
 process.on("uncaughtException", (err) => {
   console.error("Uncaught exception in server process:", err);
@@ -93,12 +97,19 @@ io.engine.use(async (req: any, res: Response, next: () => void) => {
       if (data) {
         const room = new Room(io, key, data);
         if (persistedRoom) {
-          room.status = persistedRoom.status || 'waiting';
+          const isExpired =
+            persistedRoom.status === 'expired' ||
+            persistedRoom.status === 'ended' ||
+            (!persistedRoom.isPermanent &&
+              persistedRoom.expiresAt &&
+              new Date(persistedRoom.expiresAt as string).getTime() <= Date.now());
+
+          room.status = isExpired ? 'expired' : (persistedRoom.status || 'waiting');
           room.startedAt = persistedRoom.startedAt ? new Date(persistedRoom.startedAt as string) : undefined;
           room.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;
           room.owner_id = persistedRoom.owner_id;
           room.isPermanent = persistedRoom.isPermanent || false;
-          room.durationMinutes = persistedRoom.durationMinutes ?? (persistedRoom.isPermanent ? null : 180);
+          room.durationMinutes = persistedRoom.isPermanent ? null : (persistedRoom.durationMinutes ?? null);
         }
         rooms.set(key, room);
         console.log(
@@ -113,9 +124,15 @@ io.engine.use(async (req: any, res: Response, next: () => void) => {
         memoryRoom.isPermanent = persistedRoom.isPermanent || false;
         memoryRoom.startedAt = persistedRoom.startedAt ? new Date(persistedRoom.startedAt as string) : undefined;
         memoryRoom.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;
-        memoryRoom.durationMinutes = persistedRoom.durationMinutes ?? (persistedRoom.isPermanent ? null : 180);
-        if (persistedRoom.status === 'active' && memoryRoom.status === 'expired') {
-          memoryRoom.status = 'active';
+        memoryRoom.durationMinutes = persistedRoom.isPermanent ? null : (persistedRoom.durationMinutes ?? null);
+        if (
+          memoryRoom.status === 'expired' ||
+          persistedRoom.status === 'expired' ||
+          (!persistedRoom.isPermanent &&
+            persistedRoom.expiresAt &&
+            new Date(persistedRoom.expiresAt as string).getTime() <= Date.now())
+        ) {
+          memoryRoom.status = 'expired';
         }
       }
     }
@@ -457,11 +474,11 @@ app.post("/createRoom", async (req, res) => {
   // Validate and parse durationMinutes for temporary rooms
   let durationMinutes: number | null = null;
   if (!isPermanent) {
-    const rawDuration = Number(req.body?.durationMinutes);
-    if (!Number.isFinite(rawDuration) || rawDuration < 15 || rawDuration > 1440) {
-      durationMinutes = 180; // default 3 hours
-    } else {
-      durationMinutes = Math.round(rawDuration);
+    try {
+      durationMinutes = validateTemporaryDuration(req.body?.durationMinutes);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message || "Invalid session duration" });
+      return;
     }
   }
   // CREATE != START: Room begins in 'waiting' status.
@@ -1172,6 +1189,18 @@ async function expireRooms() {
             system: true,
             msg: 'This room has expired.',
           });
+
+          // Broadcast authoritative roomExpired event before disconnecting
+          room.emitToRoom("REC:roomExpired", {
+            status: "expired",
+            roomId: row.roomId,
+            endedAt: row.timestamp ? new Date(row.timestamp).toISOString() : new Date().toISOString(),
+          });
+          room.emitToRoom("REC:getRoomState", {
+            owner: room.owner_id,
+            status: "expired",
+          });
+          room.emitToRoom("errorMessage", "This watch party session has expired.");
 
           if (room.vBrowser) {
             room.stopVBrowserInternal();

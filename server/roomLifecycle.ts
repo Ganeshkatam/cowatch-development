@@ -10,6 +10,19 @@ export function initRoomLifecycle(io: Server, rooms: Map<string, Room>) {
   roomsMap = rooms;
 }
 
+export const ALLOWED_DURATION_PRESETS = [30, 60, 120, 180, 360, 720, 1440] as const;
+export type AllowedDurationPreset = (typeof ALLOWED_DURATION_PRESETS)[number];
+
+export function validateTemporaryDuration(val: unknown): number {
+  const num = typeof val === "number" ? val : Number(val);
+  if (!Number.isInteger(num) || !ALLOWED_DURATION_PRESETS.includes(num as any)) {
+    throw new Error(
+      `Invalid session duration (${val}). Allowed presets are: ${ALLOWED_DURATION_PRESETS.join(", ")} minutes.`
+    );
+  }
+  return num;
+}
+
 export interface StartRoomResult {
   success: boolean;
   status: string;
@@ -91,10 +104,10 @@ export async function startRoomLifecycle(roomId: string, uid: string): Promise<S
   // 5. Compute timestamps on the server
   const isPermanent = Boolean(room.isPermanent);
   let expiresAt: Date | null = null;
+  const validatedDuration = isPermanent ? null : validateTemporaryDuration(room.durationMinutes);
 
-  if (!isPermanent) {
-    const duration = Number(room.durationMinutes) || 180;
-    expiresAt = new Date(serverNow + duration * 60 * 1000);
+  if (!isPermanent && validatedDuration !== null) {
+    expiresAt = new Date(serverNow + validatedDuration * 60 * 1000);
   }
 
   // 6. Concurrency guard: Atomic database update
@@ -162,7 +175,7 @@ export async function startRoomLifecycle(roomId: string, uid: string): Promise<S
     memoryRoom.startedAt = now;
     memoryRoom.expiresAt = expiresAt ? expiresAt : undefined;
     memoryRoom.isPermanent = isPermanent;
-    memoryRoom.durationMinutes = isPermanent ? null : (room.durationMinutes ?? 180);
+    memoryRoom.durationMinutes = validatedDuration;
     memoryRoom.lastUpdateTime = now;
   }
 
@@ -172,7 +185,7 @@ export async function startRoomLifecycle(roomId: string, uid: string): Promise<S
     startedAt: now.toISOString(),
     expiresAt: expiresAt ? expiresAt.toISOString() : null,
     isPermanent,
-    durationMinutes: isPermanent ? null : (room.durationMinutes ?? 180),
+    durationMinutes: validatedDuration,
     serverNow: Date.now(),
   };
 
@@ -200,7 +213,7 @@ export async function startRoomLifecycle(roomId: string, uid: string): Promise<S
     startedAt: now.toISOString(),
     expiresAt: expiresAt ? expiresAt.toISOString() : null,
     isPermanent,
-    durationMinutes: isPermanent ? null : (room.durationMinutes ?? 180),
+    durationMinutes: validatedDuration,
     serverNow: Date.now(),
   };
 }

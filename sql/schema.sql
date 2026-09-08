@@ -56,14 +56,33 @@ CREATE TABLE IF NOT EXISTS public.rooms (
   "expiresAt" timestamp with time zone,
   "endedAt" timestamp with time zone,
   "isPermanent" boolean NOT NULL DEFAULT false,
-  "durationMinutes" integer DEFAULT 180,
+  "durationMinutes" integer,
   "lastActiveAt" timestamp with time zone,
   owner_passcode text,
   CONSTRAINT room_status_check CHECK (status IN ('waiting', 'scheduled', 'active', 'inactive', 'ended', 'expired')),
   CONSTRAINT room_title_not_empty CHECK (btrim("roomTitle") <> ''),
   CONSTRAINT rooms_expiration_policy_check CHECK (
-    (("isPermanent" = true) AND ("expiresAt" IS NULL)) OR 
-    (("isPermanent" = false) AND (status IN ('waiting', 'scheduled') OR ("expiresAt" IS NOT NULL)))
+    (
+      -- Permanent rooms: never have durationMinutes or expiresAt
+      "isPermanent" = true 
+      AND "durationMinutes" IS NULL 
+      AND "expiresAt" IS NULL
+      AND (
+        (status IN ('waiting', 'scheduled') AND "startedAt" IS NULL) OR
+        (status IN ('active', 'inactive', 'ended') AND "startedAt" IS NOT NULL)
+      )
+    )
+    OR
+    (
+      -- Temporary rooms: must have valid durationMinutes
+      "isPermanent" = false 
+      AND "durationMinutes" IS NOT NULL 
+      AND "durationMinutes" BETWEEN 15 AND 1440
+      AND (
+        (status IN ('waiting', 'scheduled') AND "startedAt" IS NULL AND "expiresAt" IS NULL) OR
+        (status IN ('active', 'inactive', 'ended', 'expired') AND "startedAt" IS NOT NULL AND "expiresAt" IS NOT NULL)
+      )
+    )
   )
 );
 

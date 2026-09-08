@@ -17,6 +17,7 @@ import {
 } from "@mantine/core";
 import {
   IconArrowLeft,
+  IconPlayerPlay,
   IconPlayerPlayFilled,
   IconCopy,
   IconSettings,
@@ -283,6 +284,33 @@ export const RoomDetails = () => {
 
   const [nowTime, setNowTime] = useState(Date.now());
   const [actionError, setActionError] = useState<string | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
+
+  const handleStartRoom = async () => {
+    if (!room) return;
+    setIsStarting(true);
+    setActionError(null);
+    try {
+      const token = await getAccessToken();
+      const user = await supabase.auth.getUser();
+      const response = await fetch(`${serverPath}/startRoom`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: user.data.user?.id, token, roomId: room.roomId }),
+      });
+      if (response.ok) {
+        history.push(urlPath);
+      } else {
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.error?.message || errData?.error || "Failed to start room");
+      }
+    } catch (e: any) {
+      console.error(e);
+      setActionError(e.message || "Failed to start room");
+    } finally {
+      setIsStarting(false);
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -339,6 +367,7 @@ export const RoomDetails = () => {
   }
 
   const isClosed = room.status === "expired" || room.status === "ended";
+  const isWaiting = room.status === "waiting";
   const isOpenable = !isClosed && (room.status === "active" || room.status === "expiring" || room.status === "scheduled" || room.status === "inactive");
   const urlPath = `/watch/${room.roomId.replace(/^\//, "")}`;
   const statusConfig = getStatusConfig(room.status);
@@ -367,6 +396,17 @@ export const RoomDetails = () => {
         <span className={styles.breadcrumbSeparator}>/</span>
         <span className={styles.breadcrumbCurrent}>{room.roomTitle || room.roomId}</span>
       </div>
+
+      {actionError && (
+        <Paper withBorder p="md" radius="md" mb="md" style={{ backgroundColor: "rgba(239, 68, 68, 0.1)", borderColor: "rgba(239, 68, 68, 0.3)" }}>
+          <Group justify="space-between">
+            <Text c="red" size="sm" fw={600}>{actionError}</Text>
+            <ActionIcon size="xs" variant="subtle" color="red" onClick={() => setActionError(null)}>
+              <IconCheck size={12} />
+            </ActionIcon>
+          </Group>
+        </Paper>
+      )}
 
       {/* HERO SECTION */}
       <div className={styles.hero}>
@@ -426,6 +466,27 @@ export const RoomDetails = () => {
                 >
                   Join Room
                 </Button>
+              )}
+              {isWaiting && (
+                <>
+                  <Button
+                    size="md"
+                    className={styles.primaryOpenBtn}
+                    onClick={handleStartRoom}
+                    loading={isStarting}
+                    leftSection={!isStarting ? <IconPlayerPlayFilled size={16} /> : undefined}
+                  >
+                    Start Watch Party
+                  </Button>
+                  <Button
+                    size="md"
+                    className={styles.glassBtn}
+                    onClick={() => history.push(urlPath)}
+                    leftSection={<IconPlayerPlay size={16} />}
+                  >
+                    Enter Waiting Room
+                  </Button>
+                </>
               )}
               {!isClosed && (
                 <Button
