@@ -92,7 +92,7 @@ export const ListRoomsButton = () => {
   return <Button component={Link} to="/myrooms" variant="subtle" color="gray">My rooms</Button>;
 };
 
-export const TopBar = (props: { hideNewRoom?: boolean; hideSignin?: boolean; hideMyRooms?: boolean; showExit?: boolean; onOpenSettings?: () => void; roomTitle?: string; roomDescription?: string; roomStatus?: string }) => {
+export const TopBar = (props: { hideNewRoom?: boolean; hideSignin?: boolean; hideMyRooms?: boolean; hideJoin?: boolean; showExit?: boolean; onOpenSettings?: () => void; roomTitle?: string; roomDescription?: string; roomStatus?: string }) => {
   const context = useContext(MetadataContext);
   const location = useLocation();
   const path = location.pathname;
@@ -127,6 +127,11 @@ export const TopBar = (props: { hideNewRoom?: boolean; hideSignin?: boolean; hid
       </div>
 
       <div className={styles.actionsGroup}>
+        {!props.hideJoin && path !== "/join" && (
+          <Button component={Link} to="/join" variant="subtle" color="gray" size="sm">
+            Join
+          </Button>
+        )}
         {!props.hideMyRooms && context.user && <ListRoomsButton />}
         {!props.hideNewRoom && context.user && <NewRoomButton size="sm" />}
         {!props.hideSignin && <SignInButton />}

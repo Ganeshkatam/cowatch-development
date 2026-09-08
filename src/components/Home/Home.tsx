@@ -5,7 +5,6 @@ import {
   IconDeviceTv,
   IconLock,
   IconLink,
-  IconDevices,
   IconCircleCheck,
   IconArrowRight,
   IconUsers,
@@ -21,7 +20,6 @@ import {
   IconVideo,
   IconMessage,
 } from "@tabler/icons-react";
-import { SignInButton } from "../TopBar/TopBar";
 import styles from "./Home.module.css";
 import { MetadataContext } from "../../MetadataContext";
 
@@ -66,9 +64,10 @@ export const Home = () => {
                       size="lg"
                       variant="default"
                       component={Link}
-                      to="/myrooms"
+                      to="/join"
+                      leftSection={<IconDeviceTv size={18} />}
                     >
-                      My Rooms
+                      Join a Room
                     </Button>
                   </>
                 ) : (
@@ -87,9 +86,10 @@ export const Home = () => {
                       size="lg"
                       variant="default"
                       component={Link}
-                      to="/login"
+                      to="/join"
+                      leftSection={<IconDeviceTv size={18} />}
                     >
-                      Sign In
+                      Join a Room
                     </Button>
                   </>
                 )}

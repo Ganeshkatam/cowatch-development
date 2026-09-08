@@ -33,6 +33,7 @@ const Profile = lazy(() => import("./components/Profile/Profile").then((m) => ({
 const MyRooms = lazy(() => import("./components/MyRooms/MyRooms").then((m) => ({ default: m.MyRooms })));
 const RoomDetails = lazy(() => import("./components/MyRooms/RoomDetails").then((m) => ({ default: m.RoomDetails })));
 const JoinRoom = lazy(() => import("./components/JoinRoom/JoinRoom"));
+const JoinRoomInput = lazy(() => import("./components/JoinRoom/JoinRoomInput").then((m) => ({ default: m.JoinRoomInput })));
 const Terms = lazy(() => import("./components/Pages/Pages").then((m) => ({ default: m.Terms })));
 const Privacy = lazy(() => import("./components/Pages/Pages").then((m) => ({ default: m.Privacy })));
 const FAQ = lazy(() => import("./components/Pages/Pages").then((m) => ({ default: m.FAQ })));
@@ -478,6 +479,9 @@ class CoWatch extends React.Component {
                         <Redirect to={{ pathname: "/room/new", search: location.search }} />
                       )}
                     />
+                    <Route path="/join" exact>
+                      <JoinRoomInput />
+                    </Route>
                     <Route path="/join/:roomId" exact>
                       <JoinRoom />
                     </Route>
