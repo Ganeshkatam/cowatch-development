@@ -501,13 +501,6 @@ class CoWatch extends React.Component {
                         <FAQ />
                       </>
                     </Route>
-                    <Route
-                      path="/account"
-                      exact
-                      render={({ location }) => (
-                        <Redirect to={{ pathname: "/account/profile", search: location.search }} />
-                      )}
-                    />
                     <Route path="/account/:section?">
                       <RequireVerifiedEmail>
                         <TopBar hideNewRoom />

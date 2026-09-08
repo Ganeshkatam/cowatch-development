@@ -239,6 +239,26 @@
   background: var(--border-strong, rgba(0, 0, 0, 0.25));
 }
 
+/* Tab content smooth transition pane */
+.tabTransitionPane {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  animation: tabFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Page header inside content */
 .contentHeader {
   display: flex;

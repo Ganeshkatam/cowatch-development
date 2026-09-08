@@ -412,7 +412,7 @@ export const Profile: React.FC = () => {
             <div className={styles.contentWrapper}>
               {/* TAB 1: YOUR PROFILE */}
               {activeTab === "profile" && (
-                <>
+                <div key="profile" className={styles.tabTransitionPane}>
                   <div className={styles.contentHeader}>
                     <span className={styles.breadcrumbCategory}>Your profile</span>
                     <h1 className={styles.contentTitle}>Your profile</h1>
@@ -605,12 +605,12 @@ export const Profile: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                </>
+                </div>
               )}
 
               {/* TAB 2: PREFERENCES */}
               {activeTab === "preferences" && (
-                <>
+                <div key="preferences" className={styles.tabTransitionPane}>
                   <div className={styles.contentHeader}>
                     <span className={styles.breadcrumbCategory}>App experience</span>
                     <h1 className={styles.contentTitle}>Preferences</h1>
@@ -727,12 +727,12 @@ export const Profile: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                </>
+                </div>
               )}
 
               {/* TAB 3: LOGIN & SECURITY */}
               {activeTab === "security" && (
-                <>
+                <div key="security" className={styles.tabTransitionPane}>
                   <div className={styles.contentHeader}>
                     <span className={styles.breadcrumbCategory}>Security & sign in</span>
                     <h1 className={styles.contentTitle}>Login & security</h1>
@@ -818,7 +818,7 @@ export const Profile: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                </>
+                </div>
               )}
             </div>
           </main>
