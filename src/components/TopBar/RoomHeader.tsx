@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
 import {
   IconCheck,
   IconChevronDown,
@@ -66,30 +65,28 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    window.setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <header className={styles.header}>
       <div className={styles.leftSection}>
-        <Link to="/" className={styles.logoLink} title="Go to home">
-          <img
-            src="/logo192.png"
-            alt="CoWatch"
-            className={styles.logoImg}
-          />
+        <button
+          type="button"
+          className={styles.logoLink}
+          title="Leave room"
+          onClick={onExit}
+          aria-label="Leave room"
+        >
+          <img src="/logo192.png" alt="CoWatch" className={styles.logoImg} />
           <span className={styles.logoText}>CoWatch</span>
-        </Link>
+        </button>
 
         <div className={styles.divider} />
 
         <Menu shadow="md" width={220} position="bottom-start">
           <Menu.Target>
-            <button
-              className={styles.roomDropdownBtn}
-              type="button"
-              title="Room details and options"
-            >
+            <button className={styles.roomDropdownBtn} type="button" title="Room details and options">
               <span>{roomTitle || "Watch Party Room"}</span>
               <IconChevronDown size={14} stroke={1.5} />
             </button>
@@ -98,11 +95,7 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
             <Menu.Label>Room Options</Menu.Label>
             <Menu.Item
               leftSection={
-                copied ? (
-                  <IconCheck size={16} color="var(--color-live)" />
-                ) : (
-                  <IconCopy size={16} />
-                )
+                copied ? <IconCheck size={16} color="var(--color-live)" /> : <IconCopy size={16} />
               }
               onClick={handleCopyLink}
             >
@@ -112,21 +105,14 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
               <Menu.Item
                 disabled={!haveLock}
                 leftSection={
-                  isLocked ? (
-                    <IconLock size={16} color="var(--color-warning)" />
-                  ) : (
-                    <IconLockOpen size={16} />
-                  )
+                  isLocked ? <IconLock size={16} color="var(--color-warning)" /> : <IconLockOpen size={16} />
                 }
                 onClick={onToggleLock}
               >
                 {isLocked ? "Unlock room controls" : "Lock room controls"}
               </Menu.Item>
             )}
-            <Menu.Item
-              leftSection={<IconSettings size={16} />}
-              onClick={onOpenSettings}
-            >
+            <Menu.Item leftSection={<IconSettings size={16} />} onClick={onOpenSettings}>
               Room settings
             </Menu.Item>
           </Menu.Dropdown>
@@ -145,23 +131,15 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
         >
           <button
             type="button"
-            className={`${styles.nowPlayingBadge} ${
-              currentMedia ? styles.nowPlayingActive : styles.nowPlayingIdle
-            }`}
+            className={`${styles.nowPlayingBadge} ${currentMedia ? styles.nowPlayingActive : styles.nowPlayingIdle}`}
             onClick={onOpenQuickAdd}
-            title={
-              currentMedia
-                ? `Playing: ${mediaDisplayName || currentMedia}`
-                : "Add something to play"
-            }
+            title={currentMedia ? `Playing: ${mediaDisplayName || currentMedia}` : "Add something to play"}
           >
             {currentMedia ? (
               <>
                 <div className={styles.playingDot} />
                 <span className={styles.nowPlayingLabel}>Playing:</span>
-                <span className={styles.nowPlayingTitle}>
-                  {mediaDisplayName || currentMedia}
-                </span>
+                <span className={styles.nowPlayingTitle}>{mediaDisplayName || currentMedia}</span>
               </>
             ) : (
               <>
@@ -173,15 +151,9 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
         </Tooltip>
       </div>
 
-      {/* Center Inline Search Bar (Option 2) */}
       {roomSetMedia && playlistAdd && (
         <div className={styles.centerSection}>
-          <HeaderSearchBar
-            roomSetMedia={roomSetMedia}
-            playlistAdd={playlistAdd}
-            mediaPath={mediaPath}
-            disabled={!haveLock}
-          />
+          <HeaderSearchBar roomSetMedia={roomSetMedia} playlistAdd={playlistAdd} mediaPath={mediaPath} disabled={!haveLock} />
         </div>
       )}
 
@@ -206,21 +178,11 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
           </WaitingParticipantsPopover>
         )}
 
-        <button
-          type="button"
-          className={styles.iconOnlyBtn}
-          onClick={onOpenSettings}
-          title="Open Settings"
-        >
+        <button type="button" className={styles.iconOnlyBtn} onClick={onOpenSettings} title="Open Settings">
           <IconSettings size={16} stroke={1.5} />
         </button>
 
-        <button
-          type="button"
-          className={styles.exitBtn}
-          onClick={onExit}
-          title="Leave room"
-        >
+        <button type="button" className={styles.exitBtn} onClick={onExit} title="Leave room">
           <IconX size={15} stroke={2} />
           <span className={styles.exitText}>Exit</span>
         </button>
