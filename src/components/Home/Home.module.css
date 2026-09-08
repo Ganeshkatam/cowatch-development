@@ -493,34 +493,24 @@
     box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
   }
 
-  /* Audio wave graphic */
-  .audioWaveBox {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: 16px;
+  /* Voice & Video feature grid */
+  .voiceFeatureGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .voiceFeatureItem {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
-    height: 80px;
-  }
-
-  .waveBar {
-    width: 5px;
-    background: linear-gradient(to top, var(--color-violet), var(--color-pink));
-    border-radius: 9999px;
-    animation: waveAnim 1.2s ease-in-out infinite alternate;
-  }
-
-  @keyframes waveAnim {
-    0% {
-      height: 16px;
-    }
-
-    100% {
-      height: 58px;
-    }
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
   }
 
   /* Card 3: Security & Verification Card */

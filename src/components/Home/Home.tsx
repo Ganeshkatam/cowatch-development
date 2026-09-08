@@ -18,6 +18,8 @@ import {
   IconFile,
   IconBrowser,
   IconPlayerPlayFilled,
+  IconVideo,
+  IconMessage,
 } from "@tabler/icons-react";
 import { SignInButton } from "../TopBar/TopBar";
 import styles from "./Home.module.css";
@@ -249,15 +251,20 @@ export const Home = () => {
               </p>
             </div>
 
-            {/* Audio Wave Visualizer Box */}
-            <div className={styles.audioWaveBox}>
-              <div className={styles.waveBar} style={{ animationDelay: "0s" }} />
-              <div className={styles.waveBar} style={{ animationDelay: "0.2s" }} />
-              <div className={styles.waveBar} style={{ animationDelay: "0.4s" }} />
-              <div className={styles.waveBar} style={{ animationDelay: "0.1s" }} />
-              <div className={styles.waveBar} style={{ animationDelay: "0.5s" }} />
-              <div className={styles.waveBar} style={{ animationDelay: "0.3s" }} />
-              <div className={styles.waveBar} style={{ animationDelay: "0.25s" }} />
+            {/* Communication Modes */}
+            <div className={styles.voiceFeatureGrid}>
+              <div className={styles.voiceFeatureItem}>
+                <IconMicrophone size={18} color="var(--color-pink)" />
+                <span>Microphone</span>
+              </div>
+              <div className={styles.voiceFeatureItem}>
+                <IconVideo size={18} color="var(--color-violet)" />
+                <span>Webcam</span>
+              </div>
+              <div className={styles.voiceFeatureItem}>
+                <IconMessage size={18} color="var(--color-teal)" />
+                <span>Text Chat</span>
+              </div>
             </div>
           </div>
 
