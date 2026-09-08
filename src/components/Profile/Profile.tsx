@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Modal, Button, Avatar, Switch, Text, Tabs, TextInput, SegmentedControl } from "@mantine/core";
+import { Modal, Button, Avatar, Switch, Text, TextInput, SegmentedControl } from "@mantine/core";
 import { useHistory } from "react-router-dom";
 import { supabase } from "../../utils/supabaseClient";
 import { serverPath, openFileSelector } from "../../utils/utils";
@@ -7,15 +7,18 @@ import { MetadataContext } from "../../MetadataContext";
 import {
   IconAlertTriangle,
   IconArrowLeft,
+  IconCamera,
+  IconCheck,
   IconCircleCheckFilled,
   IconKeyFilled,
+  IconLock,
   IconLogout,
+  IconPencil,
+  IconSettings,
   IconTrashFilled,
   IconUpload,
-  IconSettings,
   IconUser,
-  IconLock,
-  IconPencil,
+  IconX,
 } from "@tabler/icons-react";
 import { useAppearance } from "../../theme/ThemeProvider";
 import styles from "./Profile.module.css";
@@ -41,6 +44,14 @@ export const Profile: React.FC = () => {
   const { user, profile, displayName: ctxDisplayName, avatarUrl: ctxAvatarUrl, setMetadata } = metadata;
   const history = useHistory();
 
+  const [activeTab, setActiveTab] = useState<"profile" | "preferences" | "security">(() => {
+    const saved = window.localStorage.getItem("cowatch-profile-tab");
+    if (saved === "general" || saved === "profile") return "profile";
+    if (saved === "preferences") return "preferences";
+    if (saved === "security") return "security";
+    return "profile";
+  });
+
   const [resetDisabled, setResetDisabled] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [displayName, setDisplayName] = useState("");
@@ -53,7 +64,7 @@ export const Profile: React.FC = () => {
   const [prefCameraOn, setPrefCameraOn] = useState(false);
   const [prefMicOn, setPrefMicOn] = useState(false);
 
-  // Sync profile safely when context updates, avoiding infinite loops
+  // Sync profile safely when context updates
   useEffect(() => {
     if (user) {
       const effectiveName =
@@ -73,6 +84,11 @@ export const Profile: React.FC = () => {
       }
     }
   }, [user, profile, ctxDisplayName]);
+
+  const handleTabChange = (tab: "profile" | "preferences" | "security") => {
+    setActiveTab(tab);
+    window.localStorage.setItem("cowatch-profile-tab", tab);
+  };
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -220,6 +236,11 @@ export const Profile: React.FC = () => {
     }
   };
 
+  const cancelEditDisplayName = () => {
+    setDisplayName(originalDisplayName);
+    setIsEditingName(false);
+  };
+
   const updatePreference = async (key: string, value: boolean) => {
     if (key === "pref_camera_on") setPrefCameraOn(value);
     if (key === "pref_mic_on") setPrefMicOn(value);
@@ -275,7 +296,7 @@ export const Profile: React.FC = () => {
               <span>Back to Home</span>
             </button>
           </div>
-          <div className={styles.card} style={{ textAlign: "center", padding: "60px 20px" }}>
+          <div className={styles.mainCard} style={{ textAlign: "center", padding: "60px 20px" }}>
             <Text size="lg" c="var(--text-secondary)">
               Please sign in to view your settings.
             </Text>
@@ -284,6 +305,10 @@ export const Profile: React.FC = () => {
       </div>
     );
   }
+
+  const memberSince = user?.created_at
+    ? new Date(user.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : "Recently";
 
   return (
     <div className={styles.page}>
@@ -313,6 +338,7 @@ export const Profile: React.FC = () => {
       </Modal>
 
       <div className={styles.container}>
+        {/* Top bar with back button */}
         <div className={styles.topNav}>
           <button type="button" className={styles.backBtn} onClick={handleBack}>
             <IconArrowLeft size={16} />
@@ -320,353 +346,475 @@ export const Profile: React.FC = () => {
           </button>
         </div>
 
-        <div className={styles.card}>
-          <div className={styles.bgGlow} />
+        {/* Canva-inspired 2-column layout */}
+        <div className={styles.settingsLayout}>
+          {/* Left Navigation Sidebar */}
+          <aside className={styles.sidebar}>
+            <h2 className={styles.sidebarTitle}>Settings</h2>
 
-          <div className={styles.cardContent}>
-            <h1 className={styles.pageTitle}>Account Settings</h1>
-
-            {/* Profile Header */}
-            <div className={styles.profileHeader}>
-              <Avatar size={96} src={ctxAvatarUrl} className={styles.avatar} />
-              <div className={styles.profileMeta}>
-                <div className={styles.displayNameRow}>
-                  <span className={styles.displayName}>
-                    {originalDisplayName || ctxDisplayName || user.email?.split("@")[0]}
-                  </span>
-                  {user.user_metadata?.email_verified && (
-                    <IconCircleCheckFilled title="Verified" color="var(--color-success)" size={18} />
-                  )}
-                </div>
-                <span className={styles.emailText}>{user.email}</span>
-              </div>
-
-              <div className={styles.headerActions}>
-                <Button
-                  className={styles.uploadBtn}
-                  leftSection={<IconUpload size={16} />}
-                  onClick={uploadAvatar}
-                  variant="light"
-                  color="violet"
-                >
-                  {ctxAvatarUrl ? "Change Picture" : "Upload Picture"}
-                </Button>
-              </div>
+            {/* Account Category */}
+            <div className={styles.navGroup}>
+              <span className={styles.navGroupHeader}>Account</span>
+              <button
+                type="button"
+                className={`${styles.navItem} ${activeTab === "profile" ? styles.navItemActive : ""}`}
+                onClick={() => handleTabChange("profile")}
+              >
+                <span className={styles.navIcon}>
+                  <IconUser size={18} stroke={1.75} />
+                </span>
+                <span>Your profile</span>
+              </button>
             </div>
 
-            <Tabs
-              defaultValue={window.localStorage.getItem("cowatch-profile-tab") || "general"}
-              onChange={(value) => {
-                if (value) window.localStorage.setItem("cowatch-profile-tab", value);
-              }}
-              color="violet"
-            >
-              <Tabs.List grow className={styles.tabsList}>
-                <Tabs.Tab value="general" leftSection={<IconUser size={16} />}>
-                  General
-                </Tabs.Tab>
-                <Tabs.Tab value="preferences" leftSection={<IconSettings size={16} />}>
-                  Preferences
-                </Tabs.Tab>
-                <Tabs.Tab value="security" leftSection={<IconLock size={16} />}>
-                  Security
-                </Tabs.Tab>
-              </Tabs.List>
+            {/* App Experience Category */}
+            <div className={styles.navGroup}>
+              <span className={styles.navGroupHeader}>App experience</span>
+              <button
+                type="button"
+                className={`${styles.navItem} ${activeTab === "preferences" ? styles.navItemActive : ""}`}
+                onClick={() => handleTabChange("preferences")}
+              >
+                <span className={styles.navIcon}>
+                  <IconSettings size={18} stroke={1.75} />
+                </span>
+                <span>Preferences</span>
+              </button>
+            </div>
 
-              <Tabs.Panel value="general">
-                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                  <div style={{ flex: 1, minWidth: "200px" }}>
-                    <Text
-                      size="sm"
-                      fw={500}
-                      mb={5}
-                      c="var(--text-secondary)"
-                      style={{ textTransform: "uppercase", letterSpacing: "1px" }}
-                    >
-                      Display name
-                    </Text>
-                    <Text size="xs" c="dimmed" mb="sm">
-                      This is the name other people see in CoWatch.
-                    </Text>
-                    {isEditingName ? (
-                      <TextInput
-                        autoFocus
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        onBlur={() => {
-                          setIsEditingName(false);
-                          saveDisplayName();
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            setIsEditingName(false);
-                            saveDisplayName();
-                          }
-                        }}
-                        maxLength={50}
-                        placeholder="Enter a display name"
-                        styles={{
-                          input: {
-                            backgroundColor: "var(--bg-surface)",
-                            border: "1px solid var(--color-violet)",
-                            color: "var(--text-primary)",
-                            height: "45px",
-                          },
-                        }}
-                      />
-                    ) : (
-                      <TextInput
-                        readOnly
-                        value={displayName || originalDisplayName || ctxDisplayName || ""}
-                        placeholder="Enter a display name"
-                        onClick={() => setIsEditingName(true)}
-                        rightSection={<IconPencil size={16} stroke={1.5} color="var(--text-muted)" />}
-                        styles={{
-                          input: {
-                            backgroundColor: "var(--bg-elevated)",
-                            border: "1px solid var(--border-subtle)",
-                            color: "var(--text-primary)",
-                            height: "45px",
-                            cursor: "pointer",
-                          },
-                        }}
-                      />
-                    )}
+            {/* Security & Sign In Category */}
+            <div className={styles.navGroup}>
+              <span className={styles.navGroupHeader}>Security & sign in</span>
+              <button
+                type="button"
+                className={`${styles.navItem} ${activeTab === "security" ? styles.navItemActive : ""}`}
+                onClick={() => handleTabChange("security")}
+              >
+                <span className={styles.navIcon}>
+                  <IconLock size={18} stroke={1.75} />
+                </span>
+                <span>Login & security</span>
+              </button>
+            </div>
+          </aside>
+
+          {/* Right Content Canvas */}
+          <main className={styles.mainCard}>
+            <div className={styles.ambientGradient} />
+
+            <div className={styles.contentWrapper}>
+              {/* TAB 1: YOUR PROFILE */}
+              {activeTab === "profile" && (
+                <>
+                  <div className={styles.contentHeader}>
+                    <span className={styles.breadcrumbCategory}>Your profile</span>
+                    <h1 className={styles.contentTitle}>Your profile</h1>
+                    <p className={styles.contentSubtitle}>
+                      Manage how you appear across CoWatch rooms and conversations.
+                    </p>
                   </div>
-                </div>
-              </Tabs.Panel>
 
-              <Tabs.Panel value="preferences">
-                <div className={styles.sectionCard}>
-                  <Text
-                    size="sm"
-                    fw={600}
-                    c="dimmed"
-                    style={{ textTransform: "uppercase", letterSpacing: "1px", marginBottom: "-4px" }}
-                  >
-                    Media
-                  </Text>
-
-                  <div className={styles.responsiveRowWithSwitch}>
-                    <div className={styles.responsiveRowText}>
-                      <Text size="md" fw={500} c="var(--text-primary)">
-                        Camera on by default
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        Start video automatically when joining a room.
-                      </Text>
+                  {/* Compact CoWatch Identity Banner */}
+                  <div className={styles.identityBanner}>
+                    <div className={styles.bannerHeaderText}>
+                      <h3 className={styles.bannerTitle}>Your CoWatch profile</h3>
+                      <p className={styles.bannerSubtitle}>
+                        Your identity across watch rooms and conversations.
+                      </p>
                     </div>
-                    <Switch
-                      size="lg"
-                      className="custom-switch"
-                      color="violet"
-                      checked={prefCameraOn}
-                      onChange={(e) => updatePreference("pref_camera_on", e.currentTarget.checked)}
-                    />
-                  </div>
 
-                  <div className={`${styles.responsiveRowWithSwitch} ${styles.rowDivider}`}>
-                    <div className={styles.responsiveRowText}>
-                      <Text size="md" fw={500} c="var(--text-primary)">
-                        Microphone on by default
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        Start microphone automatically when joining a room.
-                      </Text>
-                    </div>
-                    <Switch
-                      size="lg"
-                      className="custom-switch"
-                      color="violet"
-                      checked={prefMicOn}
-                      onChange={(e) => updatePreference("pref_mic_on", e.currentTarget.checked)}
-                    />
-                  </div>
+                    <div className={styles.bannerProfileRow}>
+                      <div className={styles.bannerUserGroup}>
+                        <div
+                          className={styles.avatarContainer}
+                          onClick={uploadAvatar}
+                          title="Click to change profile picture"
+                          role="button"
+                          tabIndex={0}
+                        >
+                          <Avatar size={84} src={ctxAvatarUrl} className={styles.avatar} />
+                          <div className={styles.cameraBadge}>
+                            <IconCamera size={14} />
+                          </div>
+                        </div>
 
-                  <Text
-                    size="sm"
-                    fw={600}
-                    c="dimmed"
-                    style={{ textTransform: "uppercase", letterSpacing: "1px", marginBottom: "-4px", marginTop: "4px" }}
-                  >
-                    General
-                  </Text>
-
-                  <div className={styles.responsiveRowWithSwitch}>
-                    <div className={styles.responsiveRowText}>
-                      <Text size="md" fw={500} c="var(--text-primary)">
-                        Show Chat Column
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        Display the chat sidebar by default when joining rooms.
-                      </Text>
-                    </div>
-                    <Switch
-                      size="lg"
-                      className="custom-switch"
-                      color="violet"
-                      checked={prefShowChatColumn}
-                      onChange={(e) => updatePreference("pref_show_chat_column", e.currentTarget.checked)}
-                    />
-                  </div>
-
-                  <div className={styles.responsiveRowWithSwitch}>
-                    <div className={styles.responsiveRowText}>
-                      <Text size="md" fw={500} c="var(--text-primary)">
-                        Show People Column
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        Display the participant list by default.
-                      </Text>
-                    </div>
-                    <Switch
-                      size="lg"
-                      className="custom-switch"
-                      color="violet"
-                      checked={prefShowPeopleColumn}
-                      onChange={(e) => updatePreference("pref_show_people_column", e.currentTarget.checked)}
-                    />
-                  </div>
-
-                  <div className={styles.responsiveRowWithSwitch}>
-                    <div className={styles.responsiveRowText}>
-                      <Text size="md" fw={500} c="var(--text-primary)">
-                        Disable Chat Sound
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        Mute notification sounds for new chat messages.
-                      </Text>
-                    </div>
-                    <Switch
-                      size="lg"
-                      className="custom-switch"
-                      color="violet"
-                      checked={prefDisableChatSound}
-                      onChange={(e) => updatePreference("pref_disable_chat_sound", e.currentTarget.checked)}
-                    />
-                  </div>
-
-                  <div className={styles.responsiveRow} style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "16px", marginTop: "4px" }}>
-                    <div className={styles.responsiveRowText}>
-                      <Text size="md" fw={500} c="var(--text-primary)">
-                        Appearance
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        Customize your visual interface theme.
-                      </Text>
-                    </div>
-                    <AppearanceSelector />
-                  </div>
-                </div>
-              </Tabs.Panel>
-
-              <Tabs.Panel value="security">
-                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                  {/* Authentication & Session Card */}
-                  <div className={styles.sectionCard}>
-                    <Text
-                      size="sm"
-                      fw={600}
-                      c="dimmed"
-                      style={{
-                        textTransform: "uppercase",
-                        letterSpacing: "1px",
-                        marginBottom: "-4px",
-                      }}
-                    >
-                      Authentication & Session
-                    </Text>
-
-                    <div className={`${styles.responsiveRow} ${styles.rowDivider}`}>
-                      <div className={styles.responsiveRowText}>
-                        <Text size="md" fw={500} c="var(--text-primary)">
-                          Password
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          Send a secure password reset link to {user.email || "your registered email"}.
-                        </Text>
+                        <div className={styles.bannerMeta}>
+                          <div className={styles.bannerDisplayNameRow}>
+                            <span className={styles.bannerDisplayName}>
+                              {originalDisplayName || ctxDisplayName || user.email?.split("@")[0]}
+                            </span>
+                            {user.user_metadata?.email_verified && (
+                              <IconCircleCheckFilled title="Verified" color="var(--color-success)" size={18} />
+                            )}
+                          </div>
+                          <span className={styles.bannerEmail}>{user.email}</span>
+                        </div>
                       </div>
+
                       <Button
-                        disabled={resetDisabled}
-                        leftSection={<IconKeyFilled size={15} />}
+                        className={styles.changePictureBtn}
+                        leftSection={<IconUpload size={15} />}
+                        onClick={uploadAvatar}
                         variant="light"
                         color="violet"
-                        size="sm"
-                        style={{ flexShrink: 0 }}
-                        onClick={resetPassword}
                       >
-                        Reset Password
-                      </Button>
-                    </div>
-
-                    <div className={styles.responsiveRow}>
-                      <div className={styles.responsiveRowText}>
-                        <Text size="md" fw={500} c="var(--text-primary)">
-                          Active Session
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          Sign out of your active CoWatch account on this browser.
-                        </Text>
-                      </div>
-                      <Button
-                        leftSection={<IconLogout size={15} stroke={1.5} />}
-                        variant="outline"
-                        color="gray"
-                        size="sm"
-                        style={{
-                          flexShrink: 0,
-                          borderColor: "var(--border-strong)",
-                          color: "var(--text-secondary)",
-                        }}
-                        onClick={onSignOut}
-                      >
-                        Sign Out
+                        Change picture
                       </Button>
                     </div>
                   </div>
 
-                  {/* Danger Zone Card */}
-                  <div className={styles.dangerCard}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "-4px" }}>
-                      <IconAlertTriangle size={16} color="var(--color-danger)" />
-                      <Text
-                        size="sm"
-                        fw={600}
-                        c="var(--color-danger)"
-                        style={{
-                          textTransform: "uppercase",
-                          letterSpacing: "1px",
-                        }}
-                      >
-                        Danger Zone
-                      </Text>
+                  {/* Profile Section */}
+                  <div className={styles.section}>
+                    <h2 className={styles.sectionHeading}>Profile</h2>
+                    <div className={styles.settingsTable}>
+                      {/* Display Name Row */}
+                      <div className={styles.settingRow}>
+                        <div className={styles.settingInfo}>
+                          <span className={styles.settingLabel}>Display name</span>
+                          <span className={styles.settingDescription}>
+                            This name is visible to participants in watch rooms and chat.
+                          </span>
+                        </div>
+                        <div className={styles.settingValueCol}>
+                          {isEditingName ? (
+                            <div className={styles.inlineEditWrapper}>
+                              <TextInput
+                                autoFocus
+                                value={displayName}
+                                onChange={(e) => setDisplayName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") saveDisplayName();
+                                  if (e.key === "Escape") cancelEditDisplayName();
+                                }}
+                                maxLength={50}
+                                placeholder="Enter display name"
+                                size="sm"
+                                styles={{
+                                  input: {
+                                    backgroundColor: "var(--bg-surface)",
+                                    border: "1px solid var(--color-violet, #7d2ae8)",
+                                    color: "var(--text-primary)",
+                                    width: "220px",
+                                  },
+                                }}
+                              />
+                              <Button
+                                size="xs"
+                                color="violet"
+                                onClick={saveDisplayName}
+                                leftSection={<IconCheck size={14} />}
+                                className={styles.actionPillBtn}
+                              >
+                                Save
+                              </Button>
+                              <Button
+                                size="xs"
+                                variant="subtle"
+                                color="gray"
+                                onClick={cancelEditDisplayName}
+                                leftSection={<IconX size={14} />}
+                                className={styles.actionPillBtn}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className={styles.inlineEditWrapper}>
+                              <span className={styles.settingTextValue}>
+                                {displayName || originalDisplayName || ctxDisplayName || "Not set"}
+                              </span>
+                              <Button
+                                size="xs"
+                                variant="light"
+                                color="violet"
+                                onClick={() => setIsEditingName(true)}
+                                leftSection={<IconPencil size={13} />}
+                                className={styles.actionPillBtn}
+                              >
+                                Edit
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Email Row */}
+                      <div className={styles.settingRow}>
+                        <div className={styles.settingInfo}>
+                          <span className={styles.settingLabel}>Email</span>
+                          <span className={styles.settingDescription}>
+                            Your primary email address for signing in and notifications.
+                          </span>
+                        </div>
+                        <div className={styles.settingValueCol}>
+                          <span className={styles.settingTextValue}>{user.email}</span>
+                          {user.user_metadata?.email_verified && (
+                            <span className={styles.statusChip}>
+                              <IconCircleCheckFilled size={14} />
+                              Verified
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Member Since Row */}
+                      <div className={styles.settingRow}>
+                        <div className={styles.settingInfo}>
+                          <span className={styles.settingLabel}>Member since</span>
+                          <span className={styles.settingDescription}>
+                            The date your CoWatch account was created.
+                          </span>
+                        </div>
+                        <div className={styles.settingValueCol}>
+                          <span className={styles.settingTextValue}>{memberSince}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Account Section */}
+                  <div className={styles.section} style={{ marginTop: "12px" }}>
+                    <h2 className={styles.sectionHeading}>Account</h2>
+                    <div className={styles.settingsTable}>
+                      <div className={styles.settingRow}>
+                        <div className={styles.settingInfo}>
+                          <span className={styles.settingLabel}>Delete account</span>
+                          <span className={styles.settingDescription}>
+                            Permanently delete your CoWatch account, active rooms, and history.
+                          </span>
+                        </div>
+                        <div className={styles.settingValueCol}>
+                          <Button
+                            size="xs"
+                            variant="subtle"
+                            color="red"
+                            onClick={() => setDeleteConfirmOpen(true)}
+                            leftSection={<IconTrashFilled size={14} />}
+                            className={styles.actionPillBtn}
+                          >
+                            Delete account
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* TAB 2: PREFERENCES */}
+              {activeTab === "preferences" && (
+                <>
+                  <div className={styles.contentHeader}>
+                    <span className={styles.breadcrumbCategory}>App experience</span>
+                    <h1 className={styles.contentTitle}>Preferences</h1>
+                    <p className={styles.contentSubtitle}>
+                      Configure your media defaults, watch room layout, and interface appearance.
+                    </p>
+                  </div>
+
+                  {/* Media Defaults */}
+                  <div className={styles.section}>
+                    <h2 className={styles.sectionHeading}>Media defaults</h2>
+                    <div className={styles.settingsTable}>
+                      <div className={styles.settingRow}>
+                        <div className={styles.settingInfo}>
+                          <span className={styles.settingLabel}>Camera on by default</span>
+                          <span className={styles.settingDescription}>
+                            Start video automatically when joining a watch room.
+                          </span>
+                        </div>
+                        <div className={styles.settingValueCol}>
+                          <Switch
+                            size="md"
+                            color="violet"
+                            checked={prefCameraOn}
+                            onChange={(e) => updatePreference("pref_camera_on", e.currentTarget.checked)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className={styles.settingRow}>
+                        <div className={styles.settingInfo}>
+                          <span className={styles.settingLabel}>Microphone on by default</span>
+                          <span className={styles.settingDescription}>
+                            Start microphone automatically when joining a watch room.
+                          </span>
+                        </div>
+                        <div className={styles.settingValueCol}>
+                          <Switch
+                            size="md"
+                            color="violet"
+                            checked={prefMicOn}
+                            onChange={(e) => updatePreference("pref_mic_on", e.currentTarget.checked)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Watch Room Interface */}
+                  <div className={styles.section} style={{ marginTop: "12px" }}>
+                    <h2 className={styles.sectionHeading}>Watch room interface</h2>
+                    <div className={styles.settingsTable}>
+                      <div className={styles.settingRow}>
+                        <div className={styles.settingInfo}>
+                          <span className={styles.settingLabel}>Show chat column</span>
+                          <span className={styles.settingDescription}>
+                            Display the chat sidebar automatically when joining rooms.
+                          </span>
+                        </div>
+                        <div className={styles.settingValueCol}>
+                          <Switch
+                            size="md"
+                            color="violet"
+                            checked={prefShowChatColumn}
+                            onChange={(e) => updatePreference("pref_show_chat_column", e.currentTarget.checked)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className={styles.settingRow}>
+                        <div className={styles.settingInfo}>
+                          <span className={styles.settingLabel}>Show people column</span>
+                          <span className={styles.settingDescription}>
+                            Display the participant list by default when joining rooms.
+                          </span>
+                        </div>
+                        <div className={styles.settingValueCol}>
+                          <Switch
+                            size="md"
+                            color="violet"
+                            checked={prefShowPeopleColumn}
+                            onChange={(e) => updatePreference("pref_show_people_column", e.currentTarget.checked)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className={styles.settingRow}>
+                        <div className={styles.settingInfo}>
+                          <span className={styles.settingLabel}>Disable chat sound</span>
+                          <span className={styles.settingDescription}>
+                            Mute notification sounds for new incoming chat messages.
+                          </span>
+                        </div>
+                        <div className={styles.settingValueCol}>
+                          <Switch
+                            size="md"
+                            color="violet"
+                            checked={prefDisableChatSound}
+                            onChange={(e) => updatePreference("pref_disable_chat_sound", e.currentTarget.checked)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className={styles.settingRow}>
+                        <div className={styles.settingInfo}>
+                          <span className={styles.settingLabel}>Appearance theme</span>
+                          <span className={styles.settingDescription}>
+                            Select your visual interface appearance (Light, Mantine dark, or System).
+                          </span>
+                        </div>
+                        <div className={styles.settingValueCol}>
+                          <AppearanceSelector />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* TAB 3: LOGIN & SECURITY */}
+              {activeTab === "security" && (
+                <>
+                  <div className={styles.contentHeader}>
+                    <span className={styles.breadcrumbCategory}>Security & sign in</span>
+                    <h1 className={styles.contentTitle}>Login & security</h1>
+                    <p className={styles.contentSubtitle}>
+                      Manage authentication credentials, active sessions, and account protection.
+                    </p>
+                  </div>
+
+                  {/* Authentication & Session */}
+                  <div className={styles.section}>
+                    <h2 className={styles.sectionHeading}>Authentication & Session</h2>
+                    <div className={styles.settingsTable}>
+                      <div className={styles.settingRow}>
+                        <div className={styles.settingInfo}>
+                          <span className={styles.settingLabel}>Password</span>
+                          <span className={styles.settingDescription}>
+                            Send a secure password reset link to {user.email || "your registered email"}.
+                          </span>
+                        </div>
+                        <div className={styles.settingValueCol}>
+                          <Button
+                            disabled={resetDisabled}
+                            leftSection={<IconKeyFilled size={14} />}
+                            variant="light"
+                            color="violet"
+                            size="xs"
+                            onClick={resetPassword}
+                            className={styles.actionPillBtn}
+                          >
+                            {resetDisabled ? "Reset Link Sent" : "Reset Password"}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className={styles.settingRow}>
+                        <div className={styles.settingInfo}>
+                          <span className={styles.settingLabel}>Active session</span>
+                          <span className={styles.settingDescription}>
+                            Sign out of your active CoWatch session on this browser.
+                          </span>
+                        </div>
+                        <div className={styles.settingValueCol}>
+                          <Button
+                            leftSection={<IconLogout size={14} stroke={1.5} />}
+                            variant="outline"
+                            color="gray"
+                            size="xs"
+                            onClick={onSignOut}
+                            className={styles.actionPillBtn}
+                          >
+                            Sign Out
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Danger Zone */}
+                  <div className={styles.dangerSection}>
+                    <div className={styles.dangerHeader}>
+                      <IconAlertTriangle size={17} />
+                      <span>Danger zone</span>
                     </div>
 
-                    <div className={styles.responsiveRow}>
-                      <div className={styles.responsiveRowText}>
-                        <Text size="md" fw={500} c="var(--text-primary)">
-                          Delete Account
-                        </Text>
-                        <Text size="xs" c="dimmed">
+                    <div className={styles.settingRow} style={{ borderBottom: "none", paddingBottom: 0 }}>
+                      <div className={styles.settingInfo}>
+                        <span className={styles.settingLabel}>Delete account</span>
+                        <span className={styles.settingDescription}>
                           Permanently delete your account, saved preferences, rooms, and profile picture. This action cannot be undone.
-                        </Text>
+                        </span>
                       </div>
-                      <Button
-                        leftSection={<IconTrashFilled size={15} />}
-                        color="red"
-                        variant="filled"
-                        size="sm"
-                        style={{ flexShrink: 0 }}
-                        onClick={() => setDeleteConfirmOpen(true)}
-                      >
-                        Delete Account
-                      </Button>
+                      <div className={styles.settingValueCol}>
+                        <Button
+                          leftSection={<IconTrashFilled size={14} />}
+                          color="red"
+                          variant="filled"
+                          size="xs"
+                          onClick={() => setDeleteConfirmOpen(true)}
+                          className={styles.actionPillBtn}
+                        >
+                          Delete Account
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Tabs.Panel>
-            </Tabs>
-          </div>
+                </>
+              )}
+            </div>
+          </main>
         </div>
       </div>
     </div>
