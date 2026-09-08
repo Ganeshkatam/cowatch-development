@@ -26,6 +26,7 @@ import { RouteSEO } from "./utils/seo";
 
 // Route-level code splitting for rapid initial page loads
 const Home = lazy(() => import("./components/Home/Home").then((m) => ({ default: m.Home })));
+const HomeDashboard = lazy(() => import("./components/HomeDashboard/HomeDashboard").then((m) => ({ default: m.HomeDashboard })));
 const App = lazy(() => import("./components/App/App").then((m) => ({ default: m.App })));
 const AuthLayout = lazy(() => import("./components/Auth/AuthLayout").then((m) => ({ default: m.AuthLayout })));
 const Create = lazy(() => import("./components/Create/Create").then((m) => ({ default: m.Create })));
@@ -446,6 +447,9 @@ class CoWatch extends React.Component {
                         path="/"
                         exact
                         render={(_props: any) => {
+                          if (this.state.user) {
+                            return <Redirect to="/home" />;
+                          }
                           return (
                             <React.Fragment>
                               <TopBar />
@@ -454,6 +458,16 @@ class CoWatch extends React.Component {
                             </React.Fragment>
                           );
                         }}
+                      />
+                      <Route
+                        path="/home"
+                        exact
+                        render={() => (
+                          <RequireVerifiedEmail>
+                            <TopBar />
+                            <HomeDashboard />
+                          </RequireVerifiedEmail>
+                        )}
                       />
                       <Route path={["/login", "/signup", "/forgot-password", "/reset-password"]}>
                         <RequireGuest>

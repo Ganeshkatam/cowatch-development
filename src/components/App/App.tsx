@@ -363,7 +363,7 @@ export class App extends React.Component<AppProps, AppState> {
     } catch (e) {
       console.warn("[App] Error during leave cleanup:", e);
     }
-    window.location.href = "/";
+    window.location.href = "/home";
   };
 
   handleVisibilityChange = () => {
@@ -704,7 +704,7 @@ export class App extends React.Component<AppProps, AppState> {
         }, 3000);
       });
       socket.on("kicked", () => {
-        window.location.assign("/");
+        window.location.assign("/home");
       });
       socket.on("REC:play", (data?: any) => {
         if (
@@ -2584,7 +2584,7 @@ export class App extends React.Component<AppProps, AppState> {
           roomTitle={this.state.roomTitle}
           onLeave={() => {
             this.socket?.emit("CMD:leaveLounge");
-            window.location.href = "/";
+            window.location.href = "/home";
           }}
         />
       );

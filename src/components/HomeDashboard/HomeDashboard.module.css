@@ -1,0 +1,391 @@
+.dashboardContainer {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px 64px;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.clockSection {
+  text-align: center;
+  margin-bottom: 40px;
+  user-select: none;
+}
+
+.clockTime {
+  font-size: 52px;
+  font-weight: 600;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.clockDate {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: -0.2px;
+}
+
+.actionsGrid {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 36px;
+  margin-bottom: 40px;
+}
+
+.actionTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease;
+}
+
+.actionTile:hover {
+  transform: translateY(-2px);
+}
+
+.actionTile:active {
+  transform: translateY(1px);
+}
+
+.squircleBtn {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.squircleBtn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+
+.actionTile:hover .squircleBtn {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+  filter: brightness(1.06);
+}
+
+.orangeBtn {
+  background: linear-gradient(135deg, #FF7B47 0%, #F05A22 100%);
+}
+
+.blueBtn {
+  background: linear-gradient(135deg, #2D8CFF 0%, #0E71EB 100%);
+}
+
+.tileLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.calendarTileIcon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.calendarDateNum {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+}
+
+.calendarMonthStr {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+  margin-top: 1px;
+}
+
+/* Daily Schedule Card */
+.scheduleCard {
+  width: 100%;
+  max-width: 520px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.cardHeader {
+  padding: 16px 20px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.headerTitleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.headerTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.headerIconBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.headerIconBtn:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.navRow {
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.navLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.todayBtn {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.todayBtn:hover {
+  background-color: var(--surface-hover);
+}
+
+.todayBtnActive {
+  background-color: var(--color-violet);
+  color: #ffffff;
+  border-color: var(--color-violet);
+}
+
+.arrowBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.arrowBtn:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.cardBody {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.emptyStateSvg {
+  width: 140px;
+  height: 100px;
+  margin-bottom: 16px;
+  opacity: 0.85;
+}
+
+.emptyStateText {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.eventsList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.eventItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  transition: border-color 0.15s ease;
+}
+
+.eventItem:hover {
+  border-color: var(--border-strong);
+}
+
+.eventInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.eventTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eventMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.liveBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+}
+
+.liveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #10B981;
+}
+
+.cardFooter {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-subtle);
+  background-color: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.footerLink {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-violet);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.footerLink:hover {
+  color: var(--color-pink);
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .dashboardContainer {
+    padding: 32px 16px 48px;
+  }
+
+  .clockTime {
+    font-size: 40px;
+  }
+
+  .actionsGrid {
+    gap: 20px;
+  }
+
+  .squircleBtn {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+  }
+
+  .scheduleCard {
+    max-width: 100%;
+  }
+}

@@ -152,6 +152,9 @@ export class SignInButton extends React.Component {
             <Menu.Item component={Link} to="/account/profile" leftSection={<IconSettings size={16} stroke={1.5} />}>
               Account settings
             </Menu.Item>
+            <Menu.Item component={Link} to="/home" leftSection={<IconDeviceTv size={16} stroke={1.5} />}>
+              Home
+            </Menu.Item>
             <Menu.Item component={Link} to="/myrooms" leftSection={<IconDatabase size={16} stroke={1.5} />}>
               My rooms
             </Menu.Item>
@@ -178,17 +181,10 @@ export class SignInButton extends React.Component {
     return (
       <Group gap="xs">
         <Button component={Link} to="/login" variant="subtle" color="gray" size="sm">
-          Sign in
+          Sign In
         </Button>
-        <Button
-          component={Link}
-          to="/signup"
-          variant="gradient"
-          gradient={{ from: "#8B5CF6", to: "#EC4899", deg: 135 }}
-          size="sm"
-          style={{ fontWeight: 600, borderRadius: "10px" }}
-        >
-          Start Free
+        <Button component={Link} to="/signup" variant="filled" color="violet" size="sm">
+          Get Started
         </Button>
       </Group>
     );
@@ -244,7 +240,7 @@ export const TopBar = (props: {
       <div className={styles.topBarContainer}>
         {/* Left Section: Brand Logo + Name + optional Room Breadcrumb */}
         <div className={styles.leftSection}>
-          <Link to="/" className={styles.brandGroup}>
+          <Link to={context.user ? "/home" : "/"} className={styles.brandGroup}>
             <img className={`cowatch-brand-logo ${styles.logo}`} src="/logo192.png" alt="CoWatch" />
             <span className={styles.brandName}>CoWatch</span>
           </Link>

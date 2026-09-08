@@ -61,7 +61,7 @@ export const WaitingLounge: React.FC<WaitingLoungeProps> = ({
             type="button"
             className={styles.returnHomeButton}
             onClick={() => {
-              window.location.href = "/";
+              window.location.href = "/home";
             }}
           >
             Return to Home

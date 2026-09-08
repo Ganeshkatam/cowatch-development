@@ -57,7 +57,7 @@ const areRoomsEqual = (a: RoomSummary[], b: RoomSummary[]): boolean => {
   return true;
 };
 
-const useRooms = (user: any) => {
+export const useRooms = (user: any) => {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
