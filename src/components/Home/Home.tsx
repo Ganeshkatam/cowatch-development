@@ -22,6 +22,12 @@ import {
   IconVolume,
   IconUserPlus,
   IconUserCheck,
+  IconMicrophone,
+  IconShieldCheck,
+  IconBrandYoutubeFilled,
+  IconScreenShare,
+  IconFile,
+  IconBrowser,
 } from "@tabler/icons-react";
 import { SignInButton } from "../TopBar/TopBar";
 import styles from "./Home.module.css";
@@ -172,203 +178,303 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* Feature Pillars: Plain English */}
+      {/* Section 2: Asymmetric Bento Grid (Distinctive Feature Architecture) */}
       <section className={styles.sectionContainer}>
         <div className={styles.sectionHeader}>
-          <span className={styles.sectionTag}>Why You Will Love It</span>
+          <span className={styles.sectionTag}>Feature Highlights</span>
           <h2 className={styles.sectionTitle}>Built for genuine hangout moments</h2>
           <p className={styles.sectionDesc}>
             Everything you need for a cozy movie night, watch party, or anime marathon with friends.
           </p>
         </div>
 
-        <div className={styles.featureGrid}>
-          <FeatureCard
-            icon={<IconRefresh size={26} />}
-            title="Always in Perfect Sync"
-            text="When anyone hits pause, play, or rewinds to catch a missed joke, everyone moves together instantly. No more counting down 3, 2, 1 over the phone."
-          />
-          <FeatureCard
-            icon={<IconDeviceTv size={26} />}
-            title="Watch Anything You Like"
-            text="Paste a YouTube link, stream your favorite video files, or share your screen directly with the group."
-          />
-          <FeatureCard
-            icon={<IconMessageDots size={26} />}
-            title="Talk, Laugh, and React"
-            text="Turn on your webcam and mic or send live messages and instant reactions. It feels like everyone is sharing the same couch."
-          />
-          <FeatureCard
-            icon={<IconLock size={26} />}
-            title="Your Own Private Space"
-            text="Lock your room with a password or turn on the waiting lounge so only your invited friends can enter."
-          />
-          <FeatureCard
-            icon={<IconUserCheck size={26} />}
-            title="Safe & Verified Rooms"
-            text="Every viewer has a verified account. This protects your watch party from strangers, lets you manage member permissions, and saves your rooms."
-          />
-          <FeatureCard
-            icon={<IconDevices size={26} />}
-            title="Works on Every Screen"
-            text="Join from your laptop, desktop, iPad, tablet, or phone right in any modern web browser."
-          />
+        <div className={styles.bentoGrid}>
+          {/* Card 1: Wide Card with Live Dual-Sync Visualizer */}
+          <div className={styles.bentoCardWide}>
+            <div className={styles.bentoCardBody}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-violet)" }}>
+                <IconRefresh size={24} />
+                <span style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Synchronized Play
+                </span>
+              </div>
+              <h3 className={styles.bentoTitle}>Always in Sync</h3>
+              <p className={styles.bentoText}>
+                When anyone pauses, plays, or seeks to another part of the video, everyone in the room stays synchronized.
+                No countdowns needed.
+              </p>
+            </div>
+
+            {/* Sync Visualizer Mock */}
+            <div className={styles.syncWidget}>
+              <div className={styles.syncWidgetHeader}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>
+                  Synchronized Playback
+                </span>
+                <div className={styles.syncStatusPill}>
+                  <span className={styles.pulseDot} />
+                  <span>IN SYNC</span>
+                </div>
+              </div>
+
+              <div className={styles.syncAvatarsRow}>
+                <div className={styles.userSyncNode}>
+                  <div className={styles.friendAvatar} style={{ background: "#8B5CF6", width: 32, height: 32 }}>You</div>
+                  <div>
+                    <div className={styles.syncNodeName}>Host (You)</div>
+                    <div className={styles.syncNodeTime}>00:24:18</div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--color-live)", fontSize: 12, fontWeight: 700 }}>
+                  <IconCircleCheck size={16} /> Synced
+                </div>
+
+                <div className={styles.userSyncNode}>
+                  <div className={styles.friendAvatar} style={{ background: "#EC4899", width: 32, height: 32 }}>M</div>
+                  <div>
+                    <div className={styles.syncNodeName}>Friend</div>
+                    <div className={styles.syncNodeTime}>00:24:18</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.syncLineTrack}>
+                <div className={styles.syncLineGlow} />
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Square Card - Voice & Reactions */}
+          <div className={styles.bentoCardSquare}>
+            <div className={styles.bentoCardBody}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-pink)" }}>
+                <IconMicrophone size={24} />
+                <span style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Voice & Video
+                </span>
+              </div>
+              <h3 className={styles.bentoTitle}>Voice & Video Chat</h3>
+              <p className={styles.bentoText}>
+                Turn on your microphone or webcam while watching, and chat with friends in real time.
+              </p>
+            </div>
+
+            {/* Audio Wave Visualizer Box */}
+            <div className={styles.audioWaveBox}>
+              <div className={styles.waveBar} style={{ animationDelay: "0s" }} />
+              <div className={styles.waveBar} style={{ animationDelay: "0.2s" }} />
+              <div className={styles.waveBar} style={{ animationDelay: "0.4s" }} />
+              <div className={styles.waveBar} style={{ animationDelay: "0.1s" }} />
+              <div className={styles.waveBar} style={{ animationDelay: "0.5s" }} />
+              <div className={styles.waveBar} style={{ animationDelay: "0.3s" }} />
+              <div className={styles.waveBar} style={{ animationDelay: "0.25s" }} />
+            </div>
+          </div>
+
+          {/* Card 3: Security & Verified Accounts */}
+          <div className={styles.bentoCardSecurity}>
+            <div className={styles.bentoCardBody}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-teal)" }}>
+                <IconShieldCheck size={24} />
+                <span style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Room Security
+                </span>
+              </div>
+              <h3 className={styles.bentoTitle}>Room Controls</h3>
+              <p className={styles.bentoText}>
+                Create rooms with passcodes, enable a waiting lounge for approvals, or set rooms as permanent.
+              </p>
+            </div>
+
+            <div className={styles.securityList}>
+              <div className={styles.securityItem}>
+                <IconCircleCheck size={16} color="var(--color-success)" />
+                <span>Verified Email Accounts</span>
+              </div>
+              <div className={styles.securityItem}>
+                <IconLock size={16} color="var(--color-violet)" />
+                <span>Optional Passcode Protection</span>
+              </div>
+              <div className={styles.securityItem}>
+                <IconUsers size={16} color="var(--color-pink)" />
+                <span>Host Waiting Lounge</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Wide Card - Universal Media Sources */}
+          <div className={styles.bentoCardSources}>
+            <div className={styles.bentoCardBody}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-violet)" }}>
+                <IconDeviceTv size={24} />
+                <span style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Media Sources
+                </span>
+              </div>
+              <h3 className={styles.bentoTitle}>Supported Media</h3>
+              <p className={styles.bentoText}>
+                Stream from YouTube, launch a virtual browser in the cloud, share your screen, upload a video file, or paste direct URLs.
+              </p>
+            </div>
+
+            <div className={styles.sourcePillRow}>
+              <div className={styles.sourceBadge}>
+                <IconBrandYoutubeFilled size={18} color="#EF4444" />
+                <span>YouTube</span>
+              </div>
+              <div className={styles.sourceBadge}>
+                <IconBrowser size={18} color="var(--color-violet)" />
+                <span>Virtual Browser (VBrowser)</span>
+              </div>
+              <div className={styles.sourceBadge}>
+                <IconScreenShare size={18} color="var(--color-blue)" />
+                <span>Screensharing</span>
+              </div>
+              <div className={styles.sourceBadge}>
+                <IconFile size={18} color="var(--color-teal)" />
+                <span>File Upload</span>
+              </div>
+              <div className={styles.sourceBadge}>
+                <IconLink size={18} color="var(--color-pink)" />
+                <span>Direct Video URL</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* How It Works: 3 Steps */}
-      <section className={styles.sectionContainer} style={{ paddingTop: 20 }}>
+      {/* Section 3: Connected Horizontal Stepper Timeline */}
+      <section className={styles.timelineSection}>
         <div className={styles.sectionHeader}>
-          <span className={styles.sectionTag}>Simple as 1-2-3</span>
-          <h2 className={styles.sectionTitle}>How to start watching</h2>
+          <span className={styles.sectionTag}>How It Works</span>
+          <h2 className={styles.sectionTitle}>Get started in three easy steps</h2>
           <p className={styles.sectionDesc}>
-            Get your party started in less than 30 seconds with no complex settings.
+            Everything is designed to get you watching together in less than 30 seconds.
           </p>
         </div>
 
-        <div className={styles.stepsGrid}>
-          <div className={styles.stepCard}>
-            <div className={styles.stepNumber}>01</div>
-            <h3 className={styles.stepTitle}>Create Your Free Account</h3>
-            <p className={styles.stepDesc}>
-              Sign up in seconds and verify your email to unlock your personal rooms, custom profile, and watch history.
-            </p>
-          </div>
-
-          <div className={styles.stepCard}>
-            <div className={styles.stepNumber}>02</div>
-            <h3 className={styles.stepTitle}>Start or Join a Room</h3>
-            <p className={styles.stepDesc}>
-              Launch your own room with optional password protection, or paste a friend's room code to jump in.
-            </p>
-          </div>
-
-          <div className={styles.stepCard}>
-            <div className={styles.stepNumber}>03</div>
-            <h3 className={styles.stepTitle}>Invite & Enjoy in Sync</h3>
-            <p className={styles.stepDesc}>
-              Pick what to watch, share your room link with friends, and enjoy the show together in perfect sync.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Occasions / Scenarios */}
-      <section className={styles.sectionContainer} style={{ paddingTop: 20 }}>
-        <div className={styles.sectionHeader}>
-          <span className={styles.sectionTag}>Made For You</span>
-          <h2 className={styles.sectionTitle}>Great for every kind of hangout</h2>
-          <p className={styles.sectionDesc}>
-            Stay close with the people who matter most, wherever they are in the world.
-          </p>
-        </div>
-
-        <div className={styles.occasionsGrid}>
-          <div className={styles.occasionCard}>
-            <img
-              src="/cinema_theater_bg.jpg"
-              alt="Movie theater date"
-              className={styles.occasionImg}
-            />
-            <div className={styles.occasionBody}>
-              <h4 className={styles.occasionTitle}>Long-Distance Movie Dates</h4>
-              <p className={styles.occasionDesc}>
-                Feel close even when miles apart. Pick a series, turn on webcams, and make weekend movie nights a tradition.
+        <div className={styles.timelineTrackContainer}>
+          <div className={styles.timelineNodeCard}>
+            <div className={styles.nodeMarker}>01</div>
+            <div className={styles.nodeContentBox}>
+              <h3 className={styles.nodeTitle}>Create Your Account</h3>
+              <p className={styles.nodeDesc}>
+                Sign up for free and verify your email. This secures your personal rooms, custom display name, and watch history.
               </p>
             </div>
           </div>
 
-          <div className={styles.occasionCard}>
-            <img
-              src="/previews/spring.jpg"
-              alt="Anime binge with friends"
-              className={styles.occasionImg}
-            />
-            <div className={styles.occasionBody}>
-              <h4 className={styles.occasionTitle}>Weekend Anime & Show Binges</h4>
-              <p className={styles.occasionDesc}>
-                Gather your group chat for new episode drops, season finales, and favorite comedy specials.
+          <div className={styles.timelineNodeCard}>
+            <div className={styles.nodeMarker}>02</div>
+            <div className={styles.nodeContentBox}>
+              <h3 className={styles.nodeTitle}>Start or Join a Room</h3>
+              <p className={styles.nodeDesc}>
+                Launch a room with custom passcode protection or paste a friend's room link to jump straight into the party.
               </p>
             </div>
           </div>
 
-          <div className={styles.occasionCard}>
-            <img
-              src="/previews/bunny.jpg"
-              alt="Study and chill session"
-              className={styles.occasionImg}
-            />
-            <div className={styles.occasionBody}>
-              <h4 className={styles.occasionTitle}>Study Groups & Hangouts</h4>
-              <p className={styles.occasionDesc}>
-                Stream coding tutorials, study music playlists, or share your screen to collaborate on class projects.
+          <div className={styles.timelineNodeCard}>
+            <div className={styles.nodeMarker}>03</div>
+            <div className={styles.nodeContentBox}>
+              <h3 className={styles.nodeTitle}>Invite & Enjoy in Sync</h3>
+              <p className={styles.nodeDesc}>
+                Select what to watch, share your link with your crew, and enjoy the show in perfect real-time synchronization.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Frequently Asked Questions */}
-      <section className={styles.sectionContainer} style={{ paddingTop: 20 }}>
-        <div className={styles.sectionHeader}>
-          <span className={styles.sectionTag}>Questions & Answers</span>
-          <h2 className={styles.sectionTitle}>Frequently asked questions</h2>
-          <p className={styles.sectionDesc}>
-            Everything you need to know about watching together.
-          </p>
-        </div>
+      {/* Section 4: Split-Screen Interactive Experience Showcase */}
+      <OccasionsShowcase />
 
-        <div style={{ maxWidth: 760, margin: "0 auto" }}>
-          <Accordion variant="separated" radius="md">
-            <Accordion.Item value="account-required">
-              <Accordion.Control>
-                Do I need an account to watch or host?
-              </Accordion.Control>
-              <Accordion.Panel>
-                Yes. Both hosts and viewers need a free CoWatch account with a verified email. This keeps all watch parties safe and spam-free, while letting you customize your profile and save your favorite rooms.
-              </Accordion.Panel>
-            </Accordion.Item>
+      {/* Section 5: Two-Column FAQ */}
+      <section className={styles.faqSection}>
+        <div className={styles.faqLayout}>
+          <div className={styles.faqSidebar}>
+            <span className={styles.sectionTag} style={{ alignSelf: "flex-start" }}>
+              FAQ
+            </span>
+            <h2 className={styles.sectionTitle} style={{ textAlign: "left" }}>
+              Frequently asked questions
+            </h2>
+            <p className={styles.sectionDesc} style={{ textAlign: "left" }}>
+              Have questions about how watch parties work? Here are quick answers to common questions.
+            </p>
 
-            <Accordion.Item value="is-free">
-              <Accordion.Control>
-                Is CoWatch free to use?
-              </Accordion.Control>
-              <Accordion.Panel>
-                Yes, CoWatch is completely free. You can create an account, start rooms, and invite your friends whenever you like.
-              </Accordion.Panel>
-            </Accordion.Item>
+            <div className={styles.faqContactBox}>
+              <h4 className={styles.faqContactTitle}>Still have questions?</h4>
+              <p className={styles.faqContactText}>
+                Learn more details in our complete documentation guide.
+              </p>
+              <Button
+                component={Link}
+                to="/faq"
+                variant="light"
+                color="violet"
+                size="sm"
+                rightSection={<IconArrowRight size={14} />}
+                style={{ alignSelf: "flex-start" }}
+              >
+                View Full Help Center
+              </Button>
+            </div>
+          </div>
 
-            <Accordion.Item value="devices-supported">
-              <Accordion.Control>
-                What devices can we use?
-              </Accordion.Control>
-              <Accordion.Panel>
-                CoWatch works directly in any standard web browser on desktop computers, laptops, iPads, tablets, and smartphones. No app installation is required.
-              </Accordion.Panel>
-            </Accordion.Item>
+          <div>
+            <Accordion variant="separated" radius="md">
+              <Accordion.Item value="account-required">
+                <Accordion.Control>
+                  Do I need an account to watch or host?
+                </Accordion.Control>
+                <Accordion.Panel>
+                  Yes. Both hosts and viewers need a free CoWatch account with a verified email. This keeps all watch parties safe, prevents trolls and spam, and lets you save your rooms and profile settings.
+                </Accordion.Panel>
+              </Accordion.Item>
 
-            <Accordion.Item value="voice-video">
-              <Accordion.Control>
-                Can we talk and see each other while watching?
-              </Accordion.Control>
-              <Accordion.Panel>
-                Yes! You can turn on your webcam and microphone, or simply use text chat and interactive reactions.
-              </Accordion.Panel>
-            </Accordion.Item>
+              <Accordion.Item value="is-free">
+                <Accordion.Control>
+                  Is CoWatch completely free?
+                </Accordion.Control>
+                <Accordion.Panel>
+                  Yes, CoWatch is 100% free to sign up and use. You can start rooms and invite friends whenever you like.
+                </Accordion.Panel>
+              </Accordion.Item>
 
-            <Accordion.Item value="privacy">
-              <Accordion.Control>
-                How do I keep our room private?
-              </Accordion.Control>
-              <Accordion.Panel>
-                When creating a room, you can set a password or turn on the waiting lounge so you can approve guests before they enter. Only people who have your room link and password can join.
-              </Accordion.Panel>
-            </Accordion.Item>
-          </Accordion>
+              <Accordion.Item value="devices-supported">
+                <Accordion.Control>
+                  What devices can we use to watch?
+                </Accordion.Control>
+                <Accordion.Panel>
+                  CoWatch works directly in modern web browsers on desktop computers, laptops, iPads, tablets, and smartphones. No app installation is required.
+                </Accordion.Panel>
+              </Accordion.Item>
+
+              <Accordion.Item value="voice-video">
+                <Accordion.Control>
+                  Can we talk and see each other while watching?
+                </Accordion.Control>
+                <Accordion.Panel>
+                  Yes! You can turn on your webcam and microphone, or simply use text chat and interactive reactions.
+                </Accordion.Panel>
+              </Accordion.Item>
+
+              <Accordion.Item value="privacy">
+                <Accordion.Control>
+                  How do I keep our room private?
+                </Accordion.Control>
+                <Accordion.Panel>
+                  When creating a room, you can set a password or turn on the waiting lounge so you can approve guests before they enter. Only people who have your room link and password can join.
+                </Accordion.Panel>
+              </Accordion.Item>
+            </Accordion>
+          </div>
         </div>
       </section>
 
-      {/* Call to Action Banner */}
+      {/* Section 6: Ambient Cinema Call to Action Banner */}
       <div className={styles.ctaWrapper}>
         <div className={styles.ctaCard}>
           <h2 className={styles.ctaTitle}>Ready for movie night?</h2>
@@ -423,13 +529,13 @@ const CHAT_SNIPPETS = [
 ];
 
 const PREVIEW_MODES = [
-  { id: "movie", label: "Movie Night", image: "/cinema_theater_bg.jpg", title: "Cinema Night" },
-  { id: "youtube", label: "YouTube", image: "/previews/spring.jpg", title: "Shared Stream" },
-  { id: "web", label: "Web Screen", image: "/screenshot_full.png", title: "Shared Screen" },
+  { id: "youtube", label: "YouTube", image: "/previews/youtube.jpg", title: "YouTube Video" },
+  { id: "vbrowser", label: "VBrowser", image: "/screenshot_full.png", title: "Virtual Browser" },
+  { id: "screenshare", label: "Screenshare", image: "/reactions_preview.png", title: "Screen Sharing" },
 ];
 
 const InteractiveTheaterPreview = () => {
-  const [activeMode, setActiveMode] = useState("movie");
+  const [activeMode, setActiveMode] = useState("youtube");
   const [isPlaying, setIsPlaying] = useState(true);
   const [progress, setProgress] = useState(42);
   const [reactions, setReactions] = useState<FloatingReaction[]>([]);
@@ -615,21 +721,86 @@ const InteractiveTheaterPreview = () => {
   );
 };
 
-const FeatureCard = ({
-  icon,
-  title,
-  text,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}) => {
+const OCCASIONS = [
+  {
+    id: "movies",
+    tag: "Synchronized Playback",
+    title: "Watch Movies & Shows",
+    desc: "Create a private room, pick a video, and watch in sync. When anyone pauses or seeks, everyone stays on the exact same second.",
+    image: "/cinema_theater_bg.jpg",
+    featureNote: "Synchronized play, pause, and seek controls across all room members.",
+  },
+  {
+    id: "youtube",
+    tag: "YouTube & Playlists",
+    title: "YouTube Watch Parties",
+    desc: "Search YouTube or paste links directly into the room. Queue up multiple videos in the shared playlist for continuous viewing.",
+    image: "/previews/youtube.jpg",
+    featureNote: "Built-in YouTube search and shared playlist queue.",
+  },
+  {
+    id: "vbrowser",
+    tag: "Virtual Browser & Screenshare",
+    title: "Virtual Browser & Screen Sharing",
+    desc: "Launch a virtual browser running in the cloud to watch websites together, or share your own browser tab or desktop.",
+    image: "/screenshot_full.png",
+    featureNote: "Virtual cloud browser and desktop screensharing support.",
+  },
+];
+
+const OccasionsShowcase = () => {
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const current = OCCASIONS[selectedIdx];
+
   return (
-    <div className={styles.featureCard}>
-      <div className={styles.featureIconWrap}>{icon}</div>
-      <h3 className={styles.featureCardTitle}>{title}</h3>
-      <p className={styles.featureCardText}>{text}</p>
-    </div>
+    <section className={styles.showcaseSection}>
+      <div className={styles.sectionHeader}>
+        <span className={styles.sectionTag}>Ways to Watch</span>
+        <h2 className={styles.sectionTitle}>Built for how you want to watch</h2>
+        <p className={styles.sectionDesc}>
+          Whether streaming YouTube videos, using the cloud browser, or watching video files together.
+        </p>
+      </div>
+
+      <div className={styles.showcaseStage}>
+        {/* Left Side: Interactive Selectable Tabs */}
+        <div className={styles.showcaseTabsList}>
+          {OCCASIONS.map((occ, idx) => (
+            <button
+              key={occ.id}
+              type="button"
+              className={`${styles.showcaseTabButton} ${idx === selectedIdx ? styles.showcaseTabActive : ""}`}
+              onClick={() => setSelectedIdx(idx)}
+            >
+              <div className={styles.tabHeading}>
+                <span>{occ.title}</span>
+                {idx === selectedIdx && (
+                  <span style={{ fontSize: 11, color: "var(--color-violet)", fontWeight: 700 }}>
+                    ACTIVE
+                  </span>
+                )}
+              </div>
+              <p className={styles.tabPreviewText}>{occ.desc}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* Right Side: Split-Screen Cinematic Stage */}
+        <div className={styles.showcaseDisplay}>
+          <img
+            src={current.image}
+            alt={current.title}
+            className={styles.showcaseDisplayImg}
+          />
+          <div className={styles.showcaseOverlayTag}>
+            <div style={{ fontSize: 11, textTransform: "uppercase", fontWeight: 700, color: "var(--color-pink)", marginBottom: 4 }}>
+              {current.tag}
+            </div>
+            <div>{current.featureNote}</div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 };
 
