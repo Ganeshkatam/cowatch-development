@@ -771,8 +771,37 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
   const [actionError, setActionError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [editModalOpened, setEditModalOpened] = useState(false);
+  const [startConfirmOpened, setStartConfirmOpened] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const history = useHistory();
+
+  const confirmStartRoom = async () => {
+    setIsStarting(true);
+    try {
+      const token = await getAccessToken();
+      const user = (await supabase.auth.getUser()).data.user;
+      const response = await fetch(`${serverPath}/startRoom`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: user?.id,
+          token,
+          roomId: room.roomId,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || "Failed to start room.");
+      }
+      history.push(urlPath);
+    } catch (e: any) {
+      setActionError(e.message || "Failed to start room.");
+    } finally {
+      setIsStarting(false);
+      setStartConfirmOpened(false);
+    }
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(getRoomUrl(room.roomId)).catch(console.error);
@@ -893,6 +922,20 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
         </Button>
       );
     }
+    if (computedState === 'Waiting') {
+      return (
+        <Button
+          variant="gradient"
+          gradient={{ from: "violet", to: "grape", deg: 135 }}
+          onClick={() => setStartConfirmOpened(true)}
+          leftSection={<IconPlayerPlayFilled size={14} />}
+          radius="md"
+          className={styles.cardPrimaryBtn}
+        >
+          Start Room
+        </Button>
+      );
+    }
     return (
       <Button
         variant="gradient"
@@ -955,6 +998,58 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
 
   const renderModals = () => (
     <>
+      {/* START ROOM CONFIRMATION MODAL (Before entering room) */}
+      <Modal
+        opened={startConfirmOpened}
+        onClose={() => setStartConfirmOpened(false)}
+        title="Start Watch Party"
+        centered
+      >
+        <Stack gap="sm" mb="lg">
+          <Text size="sm">
+            You are about to launch <strong>{room.roomTitle || room.roomId}</strong>.
+          </Text>
+          <div
+            style={{
+              padding: "12px 14px",
+              borderRadius: "10px",
+              backgroundColor: "rgba(139, 92, 246, 0.08)",
+              border: "1px solid rgba(139, 92, 246, 0.25)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, fontSize: "14px", color: "var(--text-primary)" }}>
+              <IconClock size={16} color="var(--color-violet)" />
+              <span>
+                {isPermanent
+                  ? "Permanent Room (no expiration)"
+                  : `Session Duration: ${formatDurationLabel(room.durationMinutes) || "5h session"}`}
+              </span>
+            </div>
+            {!isPermanent && (
+              <Text size="xs" c="dimmed">
+                The countdown begins when you start the watch party.
+              </Text>
+            )}
+          </div>
+        </Stack>
+        <Group justify="flex-end">
+          <Button variant="default" onClick={() => setStartConfirmOpened(false)}>
+            Cancel
+          </Button>
+          <Button
+            color="violet"
+            onClick={confirmStartRoom}
+            loading={isStarting}
+            leftSection={<IconPlayerPlayFilled size={15} />}
+          >
+            Start Watch Party
+          </Button>
+        </Group>
+      </Modal>
+
       {/* DELETE CONFIRMATION MODAL */}
       <Modal
         opened={deleteModalOpened}

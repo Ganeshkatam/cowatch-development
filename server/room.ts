@@ -572,6 +572,20 @@ export class Room {
             this.admittedUids.add(decoded.uid);
           }
 
+          const isRoomOwner = Boolean(
+            (this.owner_id && this.owner_id === decoded.uid) ||
+            (this.creator && decoded.email && this.creator.toLowerCase() === decoded.email.toLowerCase())
+          );
+
+          if (isRoomOwner && this.status === "waiting") {
+            try {
+              console.log("[Room] Host authenticated to waiting room %s. Auto-activating room lifecycle.", this.roomId);
+              await startRoomLifecycle(this.roomId, decoded.uid);
+            } catch (autoStartErr) {
+              console.error("[Room] Error auto-activating waiting room on host connection:", autoStartErr);
+            }
+          }
+
           if (this.waitingLounge.has(socket.clientId)) {
             if (this.isAdmitted(socket)) {
               await this.admitGuest(socket.clientId);

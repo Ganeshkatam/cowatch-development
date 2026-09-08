@@ -8,13 +8,20 @@ import {
   IconUsers,
   IconLockOpen,
   IconAlertCircle,
+  IconClock,
 } from "@tabler/icons-react";
 import styles from "../JoinRoom.module.css";
 
 interface HostConsoleProps {
   roomId: string;
+  roomTitle: string;
+  roomStatus: string;
+  durationMinutes?: number | null;
+  durationLabel: string;
+  isPermanent: boolean;
   submitting: boolean;
-  onEnterAsHost: () => void;
+  onStartWatchParty: () => void;
+  onEnterActiveRoom: () => void;
   onCopyInvite: () => void;
   copiedInvite: boolean;
   isWaitingLoungeEnabled: boolean;
@@ -23,20 +30,32 @@ interface HostConsoleProps {
 
 export const HostConsole: React.FC<HostConsoleProps> = ({
   roomId,
+  roomTitle,
+  roomStatus,
+  durationMinutes,
+  durationLabel,
+  isPermanent,
   submitting,
-  onEnterAsHost,
+  onStartWatchParty,
+  onEnterActiveRoom,
   onCopyInvite,
   copiedInvite,
   isWaitingLoungeEnabled,
   error,
 }) => {
+  const isWaiting = roomStatus === "waiting";
+
   return (
     <div className={styles.consolePanel}>
       <div className={styles.consoleHeader}>
         <span className={styles.consoleEyebrow}>HOST CONTROLS</span>
-        <h2 className={styles.consoleHeading}>You are the Room Host</h2>
+        <h2 className={styles.consoleHeading}>
+          {isWaiting ? "Start Watch Party" : "You are the Room Host"}
+        </h2>
         <p className={styles.consoleSubheading}>
-          Your watch room is live and ready for screening.
+          {isWaiting
+            ? "Review session settings and launch the screening room."
+            : "Your watch room is live and ready for screening."}
         </p>
       </div>
 
@@ -51,18 +70,51 @@ export const HostConsole: React.FC<HostConsoleProps> = ({
         </Alert>
       )}
 
-      {/* Primary Action */}
-      <Button
-        onClick={onEnterAsHost}
-        fullWidth
-        size="lg"
-        color="violet"
-        loading={submitting}
-        leftSection={<IconPlayerPlayFilled size={18} />}
-        className={styles.primaryActionButton}
-      >
-        Start Room
-      </Button>
+      {/* Pre-Entry Session Confirmation (Taken before entering the room) */}
+      {isWaiting && (
+        <div className={styles.sessionConfirmationBox}>
+          <div className={styles.sessionDurationRow}>
+            <IconClock size={16} />
+            <span>
+              {isPermanent
+                ? "Permanent Room (no expiration)"
+                : `Session Duration: ${durationLabel || "5 hours"}`}
+            </span>
+          </div>
+          {!isPermanent && (
+            <p className={styles.sessionCountdownNotice}>
+              The {durationLabel || "5 hours"} countdown begins when you start the watch party.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Primary Action Button */}
+      {isWaiting ? (
+        <Button
+          onClick={onStartWatchParty}
+          fullWidth
+          size="lg"
+          color="violet"
+          loading={submitting}
+          leftSection={<IconPlayerPlayFilled size={18} />}
+          className={styles.primaryActionButton}
+        >
+          {submitting ? "Starting Watch Party..." : "Start Watch Party"}
+        </Button>
+      ) : (
+        <Button
+          onClick={onEnterActiveRoom}
+          fullWidth
+          size="lg"
+          color="violet"
+          loading={submitting}
+          leftSection={<IconPlayerPlayFilled size={18} />}
+          className={styles.primaryActionButton}
+        >
+          Enter Watch Room
+        </Button>
+      )}
 
       {/* Operational Status Badges */}
       <div className={styles.operationalStatusGroup}>

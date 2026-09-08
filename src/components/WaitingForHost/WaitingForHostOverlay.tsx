@@ -1,14 +1,13 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Overlay,
   Title,
   Text,
-  Button,
   Loader,
   Stack,
   Badge,
 } from "@mantine/core";
-import { IconPlayerPlay, IconClock, IconUsers } from "@tabler/icons-react";
+import { IconClock, IconUsers } from "@tabler/icons-react";
 import { MetadataContext } from "../../MetadataContext";
 import { serverPath } from "../../utils/utils";
 import { getAccessToken } from "../../utils/supabaseClient";
@@ -58,15 +57,7 @@ export const WaitingForHostOverlay: React.FC<WaitingForHostOverlayProps> = ({
     )
   );
 
-  const [copiedLink, setCopiedLink] = useState(false);
 
-  const handleCopyLink = () => {
-    const link = `${window.location.origin}/join/${roomId}`;
-    navigator.clipboard.writeText(link).then(() => {
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
-    }).catch(console.error);
-  };
 
   const handleStartRoom = async () => {
     setIsStarting(true);
@@ -105,6 +96,17 @@ export const WaitingForHostOverlay: React.FC<WaitingForHostOverlayProps> = ({
       setTimeout(() => setIsStarting(false), 3000);
     }
   };
+
+  useEffect(() => {
+    if (isOwner && roomStatus === "waiting") {
+      // Host has opened the room; activate room in the background without blocking the stage
+      handleStartRoom();
+    }
+  }, [isOwner, roomStatus]);
+
+  if (roomStatus !== "waiting" || isOwner) {
+    return null;
+  }
 
   const formatDuration = (minutes: number | null): string => {
     if (minutes === null) return "Unlimited";
@@ -145,7 +147,7 @@ export const WaitingForHostOverlay: React.FC<WaitingForHostOverlayProps> = ({
           mb="lg"
           style={{ textTransform: "uppercase", letterSpacing: "0.05em" }}
         >
-          {isOwner ? "Host Control" : "Waiting for Host"}
+          Waiting for Host
         </Badge>
 
         {/* Room title */}
@@ -209,70 +211,18 @@ export const WaitingForHostOverlay: React.FC<WaitingForHostOverlayProps> = ({
           )}
         </Stack>
 
-        {/* Action area */}
-        {isOwner ? (
-          <Stack gap="sm" align="center">
-            <Button
-              size="lg"
-              color="violet"
-              radius="md"
-              onClick={handleStartRoom}
-              loading={isStarting}
-              leftSection={!isStarting ? <IconPlayerPlay size={20} /> : undefined}
-              style={{
-                fontWeight: 600,
-                fontSize: "16px",
-                paddingLeft: "28px",
-                paddingRight: "28px",
-                minWidth: "220px",
-              }}
-            >
-              {isStarting ? "Starting..." : "Start Watch Party"}
-            </Button>
-
-            <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
-              <Button
-                variant="light"
-                color="violet"
-                size="sm"
-                onClick={() => { window.location.href = `/myrooms/${roomId}`; }}
-              >
-                Room Settings
-              </Button>
-              <Button
-                variant="light"
-                color={copiedLink ? "teal" : "gray"}
-                size="sm"
-                onClick={handleCopyLink}
-              >
-                {copiedLink ? "Link Copied!" : "Copy Invite Link"}
-              </Button>
-            </div>
-
-            {!roomIsPermanent && roomDurationMinutes && (
-              <Text size="xs" c="dimmed" mt="xs">
-                The {formatDuration(roomDurationMinutes)} countdown begins when you press start
-              </Text>
-            )}
-            {error && (
-              <Text size="sm" c="red" mt="xs">
-                {error}
-              </Text>
-            )}
-          </Stack>
-        ) : (
-          <Stack gap="md" align="center">
-            <Loader color="violet" size="md" />
-            <Text
-              size="md"
-              c="dimmed"
-              style={{ maxWidth: "320px" }}
-            >
-              Waiting for the host to start the watch party.
-              You will be able to watch once the session begins.
-            </Text>
-          </Stack>
-        )}
+        {/* Guest waiting message */}
+        <Stack gap="md" align="center">
+          <Loader color="violet" size="md" />
+          <Text
+            size="md"
+            c="dimmed"
+            style={{ maxWidth: "320px" }}
+          >
+            Waiting for the host to start the watch party.
+            You will be able to watch once the session begins.
+          </Text>
+        </Stack>
       </div>
     </Overlay>
   );

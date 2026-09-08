@@ -186,6 +186,25 @@ export async function submitRoomCreation({
   }
 
   const finalRoomId = roomName.startsWith("/") ? roomName.substring(1) : roomName;
+
+  // For immediate rooms, start the session lifecycle upon creation so the room is active before entering
+  if (!scheduledStartsAt && user?.id) {
+    try {
+      const token = await getAccessToken();
+      await fetch(`${serverPath}/startRoom`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: user.id,
+          token,
+          roomId: finalRoomId,
+        }),
+      });
+    } catch (startErr) {
+      console.warn("Auto-start on room creation error:", startErr);
+    }
+  }
+
   return { finalRoomId };
 }
 

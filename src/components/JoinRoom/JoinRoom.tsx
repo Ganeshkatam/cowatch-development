@@ -214,9 +214,43 @@ export default function JoinRoom() {
     }
   };
 
+  const handleStartWatchParty = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const sessionData = await safeGetSession(1000);
+      const token = sessionData?.data?.session?.access_token;
+      const uid = sessionData?.data?.session?.user?.id || context.user?.id;
+
+      // Start the room lifecycle authoritatively before entering the room
+      const startRes = await fetch(`${serverPath}/startRoom`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          roomId,
+          uid,
+          token,
+        }),
+      });
+
+      if (!startRes.ok) {
+        const startData = await startRes.json().catch(() => null);
+        throw new Error(startData?.error || "Failed to start room.");
+      }
+
+      await requestAdmission();
+    } catch (err: any) {
+      console.error("handleStartWatchParty error:", err);
+      setError(err.message || "Failed to start watch party.");
+      setSubmitting(false);
+    }
+  };
+
   const handleStartEarly = async () => {
-    // Host starting early bypasses passcode and transitions room to active
-    await requestAdmission();
+    await handleStartWatchParty();
   };
 
   const handleCopyInviteLink = () => {
@@ -336,8 +370,14 @@ export default function JoinRoom() {
           ) : isHost ? (
             <HostConsole
               roomId={roomId}
+              roomTitle={room.title}
+              roomStatus={room.status}
+              durationMinutes={room.durationMinutes}
+              durationLabel={canonicalDuration}
+              isPermanent={!room.durationMinutes || room.durationMinutes <= 0}
               submitting={submitting}
-              onEnterAsHost={handleJoinClicked}
+              onStartWatchParty={handleStartWatchParty}
+              onEnterActiveRoom={handleJoinClicked}
               onCopyInvite={handleCopyInviteLink}
               copiedInvite={copiedInvite}
               isWaitingLoungeEnabled={room.access?.isWaitingLoungeEnabled ?? false}

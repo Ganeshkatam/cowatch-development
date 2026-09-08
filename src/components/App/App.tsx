@@ -1511,6 +1511,16 @@ export class App extends React.Component<AppProps, AppState> {
         roomDurationMinutes: data.durationMinutes ?? null,
         roomServerNow: data.serverNow || null,
       });
+
+      const isHost = Boolean(
+        (data.owner && this.context.user?.id && String(this.context.user.id).toLowerCase() === String(data.owner).toLowerCase()) ||
+        (data.owner && this.context.user?.email && this.context.user.email.toLowerCase() === String(data.owner).toLowerCase()) ||
+        (this.state.owner && this.context.user?.id && String(this.context.user.id).toLowerCase() === String(this.state.owner).toLowerCase()) ||
+        (this.state.owner && this.context.user?.email && this.context.user.email.toLowerCase() === String(this.state.owner).toLowerCase())
+      );
+      if (isHost && data.status === "waiting") {
+        this.socket?.emit("CMD:startRoom");
+      }
     }
     this.setInviteLink(this.getInviteLink());
     window.history.replaceState("", "", this.getInviteLink());
@@ -2768,7 +2778,12 @@ export class App extends React.Component<AppProps, AppState> {
           </Overlay>
         )}
 
-        {this.state.roomStatus === "waiting" && this.state.state !== "starting" && (
+        {this.state.roomStatus === "waiting" &&
+          this.state.state !== "starting" &&
+          !Boolean(
+            (this.state.owner && this.context.user?.id && String(this.context.user.id).toLowerCase() === String(this.state.owner).toLowerCase()) ||
+            (this.state.owner && this.context.user?.email && this.context.user.email.toLowerCase() === String(this.state.owner).toLowerCase())
+          ) && (
           <WaitingForHostOverlay
             roomId={this.state.roomId}
             roomTitle={this.state.roomTitle}

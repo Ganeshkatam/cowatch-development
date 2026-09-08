@@ -14,7 +14,17 @@ import {
   SegmentedControl,
   Avatar,
   ScrollArea,
+  Stack,
 } from "@mantine/core";
+
+const formatDuration = (minutes: number | null | undefined): string => {
+  if (!minutes) return "";
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (m === 0) return h === 1 ? "1 hour" : `${h} hours`;
+  return `${h}h ${m}m`;
+};
 import {
   IconArrowLeft,
   IconPlayerPlay,
@@ -288,6 +298,7 @@ export const RoomDetails = () => {
   const [nowTime, setNowTime] = useState(Date.now());
   const [actionError, setActionError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [startConfirm, setStartConfirm] = useState(false);
 
   const handleStartRoom = async () => {
     if (!room) return;
@@ -312,6 +323,7 @@ export const RoomDetails = () => {
       setActionError(e.message || "Failed to start room");
     } finally {
       setIsStarting(false);
+      setStartConfirm(false);
     }
   };
 
@@ -506,7 +518,7 @@ export const RoomDetails = () => {
                   <Button
                     size="md"
                     className={styles.primaryOpenBtn}
-                    onClick={handleStartRoom}
+                    onClick={() => setStartConfirm(true)}
                     loading={isStarting}
                     leftSection={!isStarting ? <IconPlayerPlayFilled size={16} /> : undefined}
                   >
@@ -515,10 +527,10 @@ export const RoomDetails = () => {
                   <Button
                     size="md"
                     className={styles.glassBtn}
-                    onClick={() => history.push(urlPath)}
+                    onClick={() => history.push(`/join/${room.roomId.replace(/^\//, "")}`)}
                     leftSection={<IconPlayerPlay size={16} />}
                   >
-                    Enter Waiting Room
+                    Pre-Flight Lobby
                   </Button>
                 </>
               )}
@@ -1214,6 +1226,58 @@ export const RoomDetails = () => {
           </Button>
           <Button color="orange" onClick={confirmEndRoom} loading={isEnding}>
             End Room
+          </Button>
+        </Group>
+      </Modal>
+
+      {/* START ROOM CONFIRMATION MODAL (Before entering room) */}
+      <Modal
+        opened={startConfirm}
+        onClose={() => setStartConfirm(false)}
+        title="Start Watch Party"
+        centered
+      >
+        <Stack gap="sm" mb="lg">
+          <Text size="sm">
+            You are about to start <strong>{room.roomTitle || room.roomId}</strong>.
+          </Text>
+          <div
+            style={{
+              padding: "12px 14px",
+              borderRadius: "10px",
+              backgroundColor: "rgba(139, 92, 246, 0.08)",
+              border: "1px solid rgba(139, 92, 246, 0.25)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, fontSize: "14px", color: "var(--text-primary)" }}>
+              <IconClock size={16} color="var(--color-violet)" />
+              <span>
+                {room.isPermanent
+                  ? "Permanent Room (no expiration)"
+                  : `Session Duration: ${formatDuration(room.durationMinutes) || "5 hours"}`}
+              </span>
+            </div>
+            {!room.isPermanent && (
+              <Text size="xs" c="dimmed">
+                The countdown begins when you start the watch party.
+              </Text>
+            )}
+          </div>
+        </Stack>
+        <Group justify="flex-end">
+          <Button variant="default" onClick={() => setStartConfirm(false)}>
+            Cancel
+          </Button>
+          <Button
+            color="violet"
+            onClick={handleStartRoom}
+            loading={isStarting}
+            leftSection={<IconPlayerPlayFilled size={15} />}
+          >
+            Start Watch Party
           </Button>
         </Group>
       </Modal>
