@@ -2972,6 +2972,7 @@ export class App extends React.Component<AppProps, AppState> {
         <SettingsModal
           modalOpen={this.state.settingsModalOpen}
           setModalOpen={this.setSettingsModalOpen}
+          isRoomActive={this.state.roomStatus === "active" || this.state.roomStatus === "expiring" || Boolean(this.state.roomStartedAt)}
           roomLock={this.state.roomLock}
           setRoomLock={this.setRoomLock}
           socket={this.socket}

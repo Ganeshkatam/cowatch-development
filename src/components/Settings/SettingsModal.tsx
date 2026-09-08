@@ -15,6 +15,7 @@ import {
   Badge,
   ActionIcon,
   Tooltip,
+  Alert,
 } from "@mantine/core";
 import {
   IconLock,
@@ -23,6 +24,7 @@ import {
   IconEyeOff,
   IconCheck,
   IconCopy,
+  IconAlertCircle,
 } from "@tabler/icons-react";
 import { getCurrentSettings, updateSettings } from "./LocalSettings";
 import { Socket } from "socket.io-client";
@@ -33,6 +35,7 @@ import { serverPath, addAndSavePasscode, getSavedPasscodes, removeSavedPasscode 
 interface SettingsModalProps {
   modalOpen: boolean;
   setModalOpen: (open: boolean) => void;
+  isRoomActive?: boolean;
   roomLock: string;
   setRoomLock: (lock: boolean) => Promise<void>;
   socket: Socket;
@@ -58,6 +61,7 @@ interface SettingsModalProps {
 export const SettingsModal = ({
   modalOpen,
   setModalOpen,
+  isRoomActive = false,
   roomLock,
   setRoomLock,
   socket,
@@ -175,107 +179,109 @@ export const SettingsModal = ({
       const token = await getAccessToken();
       if (!user) throw new Error("Not logged in");
 
-      const trimmedTitle = draftTitle.trim();
-      if (!trimmedTitle) throw new Error("Room title is required.");
-      if (trimmedTitle.length > 50) throw new Error("Room title must be under 50 characters.");
-      if (draftDescription.length > 500) throw new Error("Description must be under 500 characters.");
-      if (passwordAction === "change" && draftPassword !== draftPasswordConfirm) throw new Error("Passwords do not match.");
-      if (passwordAction === "change" && draftPassword.trim().length === 0) throw new Error("Password cannot be empty.");
+      if (!isRoomActive) {
+        const trimmedTitle = draftTitle.trim();
+        if (!trimmedTitle) throw new Error("Room title is required.");
+        if (trimmedTitle.length > 50) throw new Error("Room title must be under 50 characters.");
+        if (draftDescription.length > 500) throw new Error("Description must be under 500 characters.");
+        if (passwordAction === "change" && draftPassword !== draftPasswordConfirm) throw new Error("Passwords do not match.");
+        if (passwordAction === "change" && draftPassword.trim().length === 0) throw new Error("Password cannot be empty.");
 
-      // 1. Upload new cover if selected
-      let finalCoverUrl = originalCoverUrl;
-      const safeRoomId = roomId.startsWith("/") ? roomId.substring(1) : roomId;
-      const folderPath = `${user.id}/${safeRoomId}`;
+        // 1. Upload new cover if selected
+        let finalCoverUrl = originalCoverUrl;
+        const safeRoomId = roomId.startsWith("/") ? roomId.substring(1) : roomId;
+        const folderPath = `${user.id}/${safeRoomId}`;
 
-      if (coverFile) {
-        const fileExt = coverFile.name.split('.').pop();
+        if (coverFile) {
+          const fileExt = coverFile.name.split('.').pop();
 
-        // Clean up old cover files in folder to prevent orphans
-        try {
-          const { data: oldFiles } = await supabase.storage.from('room_covers').list(folderPath);
-          if (oldFiles && oldFiles.length > 0) {
-            await supabase.storage.from('room_covers').remove(oldFiles.map(f => `${folderPath}/${f.name}`));
-          }
-        } catch (_) {}
+          // Clean up old cover files in folder to prevent orphans
+          try {
+            const { data: oldFiles } = await supabase.storage.from('room_covers').list(folderPath);
+            if (oldFiles && oldFiles.length > 0) {
+              await supabase.storage.from('room_covers').remove(oldFiles.map(f => `${folderPath}/${f.name}`));
+            }
+          } catch (_) {}
 
-        const filePath = `${folderPath}/cover.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('room_covers')
-          .upload(filePath, coverFile, { upsert: true });
-        
-        if (uploadError) throw uploadError;
-        
-        const { data: publicUrlData } = supabase.storage.from('room_covers').getPublicUrl(filePath);
-        finalCoverUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
-      } else if (clearCover) {
-        finalCoverUrl = null;
-        try {
-          const { data: oldFiles } = await supabase.storage.from('room_covers').list(folderPath);
-          if (oldFiles && oldFiles.length > 0) {
-            await supabase.storage.from('room_covers').remove(oldFiles.map(f => `${folderPath}/${f.name}`));
-          }
-        } catch (_) {}
-      }
-
-      if (finalCoverUrl !== originalCoverUrl) {
-        await fetch(`${serverPath}/updateRoomCover`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid: user.id, token, roomId, coverPhoto: finalCoverUrl }),
-        });
-        
-        const { error: coverUpdateError } = await supabase
-          .from("rooms")
-          .update({ coverPhoto: finalCoverUrl })
-          .eq("roomId", roomId);
-        if (coverUpdateError) throw coverUpdateError;
-      }
-
-      // 2. Save Room Settings (only if owner)
-      if (owner === user.id) {
-        const isClearing = passwordAction === "clear";
-        const payloadPassword = passwordAction === "change" ? draftPassword.trim() : (isClearing ? "" : undefined);
-        const response = await fetch(`${serverPath}/updateRoomSettings`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            uid: user.id,
-            token,
-            roomId,
-            roomTitle: trimmedTitle,
-            roomDescription: draftDescription,
-            isPermanent: draftPermanent,
-            isChatDisabled: !draftChatEnabled,
-            removePassword: isClearing,
-            password: payloadPassword,
-          }),
-        });
-
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "Failed to save room settings");
-
-        // Inform server/socket of title and chat changes instantly
-        if (trimmedTitle !== roomTitle) setRoomTitle(trimmedTitle);
-        if (draftDescription !== roomDescription) setRoomDescription(draftDescription);
-        if (!draftChatEnabled !== isChatDisabled) setIsChatDisabled(!draftChatEnabled);
-        
-        if (isClearing) {
-          removeSavedPasscode(roomId);
-          setPasscode("");
-        } else if (passwordAction === "change") {
-          addAndSavePasscode(roomId, draftPassword.trim());
-          setPasscode(draftPassword.trim());
+          const filePath = `${folderPath}/cover.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('room_covers')
+            .upload(filePath, coverFile, { upsert: true });
+          
+          if (uploadError) throw uploadError;
+          
+          const { data: publicUrlData } = supabase.storage.from('room_covers').getPublicUrl(filePath);
+          finalCoverUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+        } else if (clearCover) {
+          finalCoverUrl = null;
+          try {
+            const { data: oldFiles } = await supabase.storage.from('room_covers').list(folderPath);
+            if (oldFiles && oldFiles.length > 0) {
+              await supabase.storage.from('room_covers').remove(oldFiles.map(f => `${folderPath}/${f.name}`));
+            }
+          } catch (_) {}
         }
 
-        if (draftLock !== Boolean(roomLock)) {
-          setRoomLock(draftLock);
+        if (finalCoverUrl !== originalCoverUrl) {
+          await fetch(`${serverPath}/updateRoomCover`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uid: user.id, token, roomId, coverPhoto: finalCoverUrl }),
+          });
+          
+          const { error: coverUpdateError } = await supabase
+            .from("rooms")
+            .update({ coverPhoto: finalCoverUrl })
+            .eq("roomId", roomId);
+          if (coverUpdateError) throw coverUpdateError;
         }
 
-        if (draftWaitingLounge !== Boolean(isWaitingLoungeEnabled)) {
-          socket?.emit("CMD:setWaitingLounge", { enabled: draftWaitingLounge });
-          if (setIsWaitingLoungeEnabled) {
-            setIsWaitingLoungeEnabled(draftWaitingLounge);
+        // 2. Save Room Settings (only if owner)
+        if (owner === user.id) {
+          const isClearing = passwordAction === "clear";
+          const payloadPassword = passwordAction === "change" ? draftPassword.trim() : (isClearing ? "" : undefined);
+          const response = await fetch(`${serverPath}/updateRoomSettings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid: user.id,
+              token,
+              roomId,
+              roomTitle: trimmedTitle,
+              roomDescription: draftDescription,
+              isPermanent: draftPermanent,
+              isChatDisabled: !draftChatEnabled,
+              removePassword: isClearing,
+              password: payloadPassword,
+            }),
+          });
+
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || "Failed to save room settings");
+
+          // Inform server/socket of title and chat changes instantly
+          if (trimmedTitle !== roomTitle) setRoomTitle(trimmedTitle);
+          if (draftDescription !== roomDescription) setRoomDescription(draftDescription);
+          if (!draftChatEnabled !== isChatDisabled) setIsChatDisabled(!draftChatEnabled);
+          
+          if (isClearing) {
+            removeSavedPasscode(roomId);
+            setPasscode("");
+          } else if (passwordAction === "change") {
+            addAndSavePasscode(roomId, draftPassword.trim());
+            setPasscode(draftPassword.trim());
+          }
+
+          if (draftLock !== Boolean(roomLock)) {
+            setRoomLock(draftLock);
+          }
+
+          if (draftWaitingLounge !== Boolean(isWaitingLoungeEnabled)) {
+            socket?.emit("CMD:setWaitingLounge", { enabled: draftWaitingLounge });
+            if (setIsWaitingLoungeEnabled) {
+              setIsWaitingLoungeEnabled(draftWaitingLounge);
+            }
           }
         }
       }
@@ -315,9 +321,9 @@ export const SettingsModal = ({
       opened={modalOpen}
       onClose={() => setModalOpen(false)}
       centered
-      title="Settings"
+      title={isRoomActive ? "Personal Preferences" : "Settings"}
       radius="md"
-      size={850}
+      size={isRoomActive ? 520 : 850}
       styles={{
         content: {
           background: "var(--bg-surface)",
@@ -339,52 +345,33 @@ export const SettingsModal = ({
       }}
     >
       <div style={{ padding: "24px 24px" }}>
-        <Text size="sm" c="dimmed" mb="xl">Manage your room and personal preferences</Text>
-        
+        <Text size="sm" c="dimmed" mb="xl">
+          {isRoomActive
+            ? "Manage your personal preferences for this session"
+            : "Manage your room and personal preferences"}
+        </Text>
+
         {error && <Text color="red" size="sm" mb="md" fw={500}>{error}</Text>}
 
-        <SimpleGrid cols={{ base: 1, md: 2 }} spacing={40}>
-          {/* LEFT COLUMN */}
+        {isRoomActive ? (
           <div>
-            <Text fw={700} size="sm" mb="md" c="dimmed" style={{ letterSpacing: "1px" }}>ROOM SETTINGS</Text>
-            <Stack gap="xl">
-              <Switch
-                label="Lock Room"
-                description="Only the person who locked the room can control playback."
-                checked={draftLock}
-                onChange={(e) => setDraftLock(e.currentTarget.checked)}
-                disabled={owner !== user?.id}
-                size="md"
-              />
-              <Switch
-                label="Permanent Room"
-                description="Room does not automatically expire."
-                checked={draftPermanent}
-                onChange={(e) => setDraftPermanent(e.currentTarget.checked)}
-                disabled={owner !== user?.id}
-                size="md"
-              />
-              <Switch
-                label="Chat Enabled"
-                description="Allow participants to send messages."
-                checked={draftChatEnabled}
-                onChange={(e) => setDraftChatEnabled(e.currentTarget.checked)}
-                disabled={owner !== user?.id}
-                size="md"
-              />
-              <Switch
-                label="Waiting Lounge"
-                description="Require host approval before guests can enter the room."
-                checked={draftWaitingLounge}
-                onChange={(e) => setDraftWaitingLounge(e.currentTarget.checked)}
-                disabled={owner !== user?.id}
-                size="md"
-              />
-            </Stack>
+            <Alert
+              icon={<IconAlertCircle size={16} />}
+              title="Room is Active"
+              color="violet"
+              variant="light"
+              mb="xl"
+              styles={{
+                root: {
+                  backgroundColor: "rgba(139, 92, 246, 0.08)",
+                  borderColor: "rgba(139, 92, 246, 0.25)",
+                },
+              }}
+            >
+              Room configurations cannot be modified while the room is active. Room modifications are not allowed once a room is started.
+            </Alert>
 
-            <Divider my="xl" />
-
-            <Text fw={700} size="sm" mb="md" c="dimmed" style={{ letterSpacing: "1px" }}>LOCAL SETTINGS</Text>
+            <Text fw={700} size="sm" mb="md" c="dimmed" style={{ letterSpacing: "1px" }}>LOCAL PREFERENCES</Text>
             <Stack gap="xl">
               <Switch
                 label="Chat Notifications"
@@ -409,153 +396,221 @@ export const SettingsModal = ({
               />
             </Stack>
           </div>
+        ) : (
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={40}>
+            {/* LEFT COLUMN */}
+            <div>
+              <Text fw={700} size="sm" mb="md" c="dimmed" style={{ letterSpacing: "1px" }}>ROOM SETTINGS</Text>
+              <Stack gap="xl">
+                <Switch
+                  label="Lock Room"
+                  description="Only the person who locked the room can control playback."
+                  checked={draftLock}
+                  onChange={(e) => setDraftLock(e.currentTarget.checked)}
+                  disabled={owner !== user?.id}
+                  size="md"
+                />
+                <Switch
+                  label="Permanent Room"
+                  description="Room does not automatically expire."
+                  checked={draftPermanent}
+                  onChange={(e) => setDraftPermanent(e.currentTarget.checked)}
+                  disabled={owner !== user?.id}
+                  size="md"
+                />
+                <Switch
+                  label="Chat Enabled"
+                  description="Allow participants to send messages."
+                  checked={draftChatEnabled}
+                  onChange={(e) => setDraftChatEnabled(e.currentTarget.checked)}
+                  disabled={owner !== user?.id}
+                  size="md"
+                />
+                <Switch
+                  label="Waiting Lounge"
+                  description="Require host approval before guests can enter the room."
+                  checked={draftWaitingLounge}
+                  onChange={(e) => setDraftWaitingLounge(e.currentTarget.checked)}
+                  disabled={owner !== user?.id}
+                  size="md"
+                />
+              </Stack>
 
-          {/* RIGHT COLUMN */}
-          <div>
-            <Text fw={700} size="sm" mb="md" c="dimmed" style={{ letterSpacing: "1px" }}>ROOM DETAILS</Text>
-            <Stack gap="md">
-              <TextInput
-                label="Room Title"
-                value={draftTitle}
-                onChange={(e) => setDraftTitle(e.currentTarget.value)}
-                disabled={owner !== user?.id}
-              />
-              <TextInput
-                label="Description"
-                value={draftDescription}
-                onChange={(e) => setDraftDescription(e.currentTarget.value)}
-                placeholder="No description set"
-                disabled={owner !== user?.id}
-              />
+              <Divider my="xl" />
 
-              <div>
-                <Text size="sm" fw={500} mb={4}>Password Protection</Text>
-                {passwordAction !== "change" ? (
-                  <Stack gap="xs">
-                    <Group justify="space-between" align="center">
-                      <Group gap={6}>
-                        <Badge
-                          color={willHavePasscode ? "violet" : "gray"}
-                          variant="light"
-                          size="sm"
-                          leftSection={willHavePasscode ? <IconLock size={12} /> : <IconLockOpen size={12} />}
-                        >
-                          {willHavePasscode ? "Protected" : "Unprotected"}
-                        </Badge>
-                      </Group>
-                      <Group>
-                        {willHavePasscode && (
-                          <Button variant="subtle" color="red" size="xs" onClick={() => setPasswordAction("clear")} disabled={owner !== user?.id}>
-                            Clear Password
+              <Text fw={700} size="sm" mb="md" c="dimmed" style={{ letterSpacing: "1px" }}>LOCAL SETTINGS</Text>
+              <Stack gap="xl">
+                <Switch
+                  label="Chat Notifications"
+                  description="Play a sound for new messages."
+                  checked={draftNotif}
+                  onChange={(e) => setDraftNotif(e.currentTarget.checked)}
+                  size="md"
+                />
+                <Switch
+                  label="Camera Default"
+                  description="Join rooms with camera on."
+                  checked={draftCamera}
+                  onChange={(e) => setDraftCamera(e.currentTarget.checked)}
+                  size="md"
+                />
+                <Switch
+                  label="Microphone Default"
+                  description="Join rooms with microphone on."
+                  checked={draftMic}
+                  onChange={(e) => setDraftMic(e.currentTarget.checked)}
+                  size="md"
+                />
+              </Stack>
+            </div>
+
+            {/* RIGHT COLUMN */}
+            <div>
+              <Text fw={700} size="sm" mb="md" c="dimmed" style={{ letterSpacing: "1px" }}>ROOM DETAILS</Text>
+              <Stack gap="md">
+                <TextInput
+                  label="Room Title"
+                  value={draftTitle}
+                  onChange={(e) => setDraftTitle(e.currentTarget.value)}
+                  disabled={owner !== user?.id}
+                />
+                <TextInput
+                  label="Description"
+                  value={draftDescription}
+                  onChange={(e) => setDraftDescription(e.currentTarget.value)}
+                  placeholder="No description set"
+                  disabled={owner !== user?.id}
+                />
+
+                <div>
+                  <Text size="sm" fw={500} mb={4}>Password Protection</Text>
+                  {passwordAction !== "change" ? (
+                    <Stack gap="xs">
+                      <Group justify="space-between" align="center">
+                        <Group gap={6}>
+                          <Badge
+                            color={willHavePasscode ? "violet" : "gray"}
+                            variant="light"
+                            size="sm"
+                            leftSection={willHavePasscode ? <IconLock size={12} /> : <IconLockOpen size={12} />}
+                          >
+                            {willHavePasscode ? "Protected" : "Unprotected"}
+                          </Badge>
+                        </Group>
+                        <Group>
+                          {willHavePasscode && (
+                            <Button variant="subtle" color="red" size="xs" onClick={() => setPasswordAction("clear")} disabled={owner !== user?.id}>
+                              Clear Password
+                            </Button>
+                          )}
+                          <Button variant="light" size="xs" onClick={() => setPasswordAction("change")} disabled={owner !== user?.id}>
+                            {willHavePasscode ? "Change Password" : "Set Password"}
                           </Button>
-                        )}
-                        <Button variant="light" size="xs" onClick={() => setPasswordAction("change")} disabled={owner !== user?.id}>
-                          {willHavePasscode ? "Change Password" : "Set Password"}
-                        </Button>
+                        </Group>
                       </Group>
-                    </Group>
 
-                    {willHavePasscode && currentSavedPasscode && (
-                      <TextInput
-                        readOnly
-                        size="xs"
-                        label="Current Password"
-                        type={showCurrentPassword ? "text" : "password"}
-                        value={currentSavedPasscode}
-                        rightSection={
-                          <Group gap={4} pr={4}>
-                            <Tooltip label={showCurrentPassword ? "Hide password" : "Show password"} withArrow>
-                              <ActionIcon
-                                size="xs"
-                                variant="subtle"
-                                color="gray"
-                                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                aria-label="Toggle password visibility"
-                              >
-                                {showCurrentPassword ? <IconEyeOff size={14} /> : <IconEye size={14} />}
-                              </ActionIcon>
-                            </Tooltip>
-                            <Tooltip label={copiedCurrentPassword ? "Copied!" : "Copy password"} withArrow>
-                              <ActionIcon
-                                size="xs"
-                                variant="subtle"
-                                color={copiedCurrentPassword ? "green" : "gray"}
-                                onClick={() => {
-                                  navigator.clipboard.writeText(currentSavedPasscode);
-                                  setCopiedCurrentPassword(true);
-                                  setTimeout(() => setCopiedCurrentPassword(false), 2000);
-                                }}
-                                aria-label="Copy password"
-                              >
-                                {copiedCurrentPassword ? <IconCheck size={14} /> : <IconCopy size={14} />}
-                              </ActionIcon>
-                            </Tooltip>
-                          </Group>
-                        }
-                        styles={{
-                          input: {
-                            fontFamily: showCurrentPassword ? "inherit" : "monospace",
-                            letterSpacing: showCurrentPassword ? "normal" : "2px",
-                          },
-                        }}
+                      {willHavePasscode && currentSavedPasscode && (
+                        <TextInput
+                          readOnly
+                          size="xs"
+                          label="Current Password"
+                          type={showCurrentPassword ? "text" : "password"}
+                          value={currentSavedPasscode}
+                          rightSection={
+                            <Group gap={4} pr={4}>
+                              <Tooltip label={showCurrentPassword ? "Hide password" : "Show password"} withArrow>
+                                <ActionIcon
+                                  size="xs"
+                                  variant="subtle"
+                                  color="gray"
+                                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                  aria-label="Toggle password visibility"
+                                >
+                                  {showCurrentPassword ? <IconEyeOff size={14} /> : <IconEye size={14} />}
+                                </ActionIcon>
+                              </Tooltip>
+                              <Tooltip label={copiedCurrentPassword ? "Copied!" : "Copy password"} withArrow>
+                                <ActionIcon
+                                  size="xs"
+                                  variant="subtle"
+                                  color={copiedCurrentPassword ? "green" : "gray"}
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(currentSavedPasscode);
+                                    setCopiedCurrentPassword(true);
+                                    setTimeout(() => setCopiedCurrentPassword(false), 2000);
+                                  }}
+                                  aria-label="Copy password"
+                                >
+                                  {copiedCurrentPassword ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                                </ActionIcon>
+                              </Tooltip>
+                            </Group>
+                          }
+                          styles={{
+                            input: {
+                              fontFamily: showCurrentPassword ? "inherit" : "monospace",
+                              letterSpacing: showCurrentPassword ? "normal" : "2px",
+                            },
+                          }}
+                        />
+                      )}
+                    </Stack>
+                  ) : (
+                    <Stack gap="xs">
+                      <PasswordInput
+                        placeholder="New Password"
+                        value={draftPassword}
+                        onChange={(e) => setDraftPassword(e.currentTarget.value)}
                       />
-                    )}
-                  </Stack>
-                ) : (
-                  <Stack gap="xs">
-                    <PasswordInput
-                      placeholder="New Password"
-                      value={draftPassword}
-                      onChange={(e) => setDraftPassword(e.currentTarget.value)}
-                    />
-                    <PasswordInput
-                      placeholder="Confirm Password"
-                      value={draftPasswordConfirm}
-                      onChange={(e) => setDraftPasswordConfirm(e.currentTarget.value)}
-                    />
-                    <Group justify="flex-end">
-                      <Button variant="subtle" size="xs" onClick={() => setPasswordAction("keep")}>Cancel Password Change</Button>
-                    </Group>
-                  </Stack>
-                )}
-              </div>
-            </Stack>
+                      <PasswordInput
+                        placeholder="Confirm Password"
+                        value={draftPasswordConfirm}
+                        onChange={(e) => setDraftPasswordConfirm(e.currentTarget.value)}
+                      />
+                      <Group justify="flex-end">
+                        <Button variant="subtle" size="xs" onClick={() => setPasswordAction("keep")}>Cancel Password Change</Button>
+                      </Group>
+                    </Stack>
+                  )}
+                </div>
+              </Stack>
 
-            <Divider my="xl" />
+              <Divider my="xl" />
 
-            <Text fw={700} size="sm" mb="md" c="dimmed" style={{ letterSpacing: "1px" }}>COVER</Text>
-            <Stack gap="md">
-              <div style={{
-                height: "140px",
-                width: "100%",
-                borderRadius: "8px",
-                border: "1px solid var(--border-subtle)",
-                overflow: "hidden",
-                background: "var(--bg-elevated)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}>
-                {coverPreview ? (
-                  <Image src={coverPreview} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                ) : (
-                  <Text c="dimmed" size="sm">No cover photo</Text>
-                )}
-              </div>
-              
-              <Group>
-                <FileButton onChange={handleFileChange} accept="image/png,image/jpeg,image/webp">
-                  {(props) => <Button {...props} variant="light" size="xs" disabled={owner !== user?.id}>Change Cover</Button>}
-                </FileButton>
-                {coverPreview && (
-                  <Button variant="subtle" color="red" size="xs" onClick={() => { setCoverFile(null); setCoverPreview(null); setClearCover(true); }} disabled={owner !== user?.id}>
-                    Remove
-                  </Button>
-                )}
-              </Group>
-            </Stack>
-          </div>
-        </SimpleGrid>
+              <Text fw={700} size="sm" mb="md" c="dimmed" style={{ letterSpacing: "1px" }}>COVER</Text>
+              <Stack gap="md">
+                <div style={{
+                  height: "140px",
+                  width: "100%",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
+                  overflow: "hidden",
+                  background: "var(--bg-elevated)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}>
+                  {coverPreview ? (
+                    <Image src={coverPreview} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <Text c="dimmed" size="sm">No cover photo</Text>
+                  )}
+                </div>
+                
+                <Group>
+                  <FileButton onChange={handleFileChange} accept="image/png,image/jpeg,image/webp">
+                    {(props) => <Button {...props} variant="light" size="xs" disabled={owner !== user?.id}>Change Cover</Button>}
+                  </FileButton>
+                  {coverPreview && (
+                    <Button variant="subtle" color="red" size="xs" onClick={() => { setCoverFile(null); setCoverPreview(null); setClearCover(true); }} disabled={owner !== user?.id}>
+                      Remove
+                    </Button>
+                  )}
+                </Group>
+              </Stack>
+            </div>
+          </SimpleGrid>
+        )}
       </div>
       
       {/* FOOTER */}

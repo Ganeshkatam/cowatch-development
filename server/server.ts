@@ -830,7 +830,7 @@ app.post("/updateRoomCover", async (req, res) => {
 
   if (postgres) {
     const roomCheck = await postgres.query(
-      `SELECT status, "expiresAt", "isPermanent" FROM rooms WHERE "roomId" = $1 AND owner_id = $2`,
+      `SELECT status, "expiresAt", "isPermanent", "startedAt" FROM rooms WHERE "roomId" = $1 AND owner_id = $2`,
       [roomId, decoded.uid]
     );
     if (roomCheck.rowCount === 0) {
@@ -841,6 +841,14 @@ app.post("/updateRoomCover", async (req, res) => {
     const isExpired = r.status === 'expired' || r.status === 'ended' || (!r.isPermanent && r.expiresAt && new Date(r.expiresAt).getTime() <= Date.now());
     if (isExpired) {
       res.status(400).json({ error: "Expired rooms cannot be edited." });
+      return;
+    }
+
+    const cleanRoomId = roomId.startsWith("/") ? roomId.substring(1) : roomId;
+    const isLiveInMemory = rooms.has(roomId) || rooms.has(cleanRoomId) || rooms.has(`/${cleanRoomId}`);
+    const isActiveOrStarted = r.status === 'active' || Boolean(r.startedAt) || isLiveInMemory;
+    if (isActiveOrStarted) {
+      res.status(400).json({ error: "Room configurations cannot be modified while the room is active." });
       return;
     }
 
@@ -908,7 +916,7 @@ app.post("/updateRoomSettings", async (req, res) => {
     await client.query('BEGIN');
 
     const existingRoom = await client.query(
-      `SELECT "expiresAt", "isSubRoom", "isPermanent", status FROM rooms WHERE "roomId" = $1 AND owner_id = $2 FOR UPDATE`,
+      `SELECT "expiresAt", "isSubRoom", "isPermanent", status, "startedAt" FROM rooms WHERE "roomId" = $1 AND owner_id = $2 FOR UPDATE`,
       [roomId, decoded.uid]
     );
 
@@ -923,6 +931,15 @@ app.post("/updateRoomSettings", async (req, res) => {
     if (isExpired) {
       await client.query('ROLLBACK');
       res.status(400).json({ error: "Expired rooms cannot be edited." });
+      return;
+    }
+
+    const cleanRoomId = roomId.startsWith("/") ? roomId.substring(1) : roomId;
+    const isLiveInMemory = rooms.has(roomId) || rooms.has(cleanRoomId) || rooms.has(`/${cleanRoomId}`);
+    const isActiveOrStarted = room.status === 'active' || Boolean(room.startedAt) || isLiveInMemory;
+    if (isActiveOrStarted) {
+      await client.query('ROLLBACK');
+      res.status(400).json({ error: "Room configurations cannot be modified while the room is active." });
       return;
     }
 

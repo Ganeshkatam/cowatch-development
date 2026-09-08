@@ -157,6 +157,13 @@ export const EditRoomModal = ({
     room.status === "ended" ||
     (!room.isPermanent && room.expiresAt && new Date(room.expiresAt).getTime() <= Date.now())
   );
+  const isActiveOrStarted = Boolean(
+    computedState === "Active" ||
+    room.status === "active" ||
+    room.status === "expiring" ||
+    Boolean(room.startedAt)
+  );
+  const isLocked = isExpired || isActiveOrStarted;
 
   const cleanId = room.roomId.startsWith("/") ? room.roomId.substring(1) : room.roomId;
   const initialPasscode =
@@ -217,7 +224,7 @@ export const EditRoomModal = ({
   };
 
   const handleFileChange = (payload: File | null) => {
-    if (isExpired) return;
+    if (isLocked) return;
     if (payload) {
       if (payload.size > 1 * 1024 * 1024) {
         setError("Cover photo too large (max 1MB).");
@@ -230,7 +237,7 @@ export const EditRoomModal = ({
   };
 
   const handleRemoveCover = () => {
-    if (isExpired) return;
+    if (isLocked) return;
     setCoverFile(null);
     setCoverPreview(null);
     setRemoveCover(true);
@@ -239,6 +246,10 @@ export const EditRoomModal = ({
   const handleSave = async () => {
     if (isExpired) {
       setError("This room has expired and can no longer be edited.");
+      return;
+    }
+    if (isActiveOrStarted) {
+      setError("Room configurations cannot be modified while the room is active. Room modifications are not allowed once a room is started.");
       return;
     }
     setError("");
@@ -421,6 +432,22 @@ export const EditRoomModal = ({
             This room has expired or ended. Closed rooms can no longer be edited.
           </Alert>
         )}
+        {isActiveOrStarted && (
+          <Alert
+            color="violet"
+            variant="light"
+            title="Room is Active"
+            icon={<IconAlertCircle size={16} />}
+            styles={{
+              root: {
+                backgroundColor: "rgba(139, 92, 246, 0.08)",
+                borderColor: "rgba(139, 92, 246, 0.25)",
+              },
+            }}
+          >
+            Room configurations cannot be modified while the room is active. Room modifications are not allowed once a room is started.
+          </Alert>
+        )}
         {error && (
           <Alert color="red" variant="light" title="Error" icon={<IconAlertCircle size={16} />}>
             {error}
@@ -428,7 +455,7 @@ export const EditRoomModal = ({
         )}
 
         {/* ROOM IDENTITY */}
-        <Box style={isExpired ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
+        <Box style={isLocked ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
           <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} mb="sm">
             Room Identity
           </Text>
@@ -439,7 +466,7 @@ export const EditRoomModal = ({
               onChange={(e) => setTitle(e.currentTarget.value)}
               maxLength={50}
               required
-              disabled={isExpired}
+              disabled={isLocked}
               placeholder="Enter room title..."
             />
             <Textarea
@@ -450,7 +477,7 @@ export const EditRoomModal = ({
               autosize
               minRows={2}
               maxRows={4}
-              disabled={isExpired}
+              disabled={isLocked}
               placeholder="What is this watch party about? (optional)"
             />
 
@@ -499,7 +526,7 @@ export const EditRoomModal = ({
                     </Text>
                   )}
                 </Box>
-                {!isExpired && (
+                {!isLocked && (
                   <div
                     style={{
                       display: "flex",
@@ -541,7 +568,7 @@ export const EditRoomModal = ({
         <Divider style={{ borderColor: "var(--border-subtle)" }} />
 
         {/* ROOM BEHAVIOR */}
-        <Box style={isExpired ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
+        <Box style={isLocked ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
           <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} mb="sm">
             Room Behavior
           </Text>
@@ -556,7 +583,7 @@ export const EditRoomModal = ({
                 onChange={(e) => setIsChatDisabled(!e.currentTarget.checked)}
                 color="violet"
                 size="md"
-                disabled={isExpired}
+                disabled={isLocked}
                 style={{ flexShrink: 0 }}
               />
             </Group>
@@ -566,7 +593,7 @@ export const EditRoomModal = ({
         <Divider style={{ borderColor: "var(--border-subtle)" }} />
 
         {/* PASSWORD PROTECTION */}
-        <Box style={isExpired ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
+        <Box style={isLocked ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
           <Group justify="space-between" align="center" mb="sm" wrap="nowrap" gap="xs" style={{ width: "100%" }}>
             <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} style={{ minWidth: 0, flex: "1 1 auto" }}>
               Password Protection
@@ -673,7 +700,7 @@ export const EditRoomModal = ({
                         variant="subtle"
                         color={removeProtection ? "violet" : "red"}
                         size="compact-xs"
-                        disabled={isExpired}
+                        disabled={isLocked}
                         style={{ flexShrink: 0 }}
                         onClick={() => {
                           setRemoveProtection(!removeProtection);
@@ -712,7 +739,7 @@ export const EditRoomModal = ({
                   placeholder={room.isPasscodeProtected ? "Leave blank to keep current" : "Enter password (optional)"}
                   value={password}
                   onChange={(e) => setPassword(e.currentTarget.value)}
-                  disabled={isExpired}
+                  disabled={isLocked}
                 />
                 {password.length > 0 && (
                   <PasswordInput
@@ -720,7 +747,7 @@ export const EditRoomModal = ({
                     placeholder="Confirm new password"
                     value={passwordConfirm}
                     onChange={(e) => setPasswordConfirm(e.currentTarget.value)}
-                    disabled={isExpired}
+                    disabled={isLocked}
                   />
                 )}
               </Stack>
@@ -751,7 +778,7 @@ export const EditRoomModal = ({
         <Button
           onClick={handleSave}
           loading={isSaving}
-          disabled={isExpired}
+          disabled={isLocked}
           color="violet"
           size="sm"
         >
@@ -871,6 +898,17 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+    const isActiveOrStarted = Boolean(
+      computedState === 'Active' ||
+      room.status === 'active' ||
+      room.status === 'expiring' ||
+      Boolean(room.startedAt)
+    );
+    if (isActiveOrStarted) {
+      setActionError("Room configurations cannot be modified while the room is active. Room modifications are not allowed once a room is started.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
 
     setIsUploading(true);
     try {
@@ -906,6 +944,12 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
 
   const computedState = getComputedState(room);
   const isPermanent = computedState === 'Permanent';
+  const isActiveOrStarted = Boolean(
+    computedState === 'Active' ||
+    room.status === 'active' ||
+    room.status === 'expiring' ||
+    Boolean(room.startedAt)
+  );
   const urlPath = `/watch/${room.roomId.replace(/^\//, '')}`;
   const detailsPath = `/myrooms/${room.roomId}`;
 
@@ -975,11 +1019,13 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
     if (computedState !== 'Expired' && computedState !== 'Ended') {
       items.push(<Menu.Divider key="div1" />);
 
-      items.push(
-        <Menu.Item key="settings" leftSection={<IconSettings size={14} />} onClick={() => setEditModalOpened(true)}>
-          Edit Room
-        </Menu.Item>
-      );
+      if (!isActiveOrStarted) {
+        items.push(
+          <Menu.Item key="settings" leftSection={<IconSettings size={14} />} onClick={() => setEditModalOpened(true)}>
+            Edit Room
+          </Menu.Item>
+        );
+      }
       items.push(
         <Menu.Item key="end" leftSection={<IconPlayerStop size={14} />} onClick={handleEndRoomClick}>
           End Room
@@ -1123,6 +1169,7 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
   return {
     isUploading,
     fileInputRef,
+    isActiveOrStarted,
     handleFileUpload,
     renderPrimary,
     renderSecondary,
@@ -1162,7 +1209,7 @@ const GridRoomCard = ({
           <RoomStatusBadge status={room.status} isPermanent={isPermanent} />
         </div>
 
-        {!isClosed && onUpdateCover && (
+        {!isClosed && !actions.isActiveOrStarted && onUpdateCover && (
           <>
             <ActionIcon
               variant="filled" color="dark" size="md" radius="md" loading={actions.isUploading}
@@ -1257,7 +1304,7 @@ const StackRoomCard = ({
           <div className={styles.coverPlaceholder}>WATCH PARTY</div>
         )}
 
-        {!isClosed && onUpdateCover && (
+        {!isClosed && !actions.isActiveOrStarted && onUpdateCover && (
           <>
             <ActionIcon
               variant="filled" color="dark" size="sm" radius="md" loading={actions.isUploading}

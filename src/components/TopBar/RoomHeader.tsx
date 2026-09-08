@@ -57,6 +57,7 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
   onLogoClick,
 }) => {
   const [copied, setCopied] = useState(false);
+  const isRoomActive = roomStatus === "active" || roomStatus === "expiring";
 
   const handleCopyLink = async () => {
     try {
@@ -163,19 +164,27 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
 
         <Menu shadow="xl" width={220} position="bottom-end" offset={8}>
           <Menu.Target>
-            <button type="button" className={styles.iconOnlyBtn} onClick={onOpenSettings} aria-label="Room settings" title="Room settings">
+            <button
+              type="button"
+              className={styles.iconOnlyBtn}
+              onClick={onOpenSettings}
+              aria-label={isRoomActive ? "Preferences" : "Room settings"}
+              title={isRoomActive ? "Preferences" : "Room settings"}
+            >
               <IconSettings size={17} stroke={1.6} />
             </button>
           </Menu.Target>
           <Menu.Dropdown>
             <Menu.Label>{isOwner ? "Host Controls" : "Room"}</Menu.Label>
-            <Menu.Item leftSection={<IconSettings size={16} />} onClick={onOpenSettings}>Room settings</Menu.Item>
+            <Menu.Item leftSection={<IconSettings size={16} />} onClick={onOpenSettings}>
+              {isRoomActive ? "Preferences" : "Room settings"}
+            </Menu.Item>
             {isOwner && (
               <Menu.Item leftSection={<IconAdjustments size={16} />} onClick={() => {
                 const cleanId = window.location.pathname.replace(/^\/watch\//, "");
                 window.open(`/myrooms/${cleanId}`, "_blank");
               }}>
-                Manage in Dashboard
+                {isRoomActive ? "View in Dashboard" : "Manage in Dashboard"}
               </Menu.Item>
             )}
             <Menu.Item leftSection={copied ? <IconCheck size={16} color="var(--color-live)" /> : <IconCopy size={16} />} onClick={handleCopyLink}>

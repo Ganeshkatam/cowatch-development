@@ -412,6 +412,11 @@ export const RoomDetails = () => {
 
   const statusStr = room.status as string;
   const isClosed = statusStr === "expired" || statusStr === "ended" || statusStr === "cancelled";
+  const isActiveOrStarted = Boolean(
+    statusStr === "active" ||
+    statusStr === "expiring" ||
+    room.startedAt
+  );
   const isWaiting = room.status === "waiting";
   const isScheduled = room.status === "scheduled";
   const isOpenable = !isClosed && (room.status === "active" || room.status === "expiring" || room.status === "scheduled" || room.status === "inactive");
@@ -563,7 +568,7 @@ export const RoomDetails = () => {
                   </Button>
                 </>
               )}
-              {!isClosed && (
+              {!isClosed && !isActiveOrStarted && (
                 <Button
                   size="md"
                   className={styles.glassBtn}
@@ -875,7 +880,7 @@ export const RoomDetails = () => {
                 </div>
                 <span>Room Settings</span>
               </div>
-              {!isClosed && (
+              {!isClosed && !isActiveOrStarted && (
                 <Button
                   variant="subtle"
                   size="xs"
@@ -885,6 +890,11 @@ export const RoomDetails = () => {
                 >
                   Edit
                 </Button>
+              )}
+              {isActiveOrStarted && !isClosed && (
+                <Badge color="violet" variant="light" size="sm">
+                  Locked (Active Session)
+                </Badge>
               )}
             </div>
 
@@ -936,7 +946,7 @@ export const RoomDetails = () => {
                     </Text>
                   ) : (
                     <Text size="sm" c="dimmed">
-                      No description added yet. Click "Edit" to add one.
+                      {isActiveOrStarted ? "No description provided." : 'No description added yet. Click "Edit" to add one.'}
                     </Text>
                   )}
                 </div>
