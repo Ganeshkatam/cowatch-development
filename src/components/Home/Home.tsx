@@ -2,7 +2,6 @@ import React, { useContext, useState } from "react";
 import { useHistory, Link } from "react-router-dom";
 import { Button, Accordion } from "@mantine/core";
 import {
-  IconRefresh,
   IconDeviceTv,
   IconLock,
   IconLink,
@@ -18,6 +17,8 @@ import {
   IconScreenShare,
   IconFile,
   IconBrowser,
+  IconMovie,
+  IconPlayerPlayFilled,
 } from "@tabler/icons-react";
 import { SignInButton } from "../TopBar/TopBar";
 import styles from "./Home.module.css";
@@ -68,8 +69,8 @@ export const Home = () => {
             </h1>
 
             <p className={styles.heroSubtitle}>
-              Create a free account in seconds, invite your friends, and watch
-              videos together in perfect sync. No counting down, no delay.
+              Create a free account in seconds, invite your friends, and enjoy
+              movies, YouTube videos, and shows together from anywhere.
             </p>
 
             <div className={styles.actionArea}>
@@ -186,58 +187,59 @@ export const Home = () => {
         </div>
 
         <div className={styles.bentoGrid}>
-          {/* Card 1: Wide Card with Live Dual-Sync Visualizer */}
+          {/* Card 1: Wide Card - Private Watch Parties */}
           <div className={styles.bentoCardWide}>
             <div className={styles.bentoCardBody}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-violet)" }}>
-                <IconRefresh size={24} />
+                <IconMovie size={24} />
                 <span style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  Synchronized Play
+                  Watch Together
                 </span>
               </div>
-              <h3 className={styles.bentoTitle}>Always in Sync</h3>
+              <h3 className={styles.bentoTitle}>Private Watch Parties</h3>
               <p className={styles.bentoText}>
-                When anyone pauses, plays, or seeks to another part of the video, everyone in the room stays synchronized.
-                No countdowns needed.
+                Host movie nights and video sessions with friends. When someone pauses to grab snacks or jumps back to rewatch a scene, everyone stays on the same page.
               </p>
             </div>
 
-            {/* Sync Visualizer Mock */}
-            <div className={styles.syncWidget}>
-              <div className={styles.syncWidgetHeader}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>
-                  Synchronized Playback
-                </span>
-                <div className={styles.syncStatusPill}>
+            {/* Shared Lounge Room Card */}
+            <div className={styles.partyWidget}>
+              <div className={styles.partyWidgetHeader}>
+                <div className={styles.partyRoomLabel}>
+                  <IconMovie size={16} color="var(--color-violet)" />
+                  <span>Weekend Movie Night</span>
+                </div>
+                <div className={styles.partyLiveBadge}>
                   <span className={styles.pulseDot} />
-                  <span>IN SYNC</span>
+                  <span>4 in room</span>
                 </div>
               </div>
 
-              <div className={styles.syncAvatarsRow}>
-                <div className={styles.userSyncNode}>
-                  <div className={styles.friendAvatar} style={{ background: "#8B5CF6", width: 32, height: 32 }}>You</div>
-                  <div>
-                    <div className={styles.syncNodeName}>Host (You)</div>
-                    <div className={styles.syncNodeTime}>00:24:18</div>
-                  </div>
+              <div className={styles.partyMembersRow}>
+                <div className={styles.partyMember}>
+                  <div className={styles.friendAvatar} style={{ background: "#8B5CF6", width: 28, height: 28, fontSize: 11 }}>You</div>
+                  <span className={styles.partyMemberName}>You (Host)</span>
                 </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--color-live)", fontSize: 12, fontWeight: 700 }}>
-                  <IconCircleCheck size={16} /> Synced
+                <div className={styles.partyMember}>
+                  <div className={styles.friendAvatar} style={{ background: "#EC4899", width: 28, height: 28, fontSize: 11 }}>M</div>
+                  <span className={styles.partyMemberName}>Maya</span>
                 </div>
-
-                <div className={styles.userSyncNode}>
-                  <div className={styles.friendAvatar} style={{ background: "#EC4899", width: 32, height: 32 }}>M</div>
-                  <div>
-                    <div className={styles.syncNodeName}>Friend</div>
-                    <div className={styles.syncNodeTime}>00:24:18</div>
-                  </div>
+                <div className={styles.partyMember}>
+                  <div className={styles.friendAvatar} style={{ background: "#10B981", width: 28, height: 28, fontSize: 11 }}>S</div>
+                  <span className={styles.partyMemberName}>Sam</span>
+                </div>
+                <div className={styles.partyMember}>
+                  <div className={styles.friendAvatar} style={{ background: "#3B82F6", width: 28, height: 28, fontSize: 11 }}>A</div>
+                  <span className={styles.partyMemberName}>Alex</span>
                 </div>
               </div>
 
-              <div className={styles.syncLineTrack}>
-                <div className={styles.syncLineGlow} />
+              <div className={styles.partyScrubberRow}>
+                <IconPlayerPlayFilled size={14} color="var(--color-violet)" />
+                <div className={styles.partyProgressBar}>
+                  <div className={styles.partyProgressFill} />
+                </div>
+                <span className={styles.partyTimeLabel}>34:12 / 1:42:00</span>
               </div>
             </div>
           </div>
@@ -375,9 +377,9 @@ export const Home = () => {
           <div className={styles.timelineNodeCard}>
             <div className={styles.nodeMarker}>03</div>
             <div className={styles.nodeContentBox}>
-              <h3 className={styles.nodeTitle}>Invite & Enjoy in Sync</h3>
+              <h3 className={styles.nodeTitle}>Invite Friends & Enjoy</h3>
               <p className={styles.nodeDesc}>
-                Select what to watch, share your link with your crew, and enjoy the show in perfect real-time synchronization.
+                Pick what you want to watch, send your room link to friends, and kick back together without any hassle.
               </p>
             </div>
           </div>
@@ -476,7 +478,7 @@ export const Home = () => {
         <div className={styles.ctaCard}>
           <h2 className={styles.ctaTitle}>Ready for movie night?</h2>
           <p className={styles.ctaSubtitle}>
-            Create your free account today and start watching with your friends in sync.
+            Create your free account today and start hanging out with your friends.
           </p>
           <div className={styles.ctaButtons}>
             {user ? (
@@ -521,11 +523,11 @@ export const Home = () => {
 const OCCASIONS = [
   {
     id: "movies",
-    tag: "Synchronized Playback",
+    tag: "Movie Nights",
     title: "Watch Movies & Shows",
-    desc: "Create a private room, pick a video, and watch in sync. When anyone pauses or seeks, everyone stays on the exact same second.",
+    desc: "Host a private movie night with friends. Everyone watches together seamlessly with shared play and pause controls.",
     image: "/cinema_theater_bg.jpg",
-    featureNote: "Synchronized play, pause, and seek controls across all room members.",
+    featureNote: "Shared playback controls so everyone stays on the exact same scene.",
   },
   {
     id: "youtube",

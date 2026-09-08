@@ -377,75 +377,97 @@
     margin: 0;
   }
 
-  /* Sync visualizer widget inside Card 1 */
-  .syncWidget {
+  /* Watch party room widget inside Card 1 */
+  .partyWidget {
     background: var(--bg-elevated);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
-    padding: 16px 20px;
+    padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
   }
 
-  .syncWidgetHeader {
+  .partyWidgetHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
 
-  .syncStatusPill {
+  .partyRoomLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .partyLiveBadge {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: var(--color-live);
     background: rgba(16, 185, 129, 0.12);
     padding: 3px 10px;
     border-radius: 9999px;
     border: 1px solid rgba(16, 185, 129, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
-  .syncAvatarsRow {
+  .partyMembersRow {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
     align-items: center;
   }
 
-  .userSyncNode {
+  .partyMember {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-surface-soft);
+    padding: 4px 10px 4px 5px;
+    border-radius: 9999px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .partyMemberName {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .partyScrubberRow {
     display: flex;
     align-items: center;
     gap: 10px;
+    padding-top: 4px;
   }
 
-  .syncNodeName {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .syncNodeTime {
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-
-  .syncLineTrack {
+  .partyProgressBar {
+    flex: 1;
     height: 4px;
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.12);
     border-radius: 9999px;
-    position: relative;
     overflow: hidden;
+    position: relative;
   }
 
-  .syncLineGlow {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 100%;
-    background: linear-gradient(90deg, var(--color-violet), var(--color-teal));
+  .partyProgressFill {
+    height: 100%;
+    width: 35%;
+    background: linear-gradient(90deg, var(--color-violet), var(--color-pink));
     border-radius: 9999px;
+  }
+
+  .partyTimeLabel {
+    font-size: 11px;
+    font-family: monospace;
+    color: var(--text-muted);
   }
 
   /* Card 2: Square card - Voice & Lounge */
