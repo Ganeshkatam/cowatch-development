@@ -1,1 +1,2 @@
 - Never create TS/JS files to inspect the database. Strictly use the Supabase MCP tools (e.g., execute_sql, list_tables) or plain SQL scripts for database operations.
+- Always push commits to the remote repository (e.g., git push origin main) after committing changes.
