@@ -324,61 +324,111 @@ export const EditRoomModal = ({
     <Modal
       opened={opened}
       onClose={onClose}
-      centered
-      title={
-        <Box>
-          <Text fw={700} size="lg" c="var(--text-primary)">
-            Edit Room
-          </Text>
-          <Text size="xs" c="dimmed" mt={2}>
-            Update how your room appears and behaves.
-          </Text>
-        </Box>
-      }
-      size={640}
+      centered={false}
+      yOffset="2vh"
+      xOffset="8px"
+      size={580}
       radius="lg"
       padding={0}
+      withCloseButton={true}
       styles={{
+        root: {
+          overflow: "hidden",
+        },
+        inner: {
+          padding: "10px 8px",
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "center",
+          boxSizing: "border-box",
+        },
         content: {
           background: "var(--bg-surface)",
           border: "1px solid var(--border-subtle)",
           color: "var(--text-primary)",
           boxShadow: "var(--shadow-xl)",
           overflow: "hidden",
-          maxHeight: "calc(90dvh)",
+          maxHeight: "calc(96dvh - 20px)",
           display: "flex",
           flexDirection: "column",
           width: "100%",
+          maxWidth: "580px",
+          boxSizing: "border-box",
         },
         header: {
           background: "var(--bg-surface)",
           borderBottom: "1px solid var(--border-subtle)",
-          padding: "16px 20px",
+          padding: "12px 16px",
           color: "var(--text-primary)",
+          flexShrink: 0,
+          width: "100%",
+          boxSizing: "border-box",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        },
+        title: {
+          flex: "1 1 auto",
+          minWidth: 0,
         },
         body: {
           padding: 0,
           display: "flex",
           flexDirection: "column",
-          flex: "1 1 auto",
+          flex: "1 1 0%",
           minHeight: 0,
           overflow: "hidden",
+          width: "100%",
+          boxSizing: "border-box",
         },
         close: {
           color: "var(--text-secondary)",
+          flexShrink: 0,
+          marginLeft: "8px",
         },
       }}
+      title={
+        <Box style={{ minWidth: 0, paddingRight: "4px" }}>
+          <Text
+            fw={700}
+            size="md"
+            c="var(--text-primary)"
+            style={{
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            Edit Room
+          </Text>
+          <Text
+            size="xs"
+            c="dimmed"
+            mt={1}
+            style={{
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            Update how your room appears and behaves.
+          </Text>
+        </Box>
+      }
     >
       {/* SCROLLABLE FORM BODY */}
       <Box
         style={{
-          padding: "20px",
+          padding: "16px 14px",
           overflowY: "auto",
-          flex: "1 1 auto",
+          flex: "1 1 0%",
+          minHeight: 0,
           overscrollBehavior: "contain",
           display: "flex",
           flexDirection: "column",
-          gap: "24px",
+          gap: "20px",
+          width: "100%",
+          boxSizing: "border-box",
         }}
       >
         {isExpired && (
@@ -394,10 +444,10 @@ export const EditRoomModal = ({
 
         {/* ROOM IDENTITY */}
         <Box style={isExpired ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
-          <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} mb="md">
+          <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} mb="sm">
             Room Identity
           </Text>
-          <Stack gap="md">
+          <Stack gap="sm">
             <TextInput
               label="Room Title"
               value={title}
@@ -421,11 +471,19 @@ export const EditRoomModal = ({
 
             <Box>
               <Text size="sm" fw={500} mb={6}>Cover Photo</Text>
-              <Group align="flex-start" gap="md" wrap="wrap">
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: "12px",
+                  width: "100%",
+                }}
+              >
                 <Box
                   style={{
-                    width: 160,
-                    height: 90,
+                    width: 140,
+                    height: 80,
                     maxWidth: "100%",
                     borderRadius: 8,
                     overflow: 'hidden',
@@ -457,8 +515,16 @@ export const EditRoomModal = ({
                   )}
                 </Box>
                 {!isExpired && (
-                  <Stack gap="xs" justify="center" style={{ flex: "1 1 180px" }}>
-                    <Group gap="xs">
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                      flex: "1 1 140px",
+                      minWidth: "120px",
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                       <FileButton onChange={handleFileChange} accept="image/png,image/jpeg,image/webp">
                         {(props) => (
                           <Button variant="default" size="xs" {...props}>
@@ -476,13 +542,13 @@ export const EditRoomModal = ({
                           Remove
                         </Button>
                       )}
-                    </Group>
-                    <Text size="xs" c="dimmed">
-                      Recommended 16:9 ratio (PNG, JPG, WEBP, max 5MB).
+                    </div>
+                    <Text size="xs" c="dimmed" style={{ fontSize: "11px", lineHeight: 1.3 }}>
+                      16:9 ratio (PNG, JPG, WEBP, max 5MB)
                     </Text>
-                  </Stack>
+                  </div>
                 )}
-              </Group>
+              </div>
             </Box>
           </Stack>
         </Box>
@@ -491,12 +557,12 @@ export const EditRoomModal = ({
 
         {/* ROOM BEHAVIOR */}
         <Box style={isExpired ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
-          <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} mb="md">
+          <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} mb="sm">
             Room Behavior
           </Text>
-          <Stack gap="lg">
-            <Group justify="space-between" align="center" wrap="nowrap" gap="md">
-              <Box style={{ flex: "1 1 auto", minWidth: 0 }}>
+          <Stack gap="md">
+            <Group justify="space-between" align="center" wrap="nowrap" gap="sm" style={{ width: "100%" }}>
+              <Box style={{ flex: "1 1 auto", minWidth: 0, paddingRight: "8px" }}>
                 <Text fw={500}>Permanent Room</Text>
                 <Text size="sm" c="dimmed">No automatic expiration</Text>
               </Box>
@@ -510,8 +576,8 @@ export const EditRoomModal = ({
               />
             </Group>
 
-            <Group justify="space-between" align="center" wrap="nowrap" gap="md">
-              <Box style={{ flex: "1 1 auto", minWidth: 0 }}>
+            <Group justify="space-between" align="center" wrap="nowrap" gap="sm" style={{ width: "100%" }}>
+              <Box style={{ flex: "1 1 auto", minWidth: 0, paddingRight: "8px" }}>
                 <Text fw={500}>Chat Enabled</Text>
                 <Text size="sm" c="dimmed">Allow participants to send messages in this room</Text>
               </Box>
@@ -531,20 +597,20 @@ export const EditRoomModal = ({
 
         {/* PASSWORD PROTECTION */}
         <Box style={isExpired ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
-          <Group justify="space-between" align="center" mb="md" wrap="wrap" gap="xs">
-            <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1}>
+          <Group justify="space-between" align="center" mb="sm" wrap="nowrap" gap="xs" style={{ width: "100%" }}>
+            <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} style={{ minWidth: 0, flex: "1 1 auto" }}>
               Password Protection
             </Text>
             {room.isPasscodeProtected && !removeProtection ? (
-              <Badge color="violet" variant="light" leftSection={<IconLock size={12} />}>
+              <Badge color="violet" variant="light" leftSection={<IconLock size={12} />} style={{ flexShrink: 0 }}>
                 Protected
               </Badge>
             ) : removeProtection ? (
-              <Badge color="red" variant="light" leftSection={<IconLockOpen size={12} />}>
-                Will Be Removed
+              <Badge color="red" variant="light" leftSection={<IconLockOpen size={12} />} style={{ flexShrink: 0 }}>
+                Removing
               </Badge>
             ) : (
-              <Badge color="gray" variant="light" leftSection={<IconLockOpen size={12} />}>
+              <Badge color="gray" variant="light" leftSection={<IconLockOpen size={12} />} style={{ flexShrink: 0 }}>
                 Unprotected
               </Badge>
             )}
@@ -554,21 +620,26 @@ export const EditRoomModal = ({
             {room.isPasscodeProtected && (
               <Box
                 style={{
-                  padding: "14px",
+                  padding: "12px",
                   borderRadius: "8px",
                   border: "1px solid var(--border-subtle)",
                   backgroundColor: "var(--bg-elevated)",
+                  width: "100%",
+                  boxSizing: "border-box",
                 }}
               >
                 {currentPassword ? (
-                  <Stack gap="xs">
-                    <Group justify="space-between" align="center" wrap="wrap" gap="xs">
-                      <Text size="xs" fw={600} c="dimmed" tt="uppercase">Current Password</Text>
+                  <Stack gap="xs" style={{ width: "100%" }}>
+                    <Group justify="space-between" align="center" wrap="nowrap" gap="xs" style={{ width: "100%" }}>
+                      <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ flex: "1 1 auto", minWidth: 0 }}>
+                        Current Password
+                      </Text>
                       <Button
                         variant="subtle"
                         color={removeProtection ? "violet" : "red"}
-                        size="xs"
+                        size="compact-xs"
                         disabled={isExpired}
+                        style={{ flexShrink: 0 }}
                         onClick={() => {
                           setRemoveProtection(!removeProtection);
                           if (!removeProtection) {
@@ -577,16 +648,16 @@ export const EditRoomModal = ({
                           }
                         }}
                       >
-                        {removeProtection ? "Keep Password Protection" : "Remove Password"}
+                        {removeProtection ? "Keep Password" : "Remove"}
                       </Button>
                     </Group>
                     <TextInput
                       readOnly
                       type={showCurrentPassword ? "text" : "password"}
                       value={currentPassword}
-                      rightSectionWidth={74}
+                      rightSectionWidth={68}
                       rightSection={
-                        <Group gap={4} pr={6}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "2px", paddingRight: "4px" }}>
                           <Tooltip label={showCurrentPassword ? "Hide password" : "Show password"} withArrow>
                             <ActionIcon
                               variant="subtle"
@@ -609,7 +680,7 @@ export const EditRoomModal = ({
                               {copiedCurrentPassword ? <IconCheck size={16} /> : <IconCopy size={16} />}
                             </ActionIcon>
                           </Tooltip>
-                        </Group>
+                        </div>
                       }
                       styles={{
                         input: {
@@ -620,17 +691,20 @@ export const EditRoomModal = ({
                     />
                   </Stack>
                 ) : (
-                  <Stack gap="xs">
-                    <Group justify="space-between" align="center" wrap="wrap" gap="xs">
-                      <Group gap={6}>
-                        <IconLock size={16} color="var(--mantine-color-violet-6)" />
-                        <Text size="sm" fw={500}>Room is password-protected</Text>
+                  <Stack gap="xs" style={{ width: "100%" }}>
+                    <Group justify="space-between" align="center" wrap="nowrap" gap="xs" style={{ width: "100%" }}>
+                      <Group gap={6} style={{ minWidth: 0, flex: "1 1 auto" }}>
+                        <IconLock size={16} color="var(--mantine-color-violet-6)" style={{ flexShrink: 0 }} />
+                        <Text size="sm" fw={500} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          Room is password-protected
+                        </Text>
                       </Group>
                       <Button
                         variant="subtle"
                         color={removeProtection ? "violet" : "red"}
-                        size="xs"
+                        size="compact-xs"
                         disabled={isExpired}
+                        style={{ flexShrink: 0 }}
                         onClick={() => {
                           setRemoveProtection(!removeProtection);
                           if (!removeProtection) {
@@ -639,13 +713,13 @@ export const EditRoomModal = ({
                           }
                         }}
                       >
-                        {removeProtection ? "Keep Protection" : "Remove Password"}
+                        {removeProtection ? "Keep Protection" : "Remove"}
                       </Button>
                     </Group>
                     <Text size="xs" c="dimmed">
                       {removeProtection
                         ? "Password protection will be removed when you save changes."
-                        : "Passcode is securely encrypted. Enter a new password below to update and view it, or click Remove Password to disable protection."}
+                        : "Passcode is securely encrypted. Enter a new password below to update and view it, or click Remove to disable protection."}
                     </Text>
                   </Stack>
                 )}
@@ -688,17 +762,20 @@ export const EditRoomModal = ({
       {/* FIXED / STICKY FOOTER */}
       <Box
         style={{
-          padding: "14px 20px",
+          padding: "12px 16px",
+          paddingBottom: "max(12px, env(safe-area-inset-bottom))",
           borderTop: "1px solid var(--border-subtle)",
           background: "var(--bg-elevated)",
           display: "flex",
           justifyContent: "flex-end",
           alignItems: "center",
-          gap: "12px",
+          gap: "10px",
           flexShrink: 0,
+          width: "100%",
+          boxSizing: "border-box",
         }}
       >
-        <Button variant="default" onClick={onClose} disabled={isSaving}>
+        <Button variant="default" onClick={onClose} disabled={isSaving} size="sm">
           Cancel
         </Button>
         <Button
@@ -706,6 +783,7 @@ export const EditRoomModal = ({
           loading={isSaving}
           disabled={isExpired}
           color="violet"
+          size="sm"
         >
           Save Changes
         </Button>
