@@ -3069,13 +3069,15 @@ export class App extends React.Component<AppProps, AppState> {
                 style={{
                   display: "flex",
                   flexDirection: "column",
+                  flex: "1 1 0%",
                   flexGrow: 1,
                   width: "100%",
                   minHeight: 0,
                   marginTop: "8px",
+                  overflow: "hidden",
                 }}
               >
-                <Tabs.List style={{ display: "flex", width: "100%" }}>
+                <Tabs.List style={{ display: "flex", width: "100%", flexShrink: 0 }}>
                   <Tabs.Tab
                     value="people"
                     leftSection={<IconUsersGroup size={16} />}
@@ -3104,6 +3106,7 @@ export class App extends React.Component<AppProps, AppState> {
                 <Tabs.Panel
                   value="people"
                   style={{
+                    flex: "1 1 0%",
                     flexGrow: 1,
                     display: "flex",
                     flexDirection: "column",
@@ -3138,10 +3141,11 @@ export class App extends React.Component<AppProps, AppState> {
                 <Tabs.Panel
                   value="chat"
                   style={{
+                    flex: "1 1 0%",
                     flexGrow: 1,
                     display: "flex",
                     flexDirection: "column",
-                    minHeight: "380px",
+                    minHeight: 0,
                     marginTop: "8px",
                     borderRadius: "8px",
                     overflow: "hidden",
@@ -3179,6 +3183,7 @@ export class App extends React.Component<AppProps, AppState> {
                   justifyContent: "space-between",
                   cursor: "pointer",
                   transition: "all 0.15s ease",
+                  flexShrink: 0,
                 }}
                 onClick={this.handleCopyRoomLink}
                 title="Click to copy room link"

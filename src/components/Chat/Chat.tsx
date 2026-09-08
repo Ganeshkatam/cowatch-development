@@ -522,6 +522,7 @@ export class ChatComponent extends React.Component<ChatProps & { onLoadMore?: ()
               justifyContent: "space-between",
               alignItems: "center",
               gap: 8,
+              flexShrink: 0,
             }}
           >
             <div className={styles.small + " " + styles.light}>
@@ -546,7 +547,7 @@ export class ChatComponent extends React.Component<ChatProps & { onLoadMore?: ()
         )}
         <TextInput
           ref={this.chatInputRef}
-          style={{ marginTop: "10px" }}
+          style={{ marginTop: "10px", flexShrink: 0 }}
           onKeyDown={(e: any) => e.key === "Enter" && this.sendChatMsg()}
           onChange={this.updateChatMsg}
           value={this.state.chatMsg}

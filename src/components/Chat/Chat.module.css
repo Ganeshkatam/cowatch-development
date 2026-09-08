@@ -1,6 +1,10 @@
 .chatContainer {
+  flex: 1 1 0%;
   flex-grow: 1;
-  overflow: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 
 .hoverEffect:hover {

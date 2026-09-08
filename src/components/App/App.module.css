@@ -105,13 +105,21 @@
 }
 
 @media only screen and (max-width: 768px) {
+  .fullHeightColumn.rightColumn,
+  .fullHeightColumnFullscreen.rightColumn,
   .rightColumn {
     width: 100% !important;
     max-width: 100% !important;
-    flex-shrink: 1;
-    min-height: 50vh;
-    flex: 1;
-    height: auto !important;
+    flex-shrink: 0 !important;
+    flex: none !important;
+    height: clamp(340px, 60vh, 540px) !important;
+    height: clamp(340px, 60dvh, 540px) !important;
+    max-height: calc(100vh - 120px) !important;
+    max-height: calc(100dvh - 120px) !important;
+    min-height: 280px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
   }
 
   .rightColumnCollapsed {
@@ -140,7 +148,7 @@
 }
 
 @media only screen and (max-width: 768px) {
-  .fullHeightColumn {
+  .fullHeightColumn:not(.rightColumn) {
     height: auto !important;
   }
 }
