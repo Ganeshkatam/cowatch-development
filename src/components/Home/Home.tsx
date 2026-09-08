@@ -17,7 +17,6 @@ import {
   IconScreenShare,
   IconFile,
   IconBrowser,
-  IconMovie,
   IconPlayerPlayFilled,
 } from "@tabler/icons-react";
 import { SignInButton } from "../TopBar/TopBar";
@@ -64,13 +63,13 @@ export const Home = () => {
             </div>
 
             <h1 className={styles.heroTitle}>
-              Watch movies together, <br />
+              Watch together, <br />
               <span className={styles.gradientText}>even miles apart.</span>
             </h1>
 
             <p className={styles.heroSubtitle}>
               Create a free account in seconds, invite your friends, and enjoy
-              movies, YouTube videos, and shows together from anywhere.
+              videos, YouTube, and streams together from anywhere.
             </p>
 
             <div className={styles.actionArea}>
@@ -182,7 +181,7 @@ export const Home = () => {
           <span className={styles.sectionTag}>Feature Highlights</span>
           <h2 className={styles.sectionTitle}>Built for genuine hangout moments</h2>
           <p className={styles.sectionDesc}>
-            Everything you need for a cozy movie night, watch party, or anime marathon with friends.
+            Everything you need to hang out, stream videos, and share reactions with friends.
           </p>
         </div>
 
@@ -191,14 +190,14 @@ export const Home = () => {
           <div className={styles.bentoCardWide}>
             <div className={styles.bentoCardBody}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-violet)" }}>
-                <IconMovie size={24} />
+                <IconUsers size={24} />
                 <span style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
                   Watch Together
                 </span>
               </div>
               <h3 className={styles.bentoTitle}>Private Watch Parties</h3>
               <p className={styles.bentoText}>
-                Host movie nights and video sessions with friends. When someone pauses to grab snacks or jumps back to rewatch a scene, everyone stays on the same page.
+                Host watch parties and video sessions with friends. When someone pauses to grab snacks or jumps back to replay a moment, everyone stays on the same page.
               </p>
             </div>
 
@@ -206,8 +205,8 @@ export const Home = () => {
             <div className={styles.partyWidget}>
               <div className={styles.partyWidgetHeader}>
                 <div className={styles.partyRoomLabel}>
-                  <IconMovie size={16} color="var(--color-violet)" />
-                  <span>Weekend Movie Night</span>
+                  <IconDeviceTv size={16} color="var(--color-violet)" />
+                  <span>Weekend Watch Party</span>
                 </div>
                 <div className={styles.partyLiveBadge}>
                   <span className={styles.pulseDot} />
@@ -476,7 +475,7 @@ export const Home = () => {
       {/* Section 6: Ambient Cinema Call to Action Banner */}
       <div className={styles.ctaWrapper}>
         <div className={styles.ctaCard}>
-          <h2 className={styles.ctaTitle}>Ready for movie night?</h2>
+          <h2 className={styles.ctaTitle}>Ready to start watching?</h2>
           <p className={styles.ctaSubtitle}>
             Create your free account today and start hanging out with your friends.
           </p>
@@ -522,10 +521,10 @@ export const Home = () => {
 
 const OCCASIONS = [
   {
-    id: "movies",
-    tag: "Movie Nights",
-    title: "Watch Movies & Shows",
-    desc: "Host a private movie night with friends. Everyone watches together seamlessly with shared play and pause controls.",
+    id: "watch",
+    tag: "Watch Parties",
+    title: "Watch Shows & Videos",
+    desc: "Host a private room for your friends. Everyone watches together with shared play, pause, and seek controls.",
     image: "/cinema_theater_bg.jpg",
     featureNote: "Shared playback controls so everyone stays on the exact same scene.",
   },
