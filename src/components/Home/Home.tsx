@@ -38,11 +38,6 @@ export const Home = () => {
       <section className={styles.hero}>
         <div className={styles.heroInner}>
           <div className={styles.heroContent}>
-            <div className={styles.badgePill}>
-              <span className={styles.pulseDot} />
-              Free and private watch rooms
-            </div>
-
             <h1 className={styles.heroTitle}>
               Watch together, <br />
               <span className={styles.gradientText}>even miles apart.</span>
