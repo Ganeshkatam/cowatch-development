@@ -93,6 +93,7 @@ declare global {
     cowatch: {
       ourStream: MediaStream | undefined;
       videoRefs: HTMLVideoElementDict;
+      audioRefs?: HTMLAudioElementDict;
       videoPCs: PCDict;
       remoteStreams: Record<string, MediaStream>;
       webtorrent?: WebTorrent.Instance;
@@ -105,6 +106,7 @@ declare global {
 window.cowatch = {
   ourStream: undefined,
   videoRefs: {},
+  audioRefs: {},
   videoPCs: {},
   remoteStreams: {},
 };

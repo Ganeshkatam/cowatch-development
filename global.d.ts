@@ -6,6 +6,7 @@ type BooleanDict = Record<string, boolean>;
 type AnyDict = Record<string, any>;
 type PCDict = Record<string, RTCPeerConnection>;
 type HTMLVideoElementDict = Record<string, HTMLVideoElement>;
+type HTMLAudioElementDict = Record<string, HTMLAudioElement>;
 type MediaType = "vbrowser" | "screenshare" | "video" | "youtube";
 
 interface User {

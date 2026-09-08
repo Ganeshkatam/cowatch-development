@@ -82,6 +82,12 @@ export class VideoChatErrorBoundary extends React.Component<
   }
 }
 
+export const AUDIO_CONSTRAINTS: MediaTrackConstraints = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+};
+
 export class VideoChat extends React.Component<VideoChatProps> {
   static contextType = MetadataContext;
   declare context: React.ContextType<typeof MetadataContext>;
@@ -91,6 +97,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
   // Stores remote MediaStreams keyed by peer clientId so they survive
   // the race between ontrack firing and the <video> ref being mounted.
   private remoteStreams: Record<string, MediaStream> = {};
+  private audioRefs: Record<string, HTMLAudioElement> = {};
   private pendingCandidates: Record<string, RTCIceCandidateInit[]> = {};
 
   state = {
@@ -218,21 +225,26 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
     pc.ontrack = (event: RTCTrackEvent) => {
       console.log(`[VideoChat] ontrack event from ${id} (${event.track.kind})`);
-      let stream = event.streams && event.streams[0];
-      if (!stream) {
-        let existing = window.cowatch.remoteStreams?.[id] || this.remoteStreams[id];
-        if (!existing) {
-          existing = new MediaStream();
-        }
-        if (!existing.getTracks().some((t) => t.id === event.track.id)) {
-          existing.addTrack(event.track);
-        }
-        stream = existing;
+      let existing = window.cowatch.remoteStreams?.[id] || this.remoteStreams[id];
+      if (!existing) {
+        existing = new MediaStream();
       }
 
-      this.remoteStreams[id] = stream;
+      if (event.track && !existing.getTracks().some((t) => t.id === event.track.id)) {
+        existing.addTrack(event.track);
+      }
+
+      if (event.streams && event.streams[0]) {
+        event.streams[0].getTracks().forEach((track) => {
+          if (!existing.getTracks().some((t) => t.id === track.id)) {
+            existing.addTrack(track);
+          }
+        });
+      }
+
+      this.remoteStreams[id] = existing;
       if (window.cowatch.remoteStreams) {
-        window.cowatch.remoteStreams[id] = stream;
+        window.cowatch.remoteStreams[id] = existing;
       }
 
       event.track.onunmute = () => {
@@ -249,12 +261,24 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
       if (videoRefs && videoRefs[id]) {
         try {
-          if (videoRefs[id].srcObject !== stream) {
-            videoRefs[id].srcObject = stream;
+          if (videoRefs[id].srcObject !== existing) {
+            videoRefs[id].srcObject = existing;
           }
           videoRefs[id].play().catch(() => {});
         } catch (e) {
           console.warn(`[VideoChat] Error mounting remote stream to video element for ${id}:`, e);
+        }
+      }
+
+      const audioRef = window.cowatch?.audioRefs?.[id] || this.audioRefs[id];
+      if (audioRef) {
+        try {
+          if (audioRef.srcObject !== existing) {
+            audioRef.srcObject = existing;
+          }
+          audioRef.play().catch(() => {});
+        } catch (e) {
+          console.warn(`[VideoChat] Error mounting remote stream to audio element for ${id}:`, e);
         }
       }
 
@@ -273,24 +297,29 @@ export class VideoChat extends React.Component<VideoChatProps> {
         if (window.cowatch.remoteStreams) {
           delete window.cowatch.remoteStreams[id];
         }
+        if (window.cowatch.audioRefs) {
+          delete window.cowatch.audioRefs[id];
+        }
+        delete this.audioRefs[id];
       }
     };
 
-    // Attach onnegotiationneeded BEFORE adding tracks so initial negotiation fires cleanly
-    const isOfferer = selfId < id;
-    if (isOfferer) {
-      pc.onnegotiationneeded = async () => {
-        try {
-          if (pc.signalingState !== "stable") return;
-          const offer = await pc.createOffer();
-          if (pc.signalingState !== "stable") return;
-          await pc.setLocalDescription(offer);
-          this.sendSignal(id, { sdp: pc.localDescription });
-        } catch (e) {
-          console.warn("[VideoChat] Negotiation error:", e);
-        }
-      };
-    }
+    // Perfect negotiation: onnegotiationneeded triggers for any peer when tracks change
+    let isMakingOffer = false;
+    pc.onnegotiationneeded = async () => {
+      try {
+        if (isMakingOffer || pc.signalingState !== "stable") return;
+        isMakingOffer = true;
+        const offer = await pc.createOffer();
+        if (pc.signalingState !== "stable") return;
+        await pc.setLocalDescription(offer);
+        this.sendSignal(id, { sdp: pc.localDescription });
+      } catch (e) {
+        console.warn("[VideoChat] Negotiation error:", e);
+      } finally {
+        isMakingOffer = false;
+      }
+    };
 
     // Attach our outgoing tracks if ourStream is present
     if (ourStream) {
@@ -395,31 +424,53 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
   setupWebRTC = async () => {
     try {
-      let stream = new MediaStream([]);
+      let stream: MediaStream | null = null;
 
       const prefCameraOn = this.context.profile?.pref_camera_on ?? true;
       const prefMicOn = this.context.profile?.pref_mic_on ?? true;
 
-      if (prefCameraOn || prefMicOn) {
+      try {
+        stream = await navigator?.mediaDevices?.getUserMedia({
+          audio: AUDIO_CONSTRAINTS,
+          video: prefCameraOn ? { width: { ideal: 640 }, height: { ideal: 480 } } : true,
+        });
+      } catch (camErr) {
+        console.warn(
+          "[VideoChat] Failed initial getUserMedia with audio+video, falling back to audio-only:",
+          camErr,
+        );
         try {
           stream = await navigator?.mediaDevices?.getUserMedia({
-            audio: prefMicOn,
-            video: prefCameraOn,
+            audio: AUDIO_CONSTRAINTS,
+            video: false,
           });
-        } catch (e) {
-          console.warn("Failed initial getUserMedia with audio+video, falling back:", e);
+        } catch (audioErr) {
+          console.warn("[VideoChat] Audio-only with constraints failed, trying basic audio:", audioErr);
           try {
             stream = await navigator?.mediaDevices?.getUserMedia({
               audio: true,
               video: false,
             });
-          } catch (fallbackErr) {
-            console.warn("Audio-only fallback also failed or was denied:", fallbackErr);
+          } catch (finalErr) {
+            console.warn("[VideoChat] getUserMedia completely denied or unavailable:", finalErr);
           }
         }
       }
 
-      window.cowatch.ourStream = stream;
+      if (stream) {
+        const audioTrack = stream.getAudioTracks()[0];
+        if (audioTrack) {
+          audioTrack.enabled = prefMicOn;
+        }
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack) {
+          videoTrack.enabled = prefCameraOn;
+        }
+        window.cowatch.ourStream = stream;
+      } else {
+        window.cowatch.ourStream = new MediaStream([]);
+      }
+
       // alert server we've joined video chat
       this.socket?.emit("CMD:joinVideo");
       this.emitUserMute();
@@ -450,6 +501,10 @@ export class VideoChat extends React.Component<VideoChatProps> {
       if (window.cowatch.remoteStreams) {
         window.cowatch.remoteStreams = {};
       }
+      if (window.cowatch.audioRefs) {
+        window.cowatch.audioRefs = {};
+      }
+      this.audioRefs = {};
       this.pendingCandidates = {};
       this.socket?.emit("CMD:leaveVideo");
       this.forceUpdate();
@@ -457,6 +512,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
       console.error("Critical error in stopWebRTC:", err);
     }
   };
+
   addTrackToAllPCs = (track: MediaStreamTrack) => {
     const ourStream = window.cowatch.ourStream;
     const videoPCs = window.cowatch.videoPCs;
@@ -469,7 +525,9 @@ export class VideoChat extends React.Component<VideoChatProps> {
         const senders = pc.getSenders();
         const existingSender = senders.find((s: any) => s.track && s.track.kind === track.kind);
         if (existingSender) {
-          existingSender.replaceTrack(track);
+          existingSender.replaceTrack(track).catch((e: any) => {
+            console.warn(`[VideoChat] Error replacing track on PC for ${id}:`, e);
+          });
         } else {
           pc.addTrack(track, ourStream);
         }
@@ -490,8 +548,10 @@ export class VideoChat extends React.Component<VideoChatProps> {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         const newTrack = stream.getVideoTracks()[0];
-        ourStream.addTrack(newTrack);
-        this.addTrackToAllPCs(newTrack);
+        if (newTrack) {
+          ourStream.addTrack(newTrack);
+          this.addTrackToAllPCs(newTrack);
+        }
       } catch (e) {
         console.warn("Failed to acquire video track dynamically", e);
       }
@@ -501,7 +561,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
   getVideoWebRTC = () => {
     const ourStream = window.cowatch.ourStream;
-    return ourStream && ourStream.getVideoTracks()[0]?.enabled;
+    return Boolean(ourStream && ourStream.getVideoTracks()[0]?.enabled);
   };
 
   toggleAudioWebRTC = async () => {
@@ -513,10 +573,14 @@ export class VideoChat extends React.Component<VideoChatProps> {
       audioTrack.enabled = !audioTrack.enabled;
     } else {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: AUDIO_CONSTRAINTS,
+        });
         const newTrack = stream.getAudioTracks()[0];
-        ourStream.addTrack(newTrack);
-        this.addTrackToAllPCs(newTrack);
+        if (newTrack) {
+          ourStream.addTrack(newTrack);
+          this.addTrackToAllPCs(newTrack);
+        }
       } catch (e) {
         console.warn("Failed to acquire audio track dynamically", e);
       }
@@ -527,7 +591,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
   getAudioWebRTC = () => {
     const ourStream = window.cowatch.ourStream;
-    return (
+    return Boolean(
       ourStream &&
       ourStream.getAudioTracks()[0] &&
       ourStream.getAudioTracks()[0].enabled
@@ -560,6 +624,10 @@ export class VideoChat extends React.Component<VideoChatProps> {
           if (window.cowatch.remoteStreams) {
             delete window.cowatch.remoteStreams[key];
           }
+          if (window.cowatch.audioRefs) {
+            delete window.cowatch.audioRefs[key];
+          }
+          delete this.audioRefs[key];
           delete this.pendingCandidates[key];
         }
       });
@@ -589,6 +657,27 @@ export class VideoChat extends React.Component<VideoChatProps> {
         let pc = videoPCs[id];
         if (!pc || pc.connectionState === "closed" || pc.connectionState === "failed") {
           this.createPeerConnection(id);
+        } else if (ourStream) {
+          // Ensure all local tracks are attached to the existing peer connection
+          const currentSenders = pc.getSenders();
+          ourStream.getTracks().forEach((track) => {
+            const existingSender = currentSenders.find(
+              (s: RTCRtpSender) => s.track && s.track.kind === track.kind,
+            );
+            if (existingSender) {
+              if (existingSender.track !== track) {
+                existingSender.replaceTrack(track).catch((e: any) => {
+                  console.warn(`[VideoChat] Error replacing track on pc ${id}:`, e);
+                });
+              }
+            } else {
+              try {
+                pc.addTrack(track, ourStream);
+              } catch (e) {
+                console.warn(`[VideoChat] Error adding track on existing pc ${id}:`, e);
+              }
+            }
+          });
         }
       });
     } catch (err) {
@@ -737,6 +826,40 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
           return (
             <div key={p.id} className={styles.videoTile}>
+              {/* Dedicated audio element for remote participants to guarantee continuous voice playback */}
+              {!isSelf && p.isVideoChat && remoteStream && (
+                <audio
+                  ref={(el) => {
+                    if (el) {
+                      this.audioRefs[p.id] = el;
+                      if (window.cowatch?.audioRefs) {
+                        window.cowatch.audioRefs[p.id] = el;
+                      }
+                      if (el.srcObject !== remoteStream) {
+                        el.srcObject = remoteStream;
+                      }
+                      el.play().catch(() => {
+                        const unlock = () => {
+                          el.play().catch(() => {});
+                          window.removeEventListener("click", unlock);
+                          window.removeEventListener("touchstart", unlock);
+                        };
+                        window.addEventListener("click", unlock, { once: true });
+                        window.addEventListener("touchstart", unlock, { once: true });
+                      });
+                    } else {
+                      delete this.audioRefs[p.id];
+                      if (window.cowatch?.audioRefs) {
+                        delete window.cowatch.audioRefs[p.id];
+                      }
+                    }
+                  }}
+                  autoPlay
+                  playsInline
+                  muted={Boolean(p.isMuted)}
+                />
+              )}
+
               {(isSelfInCall || p.isVideoChat) && (
                 <video
                   ref={(el) => {
@@ -771,7 +894,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
                   }}
                   autoPlay
                   playsInline
-                  muted={isSelf}
+                  muted={true}
                   data-id={p.id}
                 />
               )}
