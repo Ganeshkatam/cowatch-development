@@ -1,0 +1,103 @@
+name: Finalize room lifecycle
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/finalize-room-lifecycle.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply lifecycle hardening
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              s = p.read_text()
+              if old not in s:
+                  raise SystemExit(f"Expected text not found in {path}: {old[:100]!r}")
+              if s.count(old) != 1:
+                  raise SystemExit(f"Expected exactly one match in {path}, found {s.count(old)}")
+              p.write_text(s.replace(old, new))
+
+          # server.ts: persisted room loading must never resurrect expired rooms.
+          replace_once("server/server.ts", '''          room.status = persistedRoom.status || 'waiting';\n          room.startedAt = persistedRoom.startedAt ? new Date(persistedRoom.startedAt as string) : undefined;\n          room.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;\n          room.owner_id = persistedRoom.owner_id;\n          room.isPermanent = persistedRoom.isPermanent || false;\n          room.durationMinutes = persistedRoom.durationMinutes ?? (persistedRoom.isPermanent ? null : 180);''', '''          room.startedAt = persistedRoom.startedAt ? new Date(persistedRoom.startedAt as string) : undefined;\n          room.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;\n          room.owner_id = persistedRoom.owner_id;\n          room.isPermanent = persistedRoom.isPermanent || false;\n          room.durationMinutes = persistedRoom.durationMinutes ?? null;\n          const persistedExpired =\n            !room.isPermanent &&\n            room.expiresAt &&\n            room.expiresAt.getTime() <= Date.now();\n          room.status = persistedExpired ? 'expired' : (persistedRoom.status || 'waiting');''')
+
+          replace_once("server/server.ts", '''        memoryRoom.isPermanent = persistedRoom.isPermanent || false;\n        memoryRoom.startedAt = persistedRoom.startedAt ? new Date(persistedRoom.startedAt as string) : undefined;\n        memoryRoom.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;\n        memoryRoom.durationMinutes = persistedRoom.durationMinutes ?? (persistedRoom.isPermanent ? null : 180);\n        if (persistedRoom.status === 'active' && memoryRoom.status === 'expired') {\n          memoryRoom.status = 'active';\n        }''', '''        memoryRoom.isPermanent = persistedRoom.isPermanent || false;\n        memoryRoom.startedAt = persistedRoom.startedAt ? new Date(persistedRoom.startedAt as string) : undefined;\n        memoryRoom.expiresAt = persistedRoom.expiresAt ? new Date(persistedRoom.expiresAt as string) : undefined;\n        memoryRoom.durationMinutes = persistedRoom.durationMinutes ?? null;\n        const persistedExpired =\n          !memoryRoom.isPermanent &&\n          memoryRoom.expiresAt &&\n          memoryRoom.expiresAt.getTime() <= Date.now();\n        if (persistedExpired) {\n          memoryRoom.status = 'expired';\n        } else {\n          memoryRoom.status = persistedRoom.status || memoryRoom.status;\n        }''')
+
+          # server.ts: strict temporary duration validation.
+          replace_once("server/server.ts", '''const releaseInterval = 5 * 60 * 1000;''', '''const releaseInterval = 5 * 60 * 1000;\nconst TEMPORARY_ROOM_DURATIONS = [30, 60, 120, 180, 360, 720, 1440] as const;\n\nfunction validateTemporaryDuration(value: unknown): number {\n  const duration = typeof value === "number"\n    ? value\n    : typeof value === "string" && value.trim() !== ""\n      ? Number(value)\n      : NaN;\n\n  if (!Number.isInteger(duration) || !TEMPORARY_ROOM_DURATIONS.includes(duration as typeof TEMPORARY_ROOM_DURATIONS[number])) {\n    throw new Error("Invalid durationMinutes. Must be one of 30, 60, 120, 180, 360, 720, or 1440 minutes.");\n  }\n  return duration;\n}''')
+
+          replace_once("server/server.ts", '''  const isPermanent = Boolean(req.body?.isPermanent);\n  const now = new Date();\n  // Validate and parse durationMinutes for temporary rooms\n  let durationMinutes: number | null = null;\n  if (!isPermanent) {\n    const rawDuration = Number(req.body?.durationMinutes);\n    if (!Number.isFinite(rawDuration) || rawDuration < 15 || rawDuration > 1440) {\n      durationMinutes = 180; // default 3 hours\n    } else {\n      durationMinutes = Math.round(rawDuration);\n    }\n  }''', '''  const isPermanent = Boolean(req.body?.isPermanent);\n  const now = new Date();\n  let durationMinutes: number | null = null;\n  if (!isPermanent) {\n    try {\n      durationMinutes = validateTemporaryDuration(req.body?.durationMinutes);\n    } catch (e: any) {\n      res.status(400).json({ error: e.message });\n      return;\n    }\n  }''')
+
+          # server.ts: remove status resurrection in owner room lists/details.
+          replace_once("server/server.ts", '''        } else if (r.status === 'expired') {\n          derivedStatus = 'active';\n        }''', '''        }''')
+          replace_once("server/server.ts", '''      } else if (room.status === 'expired') {\n        derivedStatus = 'active';\n      }''', '''      }''')
+
+          # server.ts: expiration event is delivered before sockets are disconnected.
+          replace_once("server/server.ts", '''          if (room.vBrowser) {\n            room.stopVBrowserInternal();\n          }\n\n          room.disconnectAllSockets();''', '''          if (room.vBrowser) {\n            room.stopVBrowserInternal();\n          }\n\n          room.emitToRoom("REC:roomExpired", {\n            status: "expired",\n            startedAt: room.startedAt ? room.startedAt.toISOString() : null,\n            expiresAt: row.previousExpiresAt ? new Date(row.previousExpiresAt).toISOString() : null,\n            isPermanent: false,\n            durationMinutes: room.durationMinutes,\n            serverNow: Date.now(),\n          });\n          room.emitToRoom("REC:getRoomState", {\n            owner: room.owner_id,\n            status: "expired",\n            startedAt: room.startedAt ? room.startedAt.toISOString() : null,\n            expiresAt: row.previousExpiresAt ? new Date(row.previousExpiresAt).toISOString() : null,\n            isPermanent: false,\n            durationMinutes: room.durationMinutes,\n            serverNow: Date.now(),\n          });\n          room.disconnectAllSockets();''')
+
+          # room.ts: inactive can only reactivate if its expiration is still valid.
+          replace_once("server/room.ts", '''      if (this.status === 'inactive') {\n        this.status = 'active';\n        this.lastUpdateTime = new Date();\n        if (postgres) {\n          updateObject(postgres, "rooms", { status: 'active', "lastActiveAt": new Date() }, { "roomId": this.roomId }).catch(console.error);\n        }\n      }''', '''      if (this.status === 'inactive') {\n        const hasExpired =\n          !this.isPermanent &&\n          this.expiresAt &&\n          this.expiresAt.getTime() <= Date.now();\n        if (hasExpired) {\n          this.status = 'expired';\n          if (postgres) {\n            updateObject(postgres, "rooms", { status: 'expired', "endedAt": new Date() }, { "roomId": this.roomId }).catch(console.error);\n          }\n          next();\n          return;\n        }\n        this.status = 'active';\n        this.lastUpdateTime = new Date();\n        if (postgres) {\n          updateObject(postgres, "rooms", { status: 'active', "lastActiveAt": new Date() }, { "roomId": this.roomId }).catch(console.error);\n        }\n      }''')
+
+          # room.ts: expired and ended are terminal; no resurrection.
+          replace_once("server/room.ts", '''      const validateNotExpired = () => {\n        if (this.status === 'expired') {\n          if (!this.isPermanent && this.expiresAt && this.expiresAt.getTime() > Date.now()) {\n            this.status = 'active';\n            if (postgres) {\n              postgres.query(\n                `UPDATE rooms SET status = 'active', "endedAt" = NULL WHERE "roomId" = $1`,\n                [this.roomId]\n              ).catch(console.error);\n            }\n          } else {\n            socket.emit("errorMessage", "This room has ended or expired.");\n            return false;\n          }\n        }\n        if (this.status === 'ended') {\n          socket.emit("errorMessage", "This room has ended or expired.");\n          return false;\n        }''', '''      const validateNotExpired = () => {\n        if (this.status === 'expired' || this.status === 'ended') {\n          socket.emit("errorMessage", "This room has ended or expired.");\n          return false;\n        }''')
+
+          # roomLifecycle.ts: never silently substitute 180 minutes.
+          replace_once("server/roomLifecycle.ts", '''  if (!isPermanent) {\n    const duration = Number(room.durationMinutes) || 180;\n    expiresAt = new Date(serverNow + duration * 60 * 1000);\n  }''', '''  if (!isPermanent) {\n    const duration = Number(room.durationMinutes);\n    if (!Number.isInteger(duration) || ![30, 60, 120, 180, 360, 720, 1440].includes(duration)) {\n      throw new Error("Room has an invalid temporary duration.");\n    }\n    expiresAt = new Date(serverNow + duration * 60 * 1000);\n  }''')
+
+          replace_once("server/roomLifecycle.ts", '''    memoryRoom.durationMinutes = isPermanent ? null : (room.durationMinutes ?? 180);''', '''    memoryRoom.durationMinutes = isPermanent ? null : room.durationMinutes;''')
+          replace_once("server/roomLifecycle.ts", '''    durationMinutes: isPermanent ? null : (room.durationMinutes ?? 180),''', '''    durationMinutes: isPermanent ? null : room.durationMinutes,''')
+          replace_once("server/roomLifecycle.ts", '''      durationMinutes: isPermanent ? null : (room.durationMinutes ?? 180),''', '''      durationMinutes: isPermanent ? null : room.durationMinutes,''')
+
+          # RoomDetails.tsx: waiting rooms are openable and owner can explicitly start.
+          replace_once("src/components/MyRooms/RoomDetails.tsx", '''  const [activeHistoryTab, setActiveHistoryTab] = useState<"chat" | "activity">("chat");''', '''  const [activeHistoryTab, setActiveHistoryTab] = useState<"chat" | "activity">("chat");\n  const [isStarting, setIsStarting] = useState(false);''')
+
+          replace_once("src/components/MyRooms/RoomDetails.tsx", '''  const confirmEndRoom = async () => {''', '''  const startRoom = async () => {\n    if (!room || room.status !== "waiting" || isStarting) return;\n    setIsStarting(true);\n    setActionError(null);\n    try {\n      const token = await getAccessToken();\n      const user = await supabase.auth.getUser();\n      if (!user.data.user) throw new Error("Not authenticated");\n      const response = await fetch(`${serverPath}/startRoom`, {\n        method: "POST",\n        headers: { "Content-Type": "application/json" },\n        body: JSON.stringify({ uid: user.data.user.id, token, roomId: room.roomId }),\n      });\n      const data = await response.json().catch(() => null);\n      if (!response.ok) {\n        throw new Error(data?.error || "Failed to start the watch party.");\n      }\n      history.push(urlPath);\n    } catch (e: any) {\n      setActionError(e.message || "Failed to start the watch party.");\n    } finally {\n      setIsStarting(false);\n    }\n  };\n\n  const confirmEndRoom = async () => {''')
+
+          replace_once("src/components/MyRooms/RoomDetails.tsx", '''  const isOpenable = !isClosed && (room.status === "active" || room.status === "expiring" || room.status === "scheduled" || room.status === "inactive");''', '''  const isOwner = Boolean(room.owner_id);\n  const isOpenable = !isClosed && (room.status === "waiting" || room.status === "active" || room.status === "expiring" || room.status === "scheduled" || room.status === "inactive");''')
+
+          replace_once("src/components/MyRooms/RoomDetails.tsx", '''            <div className={styles.heroActions}>\n              {isOpenable && (\n                <Button\n                  size="md"\n                  className={styles.primaryOpenBtn}\n                  onClick={() => history.push(urlPath)}\n                  leftSection={<IconPlayerPlayFilled size={16} />}\n                >\n                  Join Room\n                </Button>\n              )}''', '''            <div className={styles.heroActions}>\n              {room.status === "waiting" ? (\n                <>\n                  <Button\n                    size="md"\n                    className={styles.primaryOpenBtn}\n                    onClick={startRoom}\n                    loading={isStarting}\n                    leftSection={!isStarting ? <IconPlayerPlayFilled size={16} /> : undefined}\n                  >\n                    {isStarting ? "Starting..." : "Start Watch Party"}\n                  </Button>\n                  <Button\n                    size="md"\n                    className={styles.glassBtn}\n                    onClick={() => history.push(urlPath)}\n                  >\n                    Enter Waiting Room\n                  </Button>\n                </>\n              ) : isOpenable && (\n                <Button\n                  size="md"\n                  className={styles.primaryOpenBtn}\n                  onClick={() => history.push(urlPath)}\n                  leftSection={<IconPlayerPlayFilled size={16} />}\n                >\n                  Join Room\n                </Button>\n              )}''')
+
+          # Create.tsx: make the countdown semantics explicit in the creation UX.
+          replace_once("src/components/Create/Create.tsx", '''                            How long the room stays active once the host starts it\n                            </Text>''', '''                            How long the room stays active once the host starts it\n                            </Text>\n                            <Text size="xs" c="dimmed" mt={4}>\n                              The expiration countdown starts only when you start the watch party.\n                            </Text>''')
+
+          # schema.sql: duration is nullable; lifecycle invariants are explicit.
+          replace_once("sql/schema.sql", '''  "durationMinutes" integer DEFAULT 180,''', '''  "durationMinutes" integer,''')
+          replace_once("sql/schema.sql", '''  CONSTRAINT rooms_expiration_policy_check CHECK (\n    (("isPermanent" = true) AND ("expiresAt" IS NULL)) OR \n    (("isPermanent" = false) AND (status IN ('waiting', 'scheduled') OR ("expiresAt" IS NOT NULL)))\n  )''', '''  CONSTRAINT rooms_expiration_policy_check CHECK (\n    (("isPermanent" = true) AND "durationMinutes" IS NULL AND "startedAt" IS NOT NULL AND "expiresAt" IS NULL) OR\n    (("isPermanent" = false) AND status = 'waiting' AND "startedAt" IS NULL AND "expiresAt" IS NULL AND "durationMinutes" BETWEEN 30 AND 1440) OR\n    (("isPermanent" = false) AND status IN ('active', 'inactive') AND "startedAt" IS NOT NULL AND "expiresAt" IS NOT NULL AND "durationMinutes" BETWEEN 30 AND 1440)\n  )''')
+
+          # Persisted schema may contain existing permanent waiting rooms; allow the waiting state explicitly for permanent rooms.
+          replace_once("sql/schema.sql", '''    (("isPermanent" = true) AND "durationMinutes" IS NULL AND "startedAt" IS NOT NULL AND "expiresAt" IS NULL) OR''', '''    (("isPermanent" = true) AND "durationMinutes" IS NULL AND "expiresAt" IS NULL) OR''')
+
+          print("Room lifecycle hardening patches applied successfully.")
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify server typecheck
+        run: npm run typecheckServer
+
+      - name: Verify frontend typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Commit changes and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/server.ts server/room.ts server/roomLifecycle.ts src/components/MyRooms/RoomDetails.tsx src/components/Create/Create.tsx sql/schema.sql
+          git rm .github/workflows/finalize-room-lifecycle.yml
+          git commit -m "fix: finalize room lifecycle state machine"
+          git push origin main
