@@ -1,2 +1,3 @@
 - Never create TS/JS files to inspect the database. Strictly use the Supabase MCP tools (e.g., execute_sql, list_tables) or plain SQL scripts for database operations.
 - Always push commits to the remote repository (e.g., git push origin main) after committing changes.
+- Do not implement floating card designs on pages unnecessarily. Pages should use purposeful, full-screen, cohesive web layouts (e.g. split hero, integrated stages, or full dashboard layouts) rather than boxing content into isolated centered modal cards.
