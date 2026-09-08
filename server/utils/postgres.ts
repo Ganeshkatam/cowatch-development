@@ -1,4 +1,5 @@
 import { Pool, type PoolClient, type QueryResult } from "pg";
+import fs from "node:fs";
 import config from "../config.ts";
 
 export type PostgresClient = Pool | PoolClient;
@@ -10,7 +11,6 @@ if (config.DATABASE_URL) {
 
 export function normalizePostgresConnectionString(connStr: string): string {
   if (!connStr) return connStr;
-  // If direct Supabase host (IPv6 only) is passed, route to IPv4 pooler to prevent ENETUNREACH errors on cloud hosts
   const match = connStr.match(
     /^postgres(?:ql)?:\/\/postgres(?::([^@]*))?@db\.([a-z0-9]+)\.supabase\.co(?::\d+)?\/(.*)$/i,
   );
@@ -27,9 +27,7 @@ export function normalizePostgresConnectionString(connStr: string): string {
           : "");
     if (region) {
       const cleanRest = rest.split("?")[0];
-      const auth = password
-        ? `postgres.${projectRef}:${password}`
-        : `postgres.${projectRef}`;
+      const auth = password ? `postgres.${projectRef}:${password}` : `postgres.${projectRef}`;
       const poolerUrl = `postgresql://${auth}@aws-0-${region}.pooler.supabase.com:5432/${cleanRest}`;
       console.log(
         `[PostgreSQL] Direct Supabase host detected. Automatically routed through IPv4 pooler: aws-0-${region}.pooler.supabase.com:5432`,
@@ -42,15 +40,33 @@ export function normalizePostgresConnectionString(connStr: string): string {
 
 function createPool(rawConnectionString: string): Pool {
   const connectionString = normalizePostgresConnectionString(rawConnectionString);
+  const strict = String(config.DATABASE_SSL_STRICT || "false").toLowerCase() === "true";
+  const caPath = String(config.DATABASE_SSL_CA || "").trim();
+  let ca: string | undefined;
+
+  if (caPath) {
+    try {
+      ca = fs.readFileSync(caPath, "utf8");
+    } catch (error) {
+      throw new Error(`Unable to read DATABASE_SSL_CA: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  if (!strict && !ca) {
+    console.warn("[PostgreSQL] TLS certificate verification is disabled. Set DATABASE_SSL_STRICT=true for production.");
+  }
+
   const pool = new Pool({
     connectionString,
-    ssl: { rejectUnauthorized: false },
+    ssl: {
+      rejectUnauthorized: strict || Boolean(ca),
+      ...(ca ? { ca } : {}),
+    },
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
   });
 
-  // Handle errors on idle clients in the pool to prevent unhandled ECONNRESET crashes
   pool.on("error", (err) => {
     console.error("PostgreSQL pool idle client error:", err.message);
   });
@@ -58,15 +74,8 @@ function createPool(rawConnectionString: string): Pool {
   return pool;
 }
 
-/**
- * Use this if we need a new connection pool instead of sharing.
- * Guarantees we'll return a pool because we throw if we don't have it configured
- * @returns
- */
 export function newPostgres(): Pool {
-  if (!config.DATABASE_URL) {
-    throw new Error("postgres not configured");
-  }
+  if (!config.DATABASE_URL) throw new Error("postgres not configured");
   return postgres || createPool(config.DATABASE_URL);
 }
 
@@ -78,17 +87,10 @@ export async function updateObject(
 ): Promise<QueryResult<any>> {
   const columns = Object.keys(object);
   const values = Object.values(object);
-  // TODO support compound conditions, not just one
-  let query = `UPDATE ${table} SET ${columns
-    .map((c, i) => `"${c}" = $${i + 1}`)
-    .join(",")}
+  let query = `UPDATE ${table} SET ${columns.map((c, i) => `"${c}" = $${i + 1}`).join(",")}
     WHERE "${Object.keys(condition)[0]}" = $${Object.keys(object).length + 1}
     RETURNING *`;
-  //console.log(query);
-  const result = await postgres.query(query, [
-    ...values,
-    condition[Object.keys(condition)[0]],
-  ]);
+  const result = await postgres.query(query, [...values, condition[Object.keys(condition)[0]]]);
   return result;
 }
 
@@ -102,7 +104,6 @@ export async function insertObject(
   let query = `INSERT INTO ${table} (${columns.map((c) => `"${c}"`).join(",")})
     VALUES (${values.map((_, i) => "$" + (i + 1)).join(",")})
     RETURNING *`;
-  // console.log(query);
   const result = await postgres.query(query, values);
   return result;
 }
@@ -117,15 +118,9 @@ export async function upsertObject(
   const values = Object.values(object);
   let query = `INSERT INTO ${table} (${columns.map((c) => `"${c}"`).join(",")})
     VALUES (${values.map((_, i) => "$" + (i + 1)).join(",")})
-    ON CONFLICT (${Object.keys(conflict)
-      .map((k) => `"${k}"`)
-      .join(",")})
-    DO UPDATE SET ${Object.keys(object)
-      .map((c) => `"${c}" = EXCLUDED."${c}"`)
-      .join(",")}
+    ON CONFLICT (${Object.keys(conflict).map((k) => `"${k}"`).join(",")})
+    DO UPDATE SET ${Object.keys(object).map((c) => `"${c}" = EXCLUDED."${c}"`).join(",")}
     RETURNING *`;
-  // console.log(query);
   const result = await postgres.query(query, values);
   return result;
 }
-
