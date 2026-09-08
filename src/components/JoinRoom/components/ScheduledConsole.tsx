@@ -49,7 +49,7 @@ export const ScheduledConsole: React.FC<ScheduledConsoleProps> = ({
     <div className={styles.consolePanel}>
       <div className={styles.consoleHeader}>
         <span className={styles.consoleEyebrow}>
-          {isHost ? "HOST PRE-FLIGHT CONSOLE" : "SCHEDULED SCREENING"}
+          {isHost ? "HOST CONTROLS" : "SCHEDULED SCREENING"}
         </span>
         <h2 className={styles.consoleHeading}>
           {isHost ? "Room Scheduled" : "Starting Soon"}

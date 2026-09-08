@@ -33,7 +33,7 @@ export const HostConsole: React.FC<HostConsoleProps> = ({
   return (
     <div className={styles.consolePanel}>
       <div className={styles.consoleHeader}>
-        <span className={styles.consoleEyebrow}>HOST COMMAND CONSOLE</span>
+        <span className={styles.consoleEyebrow}>HOST CONTROLS</span>
         <h2 className={styles.consoleHeading}>You are the Room Host</h2>
         <p className={styles.consoleSubheading}>
           Your watch room is live and ready for screening.
