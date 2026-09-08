@@ -37,7 +37,7 @@ export function useRoomFormState(): RoomFormState {
   const [lock, setLock] = useState(false);
   const [isPermanent, setIsPermanent] = useState(false);
   const [isWaitingLoungeEnabled, setIsWaitingLoungeEnabled] = useState(false);
-  const [durationMinutes, setDurationMinutes] = useState<string>("60");
+  const [durationMinutes, setDurationMinutes] = useState<string>("300");
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -52,8 +52,8 @@ export function useRoomFormState(): RoomFormState {
 
   const handleCoverChange = (file: File | null) => {
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError("Cover photo too large (max 5MB).");
+      if (file.size > 1 * 1024 * 1024) {
+        setError("Cover photo too large (max 1MB).");
         return;
       }
       if (!file.type.startsWith("image/")) {
@@ -203,76 +203,9 @@ export function getLocalTimezoneDisplay(): string {
   }
 }
 
-export interface SchedulePreset {
-  label: string;
-  date: string; // YYYY-MM-DD
-  time: string; // HH:mm
-}
-
 export function formatDate(d: Date): string {
   const y = d.getFullYear();
   const m = (d.getMonth() + 1).toString().padStart(2, "0");
   const day = d.getDate().toString().padStart(2, "0");
   return `${y}-${m}-${day}`;
-}
-
-function formatTime(d: Date): string {
-  const h = d.getHours().toString().padStart(2, "0");
-  const m = d.getMinutes().toString().padStart(2, "0");
-  return `${h}:${m}`;
-}
-
-export function getSchedulePresets(): SchedulePreset[] {
-  const now = new Date();
-  const presets: SchedulePreset[] = [];
-
-  // Preset 1: In 1 Hour (rounded to nearest 5 minutes)
-  const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
-  const remainderMins = inOneHour.getMinutes() % 5;
-  if (remainderMins !== 0) {
-    inOneHour.setMinutes(inOneHour.getMinutes() + (5 - remainderMins));
-  }
-  inOneHour.setSeconds(0, 0);
-  presets.push({
-    label: "In 1 Hour",
-    date: formatDate(inOneHour),
-    time: formatTime(inOneHour),
-  });
-
-  // Preset 2: Tonight at 8:00 PM (or 10:00 PM / Tomorrow 2:00 PM)
-  const tonight = new Date();
-  if (now.getHours() < 19 || (now.getHours() === 19 && now.getMinutes() < 45)) {
-    tonight.setHours(20, 0, 0, 0);
-    presets.push({
-      label: "Tonight 8:00 PM",
-      date: formatDate(tonight),
-      time: "20:00",
-    });
-  } else if (now.getHours() < 21) {
-    tonight.setHours(22, 0, 0, 0);
-    presets.push({
-      label: "Tonight 10:00 PM",
-      date: formatDate(tonight),
-      time: "22:00",
-    });
-  } else {
-    const tomorrowNoon = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    tomorrowNoon.setHours(14, 0, 0, 0);
-    presets.push({
-      label: "Tomorrow 2:00 PM",
-      date: formatDate(tomorrowNoon),
-      time: "14:00",
-    });
-  }
-
-  // Preset 3: Tomorrow at 8:00 PM
-  const tomorrowNight = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  tomorrowNight.setHours(20, 0, 0, 0);
-  presets.push({
-    label: "Tomorrow 8:00 PM",
-    date: formatDate(tomorrowNight),
-    time: "20:00",
-  });
-
-  return presets;
 }

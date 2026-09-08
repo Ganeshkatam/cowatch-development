@@ -11,7 +11,6 @@ import {
   useRoomFormState,
   submitRoomCreation,
   getLocalTimezoneDisplay,
-  getSchedulePresets,
   formatDate,
 } from "../Create/roomCreationDomain";
 
@@ -22,22 +21,57 @@ import { TimePickerDropdown } from "./TimePickerDropdown";
 import createStyles from "../Create/Create.module.css";
 import scheduleStyles from "./ScheduleRoom.module.css";
 
+function getNextValidScheduleTime(): { date: string; time: string } {
+  const target = new Date(Date.now() + 60 * 60 * 1000);
+  const rem = target.getMinutes() % 15;
+  if (rem !== 0) {
+    target.setMinutes(target.getMinutes() + (15 - rem));
+  }
+  target.setSeconds(0, 0);
+  const h = target.getHours().toString().padStart(2, "0");
+  const m = target.getMinutes().toString().padStart(2, "0");
+  return {
+    date: formatDate(target),
+    time: `${h}:${m}`,
+  };
+}
+
 export const ScheduleRoom: React.FC = () => {
   const { user } = useContext(MetadataContext);
   const history = useHistory();
   const formState = useRoomFormState();
-
-  const presets = useMemo(() => getSchedulePresets(), []);
   const timezoneDisplay = useMemo(() => getLocalTimezoneDisplay(), []);
 
-  // Default to the first preset (e.g. Tonight 8:00 PM or Tomorrow)
-  const defaultPreset = presets[0] || {
-    date: formatDate(new Date()),
-    time: "20:00",
-  };
-  const [scheduleDate, setScheduleDate] = useState<string>(defaultPreset.date);
-  const [scheduleTime, setScheduleTime] = useState<string>(defaultPreset.time);
-  const [activePresetIndex, setActivePresetIndex] = useState<number | null>(0);
+  // Default to 1 hour from current time (rounded to next 15 mins)
+  const [scheduleDate, setScheduleDate] = useState<string>(() => getNextValidScheduleTime().date);
+  const [scheduleTime, setScheduleTime] = useState<string>(() => getNextValidScheduleTime().time);
+
+  // Always check the time on refresh/mount and window focus to guarantee a future timestamp
+  useEffect(() => {
+    const ensureFutureTime = () => {
+      if (!scheduleDate || !scheduleTime) {
+        const next = getNextValidScheduleTime();
+        setScheduleDate(next.date);
+        setScheduleTime(next.time);
+        return;
+      }
+
+      const combined = new Date(`${scheduleDate}T${scheduleTime}`);
+      if (isNaN(combined.getTime()) || combined.getTime() <= Date.now()) {
+        const next = getNextValidScheduleTime();
+        setScheduleDate(next.date);
+        setScheduleTime(next.time);
+      }
+    };
+
+    ensureFutureTime();
+    window.addEventListener("focus", ensureFutureTime);
+    const interval = setInterval(ensureFutureTime, 60000);
+    return () => {
+      window.removeEventListener("focus", ensureFutureTime);
+      clearInterval(interval);
+    };
+  }, [scheduleDate, scheduleTime]);
 
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState("");
@@ -67,22 +101,13 @@ export const ScheduleRoom: React.FC = () => {
     }
   }, [scheduleDate, scheduleTime]);
 
-  const handleApplyPreset = (preset: { date: string; time: string }, index: number) => {
-    setScheduleDate(preset.date);
-    setScheduleTime(preset.time);
-    setActivePresetIndex(index);
-    setFormError("");
-  };
-
   const handleDateChange = (val: string) => {
     setScheduleDate(val);
-    setActivePresetIndex(null);
     setFormError("");
   };
 
   const handleTimeChange = (val: string) => {
     setScheduleTime(val);
-    setActivePresetIndex(null);
     setFormError("");
   };
 
@@ -193,6 +218,7 @@ export const ScheduleRoom: React.FC = () => {
                     <TimePickerDropdown
                       value={scheduleTime}
                       onChange={handleTimeChange}
+                      selectedDate={scheduleDate}
                     />
                   </div>
                 </div>
@@ -201,24 +227,6 @@ export const ScheduleRoom: React.FC = () => {
                   <IconWorld size={15} />
                   <span>Your local time: {timezoneDisplay}</span>
                 </div>
-
-                {presets.length > 0 && (
-                  <div className={scheduleStyles.presetsRow}>
-                    <span className={scheduleStyles.presetsLabel}>Quick Presets:</span>
-                    {presets.map((preset, idx) => (
-                      <button
-                        key={preset.label}
-                        type="button"
-                        className={`${scheduleStyles.presetChip} ${
-                          activePresetIndex === idx ? scheduleStyles.presetChipActive : ""
-                        }`}
-                        onClick={() => handleApplyPreset(preset, idx)}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* Shared Room Fields (Identity, Security, Party Settings) */}

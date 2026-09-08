@@ -10,7 +10,7 @@ export function initRoomLifecycle(io: Server, rooms: Map<string, Room>) {
   roomsMap = rooms;
 }
 
-export const ALLOWED_DURATION_PRESETS = [30, 60, 120, 180, 360, 720, 1440] as const;
+export const ALLOWED_DURATION_PRESETS = [30, 60, 120, 180, 300, 360, 720, 1440] as const;
 export type AllowedDurationPreset = (typeof ALLOWED_DURATION_PRESETS)[number];
 
 export function validateTemporaryDuration(val: unknown): number {

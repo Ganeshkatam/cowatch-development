@@ -158,8 +158,8 @@ export const SettingsModal = ({
 
   const handleFileChange = (payload: File | null) => {
     if (payload) {
-      if (payload.size > 5 * 1024 * 1024) {
-        setError("Cover photo too large (max 5MB).");
+      if (payload.size > 1 * 1024 * 1024) {
+        setError("Cover photo too large (max 1MB).");
         return;
       }
       setCoverFile(payload);

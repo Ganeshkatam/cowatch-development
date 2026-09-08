@@ -121,7 +121,7 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({ formState })
               </Group>
             </div>
             <Text size="xs" c="dimmed" mt={4}>
-              Recommended ratio 16:9, max file size 5MB (PNG, JPG, WebP)
+              Recommended ratio 16:9, max file size 1MB (PNG, JPG, WebP)
             </Text>
           </div>
         </Stack>
@@ -281,6 +281,7 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({ formState })
                   { value: "60", label: "1 hour" },
                   { value: "120", label: "2 hours" },
                   { value: "180", label: "3 hours" },
+                  { value: "300", label: "5 hours" },
                   { value: "360", label: "6 hours" },
                   { value: "720", label: "12 hours" },
                   { value: "1440", label: "24 hours" },

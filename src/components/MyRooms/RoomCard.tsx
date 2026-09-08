@@ -219,8 +219,8 @@ export const EditRoomModal = ({
   const handleFileChange = (payload: File | null) => {
     if (isExpired) return;
     if (payload) {
-      if (payload.size > 5 * 1024 * 1024) {
-        setError("Cover photo too large (max 5MB).");
+      if (payload.size > 1 * 1024 * 1024) {
+        setError("Cover photo too large (max 1MB).");
         return;
       }
       setCoverFile(payload);
@@ -529,7 +529,7 @@ export const EditRoomModal = ({
                       )}
                     </div>
                     <Text size="xs" c="dimmed" style={{ fontSize: "11px", lineHeight: 1.3 }}>
-                      16:9 ratio (PNG, JPG, WEBP, max 5MB)
+                      16:9 ratio (PNG, JPG, WEBP, max 1MB)
                     </Text>
                   </div>
                 )}
@@ -847,7 +847,7 @@ const useRoomActions = (room: RoomSummary, onDelete: (id: string) => void, onRef
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not logged in");
-      if (file.size > 5 * 1024 * 1024) throw new Error("Cover photo too large (max 5MB).");
+      if (file.size > 1 * 1024 * 1024) throw new Error("Cover photo too large (max 1MB).");
 
       const fileExt = file.name.split('.').pop();
       const safeRoomId = room.roomId.startsWith("/") ? room.roomId.substring(1) : room.roomId;
