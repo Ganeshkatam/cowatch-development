@@ -7,7 +7,7 @@ import { type AssignedVM } from "./vm/base.ts";
 import { getStartOfDay } from "./utils/time.ts";
 import { postgres, updateObject, upsertObject } from "./utils/postgres.ts";
 import { hashRoomPasscode, verifyRoomPasscode, isBcryptHash } from "./utils/roomPasscode.ts";
-import { validateRoomInviteCredential, verifyRoomInviteCredential } from "./utils/roomInvites.ts";
+import { validateRoomInviteCredential } from "./utils/roomInvites.ts";
 import { startRoomLifecycle } from "./roomLifecycle.ts";
 import {
   fetchYoutubeVideo,
@@ -233,9 +233,14 @@ export class Room {
         let isInviteValid = false;
         if (typeof inviteCredential === "string" && inviteCredential.length > 0) {
           const cleanRoomId = this.roomId.startsWith("/") ? this.roomId.substring(1) : this.roomId;
-          isInviteValid =
+          const validation =
             (await validateRoomInviteCredential(cleanRoomId, inviteCredential)) ||
             (await validateRoomInviteCredential(this.roomId, inviteCredential));
+          if (validation.valid && validation.inviteId) {
+            isInviteValid = true;
+            socket.data = socket.data || {};
+            socket.data.inviteId = validation.inviteId;
+          }
         }
 
         if (roomPasscode && !isOwner && !isInviteValid) {
@@ -2258,6 +2263,16 @@ export class Room {
     this.emitToRoom("chatinit", formattedMessages.reverse());
     this.emitToRoom("ROOM_MESSAGES", formattedMessages);
   };
+
+  public disconnectInviteSockets(inviteId: string): void {
+    const ns = this.io.of(this.roomId);
+    for (const socket of ns.sockets.values()) {
+      if (socket.data?.inviteId === inviteId) {
+        socket.emit("errorMessage", "Your invitation has been revoked.");
+        socket.disconnect(true);
+      }
+    }
+  }
 }
 
 function isValidUUID(id: string) {

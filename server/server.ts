@@ -624,6 +624,10 @@ app.post("/revokeInvite", async (req, res) => {
 
   try {
     await revokeRoomInvite(cleanRoomId, inviteId, decoded.uid);
+    const liveRoom = rooms.get(cleanRoomId) || rooms.get("/" + cleanRoomId);
+    if (liveRoom) {
+      liveRoom.disconnectInviteSockets(inviteId);
+    }
     res.json({ success: true });
   } catch (err: any) {
     console.error("revokeInvite error:", err);

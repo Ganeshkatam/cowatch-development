@@ -440,7 +440,7 @@ class CoWatch extends React.Component {
                     <Route
                       path="/"
                       exact
-                      render={(props) => {
+                      render={(_props: any) => {
                         return (
                           <React.Fragment>
                             <TopBar hideNewRoom />
@@ -471,14 +471,14 @@ class CoWatch extends React.Component {
                     <Route
                       path="/create"
                       exact
-                      render={({ location }) => (
+                      render={({ location }: { location: any }) => (
                         <Redirect to={{ pathname: "/room/new", search: location.search }} />
                       )}
                     />
                     <Route
                       path="/watch/:roomId"
                       exact
-                      render={(props) => {
+                      render={(props: any) => {
                         return <RequireVerifiedEmail><App urlRoomId={props.match.params.roomId} /></RequireVerifiedEmail>;
                       }}
                     />
