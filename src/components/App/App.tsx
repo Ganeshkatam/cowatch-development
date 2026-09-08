@@ -297,6 +297,7 @@ export class App extends React.Component<AppProps, AppState> {
   isLocalStreamAFile = false;
   publisherConns: PCDict = {};
   consumerConn?: RTCPeerConnection;
+  pendingSSCandidates: Record<string, RTCIceCandidateInit[]> = {};
   progressUpdater?: number;
   heartbeat: number | undefined = undefined;
   startingTimer: any = null;
@@ -1268,18 +1269,43 @@ export class App extends React.Component<AppProps, AppState> {
           sharer: boolean;
         }) => {
           config.NODE_ENV === "development" && console.log(data);
-          // Handle messages received from signaling server
           const msg = data.msg;
           const from = data.from;
-          // Determine whether the message came from the sharer or the sharee
-          const pc = (
+          if (!from || !msg) return;
+
+          // If message is from sharer and consumerConn isn't ready yet, initialize it
+          if (data.sharer && !this.consumerConn) {
+            await this.setupRTCConnections();
+          }
+
+          let pc = (
             data.sharer ? this.consumerConn : this.publisherConns[from]
           ) as RTCPeerConnection;
+
+          if (!pc && !data.sharer && this.localStreamToPublish) {
+            await this.setupRTCConnections();
+            pc = this.publisherConns[from];
+          }
+
+          if (!pc) {
+            console.warn("[App] signalSS: peer connection not available for", from);
+            return;
+          }
+
           if (msg.ice !== undefined) {
-            pc.addIceCandidate(new RTCIceCandidate(msg.ice));
+            if (!pc.remoteDescription) {
+              if (!this.pendingSSCandidates[from]) {
+                this.pendingSSCandidates[from] = [];
+              }
+              this.pendingSSCandidates[from].push(msg.ice);
+              return;
+            }
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(msg.ice));
+            } catch (e) {
+              console.warn("[App] Error adding ICE candidate in signalSS:", e);
+            }
           } else if (msg.sdp && msg.sdp.type === "offer") {
-            // console.log('offer');
-            // TODO Currently ios/Safari cannot handle this property, so remove it from the offer
             const _sdp = msg.sdp.sdp
               .split("\n")
               .filter((line: string) => {
@@ -1288,14 +1314,24 @@ export class App extends React.Component<AppProps, AppState> {
               .join("\n");
             msg.sdp.sdp = _sdp;
             await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+
+            // Drain queued ICE candidates for this peer
+            if (this.pendingSSCandidates[from]?.length) {
+              for (const cand of this.pendingSSCandidates[from]) {
+                try {
+                  await pc.addIceCandidate(new RTCIceCandidate(cand));
+                } catch (e) {
+                  console.warn("[App] Error adding drained ICE candidate in signalSS:", e);
+                }
+              }
+              delete this.pendingSSCandidates[from];
+            }
+
             const answer = await pc.createAnswer();
-            // Allow stereo audio
             answer.sdp = answer.sdp?.replace(
               "useinbandfec=1",
               "useinbandfec=1; stereo=1; maxaveragebitrate=510000",
             );
-            // console.log(answer.sdp);
-            // Allow multichannel audio if Chromium
             //@ts-expect-error
             const isChromium = Boolean(window.chrome);
             if (isChromium) {
@@ -1309,7 +1345,18 @@ export class App extends React.Component<AppProps, AppState> {
             await pc.setLocalDescription(answer);
             this.sendSignalSS(from, { sdp: pc.localDescription }, !data.sharer);
           } else if (msg.sdp && msg.sdp.type === "answer") {
-            pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            // Drain queued ICE candidates for this peer
+            if (this.pendingSSCandidates[from]?.length) {
+              for (const cand of this.pendingSSCandidates[from]) {
+                try {
+                  await pc.addIceCandidate(new RTCIceCandidate(cand));
+                } catch (e) {
+                  console.warn("[App] Error adding drained ICE candidate in signalSS:", e);
+                }
+              }
+              delete this.pendingSSCandidates[from];
+            }
           }
         },
       );
@@ -1593,6 +1640,12 @@ export class App extends React.Component<AppProps, AppState> {
 
   focusHeaderSearch = () => {
     window.dispatchEvent(new CustomEvent("cowatch:focus-search"));
+    const trigger = document.querySelector<HTMLButtonElement>(
+      '[title="Search or paste media link"]',
+    );
+    if (trigger) {
+      trigger.click();
+    }
     const el = document.getElementById("cowatch-header-search");
     el?.focus();
   };
@@ -2099,6 +2152,7 @@ export class App extends React.Component<AppProps, AppState> {
       pc.close();
     });
     this.publisherConns = {};
+    this.pendingSSCandidates = {};
     this.isLocalStreamAFile = false;
     if (this.mediasoupPubSocket) {
       this.mediasoupPubSocket.close();
@@ -2153,8 +2207,8 @@ export class App extends React.Component<AppProps, AppState> {
 
       this.state.participants.forEach((user) => {
         const id = user.id;
-        if (id === selfId && this.isLocalStreamAFile) {
-          // Don't set up a connection to ourselves if sharing file
+        if (id === selfId) {
+          // Don't set up a connection to ourselves
           return;
         }
         if (!this.publisherConns[id]) {
@@ -2167,28 +2221,34 @@ export class App extends React.Component<AppProps, AppState> {
             }
           });
           pc.onicecandidate = (event) => {
-            // We generated an ICE candidate, send it to peer
             if (event.candidate) {
               this.sendSignalSS(id, { ice: event.candidate }, true);
             }
           };
-          pc.onnegotiationneeded = async () => {
-            // Start connection for peer's video
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            this.sendSignalSS(id, { sdp: pc.localDescription }, true);
+
+          const createAndSendOffer = async () => {
+            try {
+              if (pc.signalingState !== "stable") return;
+              const offer = await pc.createOffer();
+              if (pc.signalingState !== "stable") return;
+              await pc.setLocalDescription(offer);
+              this.sendSignalSS(id, { sdp: pc.localDescription }, true);
+            } catch (e) {
+              console.warn(`[App] Error creating screen share offer for ${id}:`, e);
+            }
           };
+
+          pc.onnegotiationneeded = createAndSendOffer;
+          // Dispatch initial offer immediately to avoid browser negotiation delay
+          createAndSendOffer();
         }
       });
     }
     // We're a watcher, establish connection to sharer
-    // If screensharing, sharer also does this
-    // If filesharing, sharer does not do this since we use leftVideo
-    if (sharer && !this.consumerConn && !this.isLocalStreamAFile) {
+    if (sharer && !this.consumerConn && !this.isLocalStreamAFile && sharer.id !== selfId) {
       const pc = new RTCPeerConnection({ iceServers: iceServers() });
       this.consumerConn = pc;
       pc.onicecandidate = (event) => {
-        // We generated an ICE candidate, send it to sharer
         if (event.candidate) {
           this.sendSignalSS(sharer.id, { ice: event.candidate });
         }
@@ -2202,15 +2262,28 @@ export class App extends React.Component<AppProps, AppState> {
             if ("jitterBufferTarget" in event.receiver) {
               (event.receiver as any).jitterBufferTarget = 0;
             }
-          } catch (e) { }
+          } catch (e) {}
         }
-        // Mount the stream from sharer
-        // console.log(stream);
+        const stream =
+          event.streams && event.streams[0]
+            ? event.streams[0]
+            : new MediaStream([event.track]);
         const leftVideo = this.HTMLInterface.getVideoEl();
         if (leftVideo) {
           leftVideo.src = "";
-          leftVideo.srcObject = event.streams[0];
-          this.localPlay();
+          leftVideo.srcObject = stream;
+          const playPromise = this.localPlay();
+          if (playPromise && typeof (playPromise as any).catch === "function") {
+            (playPromise as any).catch(() => {
+              const unlock = () => {
+                this.localPlay();
+                window.removeEventListener("click", unlock);
+                window.removeEventListener("touchstart", unlock);
+              };
+              window.addEventListener("click", unlock, { once: true });
+              window.addEventListener("touchstart", unlock, { once: true });
+            });
+          }
         }
       };
     }
@@ -2691,6 +2764,7 @@ export class App extends React.Component<AppProps, AppState> {
         localSetSubtitleMode={this.Player().setSubtitleMode}
         roomPlaylistPlay={this.roomPlaylistPlay}
         playlist={this.state.playlist}
+        onOpenAddMedia={this.focusHeaderSearch}
       />
     );
     return (

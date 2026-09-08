@@ -261,7 +261,8 @@ export const HeaderSearchBar: React.FC<HeaderSearchBarProps> = ({
         title="Search or paste media link"
         disabled={disabled}
       >
-        <IconSearch size={16} />
+        <IconSearch size={14} />
+        <span className={styles.mobileSearchText}>Set Movie</span>
       </button>
 
       {/* Mobile Back Button (to collapse overlay on mobile) */}

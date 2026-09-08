@@ -16,6 +16,7 @@ import {
   IconMaximize,
   IconPictureInPicture,
   IconPlayerSkipForwardFilled,
+  IconMovie,
 } from "@tabler/icons-react";
 
 interface ControlsProps {
@@ -30,6 +31,7 @@ interface ControlsProps {
   leaderTime?: number;
   isPauseDisabled?: boolean;
   localTogglePiP?: () => void;
+  onOpenAddMedia?: () => void;
   playbackRate: number;
   roomPlaybackRate: number;
   isYouTube: boolean;
@@ -324,6 +326,18 @@ export const Controls = (props: ControlsProps) => {
         title="Loop"
         color={props.loop ? "green" : softWhite}
       />
+      {props.onOpenAddMedia && (
+        <IconMovie
+          onClick={() => {
+            if (!disabled) {
+              props.onOpenAddMedia?.();
+            }
+          }}
+          className={styles.action}
+          title={disabled ? "Controls locked" : "Set Movie / Media"}
+          color={softWhite}
+        />
+      )}
       {props.isYouTube ? (
         <Menu>
           <Menu.Target>

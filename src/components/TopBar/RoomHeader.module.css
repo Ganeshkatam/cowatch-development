@@ -441,25 +441,44 @@
     display: none;
   }
   .roomIdentity {
-    display: none;
-  }
-  .searchSection {
-    max-width: none;
-    width: 100%;
-  }
-}
-
-@media only screen and (max-width: 480px) {
-  .searchSection {
-    display: none;
-  }
-  .roomIdentity {
     display: flex;
-    max-width: 150px;
+    max-width: 140px;
   }
   .roomTitle {
     max-width: 90px;
     font-size: 13px;
+  }
+  .searchSection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+@media only screen and (max-width: 480px) {
+  .header {
+    padding: 0 8px;
+    gap: 8px;
+  }
+  .leftSection {
+    gap: 6px;
+    flex: 0 1 auto;
+  }
+  .searchSection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  .roomIdentity {
+    display: flex;
+    max-width: 110px;
+  }
+  .roomTitle {
+    max-width: 75px;
+    font-size: 12.5px;
   }
   .waitingHeaderBtn {
     padding: 0 6px;

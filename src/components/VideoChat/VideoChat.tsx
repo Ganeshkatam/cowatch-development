@@ -287,6 +287,14 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
       event.track.onunmute = () => {
         console.log(`[VideoChat] Track unmuted from ${id} (${event.track.kind})`);
+        if (videoRefs && videoRefs[id]) {
+          try {
+            if (videoRefs[id].srcObject !== existing) {
+              videoRefs[id].srcObject = existing;
+            }
+            videoRefs[id].play().catch(() => {});
+          } catch (e) {}
+        }
         this.forceUpdate();
       };
       event.track.onmute = () => {
@@ -302,7 +310,15 @@ export class VideoChat extends React.Component<VideoChatProps> {
           if (videoRefs[id].srcObject !== existing) {
             videoRefs[id].srcObject = existing;
           }
-          videoRefs[id].play().catch(() => {});
+          videoRefs[id].play().catch(() => {
+            const unlock = () => {
+              videoRefs[id]?.play().catch(() => {});
+              window.removeEventListener("click", unlock);
+              window.removeEventListener("touchstart", unlock);
+            };
+            window.addEventListener("click", unlock, { once: true });
+            window.addEventListener("touchstart", unlock, { once: true });
+          });
         } catch (e) {
           console.warn(`[VideoChat] Error mounting remote stream to video element for ${id}:`, e);
         }
@@ -362,8 +378,8 @@ export class VideoChat extends React.Component<VideoChatProps> {
       }
     };
 
-    // Attach our outgoing tracks if ourStream is present
-    if (ourStream) {
+    // Attach our outgoing tracks if ourStream is present, or transceivers to receive
+    if (ourStream && ourStream.getTracks().length > 0) {
       ourStream.getTracks().forEach((track) => {
         try {
           pc.addTrack(track, ourStream);
@@ -371,6 +387,11 @@ export class VideoChat extends React.Component<VideoChatProps> {
           console.warn(`[VideoChat] Could not add track (${track.kind}) to pc ${id}:`, e);
         }
       });
+    } else {
+      try {
+        pc.addTransceiver("video", { direction: "recvonly" });
+        pc.addTransceiver("audio", { direction: "recvonly" });
+      } catch (e) {}
     }
 
     return pc;
@@ -391,9 +412,11 @@ export class VideoChat extends React.Component<VideoChatProps> {
         }
 
         const isOfferer = getOrCreateClientId() < from;
+        const offerCollision = pc.signalingState !== "stable";
+
         // Perfect negotiation glare resolution: if we are impolite (isOfferer=true), ignore collision
         // If we are polite (isOfferer=false), rollback local offer to accept incoming offer
-        if (pc.signalingState !== "stable") {
+        if (offerCollision) {
           if (isOfferer) {
             console.log("[VideoChat] Impolite peer ignoring offer collision from", from);
             return;
@@ -423,6 +446,25 @@ export class VideoChat extends React.Component<VideoChatProps> {
         }
         await pc.setLocalDescription(answer);
         this.sendSignal(from, { sdp: pc.localDescription });
+
+        // If we rolled back our own offer, check if we need to renegotiate our outgoing tracks
+        const ourStream = window.cowatch.ourStream;
+        if (offerCollision && !isOfferer && ourStream && ourStream.getTracks().length > 0) {
+          setTimeout(async () => {
+            try {
+              if (pc.signalingState === "stable") {
+                const renegotiationOffer = await pc.createOffer();
+                if (renegotiationOffer.sdp) {
+                  renegotiationOffer.sdp = renegotiationOffer.sdp.replace(/useinbandfec=1/g, "useinbandfec=1;minptime=10");
+                }
+                await pc.setLocalDescription(renegotiationOffer);
+                this.sendSignal(from, { sdp: pc.localDescription });
+              }
+            } catch (err) {
+              console.warn("[VideoChat] Error renegotiating after rollback:", err);
+            }
+          }, 100);
+        }
         return;
       }
 
@@ -566,17 +608,24 @@ export class VideoChat extends React.Component<VideoChatProps> {
     const selfId = getOrCreateClientId();
     if (!ourStream) return;
 
-    Object.entries(videoPCs).forEach(([id, pc]: [string, any]) => {
+    Object.entries(videoPCs).forEach(async ([id, pc]: [string, any]) => {
       if (id === selfId) return;
       try {
         const senders = pc.getSenders();
         const existingSender = senders.find((s: any) => s.track && s.track.kind === track.kind);
         if (existingSender) {
-          existingSender.replaceTrack(track).catch((e: any) => {
-            console.warn(`[VideoChat] Error replacing track on PC for ${id}:`, e);
-          });
+          await existingSender.replaceTrack(track);
         } else {
           pc.addTrack(track, ourStream);
+          // Trigger prompt renegotiation if connection is stable
+          if (pc.signalingState === "stable") {
+            const offer = await pc.createOffer();
+            if (offer.sdp) {
+              offer.sdp = offer.sdp.replace(/useinbandfec=1/g, "useinbandfec=1;minptime=10");
+            }
+            await pc.setLocalDescription(offer);
+            this.sendSignal(id, { sdp: pc.localDescription });
+          }
         }
       } catch (e) {
         console.warn(`[VideoChat] Error updating track on PC for ${id}:`, e);
@@ -651,19 +700,20 @@ export class VideoChat extends React.Component<VideoChatProps> {
       const ourStream = window.cowatch.ourStream;
       const videoPCs = window.cowatch.videoPCs;
       const videoRefs = window.cowatch.videoRefs;
-      if (!ourStream) {
-        // We haven't started video chat, exit
-        return;
-      }
       const selfId = getOrCreateClientId();
 
-      // Delete and close any connections that aren't in the current member list (maybe someone disconnected)
-      // This allows them to rejoin later
-      const clientIds = new Set(
-        this.props.participants.filter((p) => p.isVideoChat).map((p) => p.id),
-      );
+      const isSelfBroadcasting = Boolean(ourStream && ourStream.getTracks().length > 0);
+      const activeVideoParticipants = this.props.participants.filter((p) => p.isVideoChat);
+
+      // If nobody in the room is in video chat and we are not broadcasting, clean up and exit
+      if (!isSelfBroadcasting && activeVideoParticipants.length === 0) {
+        return;
+      }
+
+      // Close connections to participants no longer in the room
+      const currentParticipantIds = new Set(this.props.participants.map((p) => p.id));
       Object.entries(videoPCs).forEach(([key, value]) => {
-        if (key !== selfId && !clientIds.has(key)) {
+        if (key !== selfId && !currentParticipantIds.has(key)) {
           try {
             value.close();
           } catch (e) {}
@@ -682,9 +732,6 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
       this.props.participants.forEach((user) => {
         const id = user.id;
-        if (!user.isVideoChat) {
-          return;
-        }
         if (id === selfId) {
           if (!videoPCs[id]) {
             videoPCs[id] = new RTCPeerConnection();
@@ -701,11 +748,17 @@ export class VideoChat extends React.Component<VideoChatProps> {
           return;
         }
 
+        // Establish connection if the remote peer is broadcasting or if we are broadcasting to them
+        const shouldConnect = user.isVideoChat || isSelfBroadcasting;
+        if (!shouldConnect) {
+          return;
+        }
+
         // Get or create RTCPeerConnection for remote peer if missing
         let pc = videoPCs[id];
         if (!pc || pc.connectionState === "closed" || pc.connectionState === "failed") {
-          this.createPeerConnection(id);
-        } else if (ourStream) {
+          pc = this.createPeerConnection(id);
+        } else if (ourStream && ourStream.getTracks().length > 0) {
           // Ensure all local tracks are attached to the existing peer connection
           const currentSenders = pc.getSenders();
           ourStream.getTracks().forEach((track) => {
@@ -893,14 +946,15 @@ export class VideoChat extends React.Component<VideoChatProps> {
           const isPeerInCall = Boolean(!isSelf && p.isVideoChat);
           const remoteStream =
             window.cowatch?.remoteStreams?.[p.id] || this.remoteStreams[p.id];
-          // Only show the video element if we actually have a remote stream
-          // with active video tracks. Otherwise show the avatar placeholder
-          // to avoid displaying a black rectangle.
+          // A peer has video stream if they are in video call, have a remote stream,
+          // and have at least one live, enabled video track.
+          // Note: We deliberately do NOT gate on !t.muted because in WebRTC t.muted is true
+          // until media packets arrive; checking !t.muted prevents the <video> element
+          // from decoding, causing RTP processing to suspend and freezing the stream.
           const peerHasVideoStream = Boolean(
             isPeerInCall &&
-            !p.isVideoMuted &&
             remoteStream &&
-            remoteStream.getVideoTracks().some((t) => t.readyState === "live" && t.enabled && !t.muted)
+            remoteStream.getVideoTracks().some((t) => t.readyState === "live" && t.enabled)
           );
           const showVideoFeed = isSelf ? isSelfVideoActive : peerHasVideoStream;
 
@@ -958,7 +1012,15 @@ export class VideoChat extends React.Component<VideoChatProps> {
                       if (!isSelf && stream && el.srcObject !== stream) {
                         try {
                           el.srcObject = stream;
-                          el.play().catch(() => {});
+                          el.play().catch(() => {
+                            const unlock = () => {
+                              el.play().catch(() => {});
+                              window.removeEventListener("click", unlock);
+                              window.removeEventListener("touchstart", unlock);
+                            };
+                            window.addEventListener("click", unlock, { once: true });
+                            window.addEventListener("touchstart", unlock, { once: true });
+                          });
                         } catch (e) {
                           console.warn("Error assigning remote stream on ref mount:", e);
                         }
@@ -969,7 +1031,9 @@ export class VideoChat extends React.Component<VideoChatProps> {
                   }}
                   className={styles.videoElement}
                   style={{
-                    display: showVideoFeed ? "block" : "none",
+                    opacity: showVideoFeed ? 1 : 0,
+                    pointerEvents: showVideoFeed ? "auto" : "none",
+                    position: showVideoFeed ? "relative" : "absolute",
                     transform: `scaleX(${isSelf ? "-1" : "1"})`,
                   }}
                   autoPlay
@@ -1012,9 +1076,11 @@ export class VideoChat extends React.Component<VideoChatProps> {
                   {!isSelf && (
                     <span className={styles.peerStatusNotice}>
                       {p.isVideoChat
-                        ? remoteStream
-                          ? "Camera is turned off"
-                          : "Connecting..."
+                        ? peerHasVideoStream
+                          ? "Live"
+                          : p.isVideoMuted
+                            ? "Camera is turned off"
+                            : "Connecting..."
                         : "Watching"}
                     </span>
                   )}
