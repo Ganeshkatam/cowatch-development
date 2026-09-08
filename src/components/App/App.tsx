@@ -2256,7 +2256,7 @@ export class App extends React.Component<AppProps, AppState> {
             <WaitingLoungeBanner
               waitingList={this.state.waitingList}
               onAdmitAll={this.admitAllWaitingUsers}
-              onOpenPeople={() => this.setState({ currentTab: "video", showPeopleColumn: true })}
+              onOpenPeople={() => this.setState({ currentTab: "people", showChatColumn: true, showPeopleColumn: true })}
             />
           )}
         {this.state.isMultiSelectModalOpen && (
