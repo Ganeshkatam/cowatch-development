@@ -6,6 +6,7 @@ import { serverPath, setServerPath, serverCandidates, calculateRoomDuration } fr
 import { MetadataContext } from "../../MetadataContext";
 import styles from "./JoinRoom.module.css";
 import { TopBar } from "../TopBar/TopBar";
+import { Announce } from "../Announce/Announce";
 import { safeGetSession } from "../../utils/supabaseClient";
 
 import { RoomStage, RoomMetadata } from "./components/RoomStage";
@@ -292,6 +293,7 @@ export default function JoinRoom() {
   return (
     <>
       <TopBar hideNewRoom={true} />
+      <Announce page="join" />
       <div className={styles.lobbyContainer}>
         {/* Ambient Theater Lighting */}
         <div className={styles.ambientGlowContainer}>

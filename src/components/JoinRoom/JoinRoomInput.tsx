@@ -4,6 +4,7 @@ import { Loader } from "@mantine/core";
 import { IconArrowRight, IconDeviceTv, IconX, IconLock, IconKey } from "@tabler/icons-react";
 import styles from "./JoinRoomInput.module.css";
 import { TopBar } from "../TopBar/TopBar";
+import { Announce } from "../Announce/Announce";
 import { serverPath, setServerPath, serverCandidates } from "../../utils/utils";
 import { safeGetSession } from "../../utils/supabaseClient";
 
@@ -233,6 +234,7 @@ export const JoinRoomInput: React.FC = () => {
   return (
     <>
       <TopBar />
+      <Announce page="join" />
       <div className={styles.container}>
         <div className={styles.ambientGlow} />
         <div className={styles.ambientGlowSecondary} />

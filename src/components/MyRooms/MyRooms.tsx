@@ -11,6 +11,7 @@ import { RoomsToolbar } from "./RoomsToolbar";
 import { RoomCard } from "./RoomCard";
 import { RoomPagination } from "./RoomPagination";
 import { IconArrowLeft, IconCalendarEvent, IconCirclePlusFilled } from "@tabler/icons-react";
+import { Announce } from "../Announce/Announce";
 
 export interface RoomSummary {
   roomId: string;
@@ -299,8 +300,10 @@ export const MyRooms = () => {
   }
 
   return (
-    <div className={styles.page}>
-      <div className={styles.container}>
+    <>
+      <Announce page="myrooms" />
+      <div className={styles.page}>
+        <div className={styles.container}>
         <div className={styles.topNav}>
           <button
             type="button"
@@ -422,5 +425,6 @@ export const MyRooms = () => {
         )}
       </div>
     </div>
+    </>
   );
 };

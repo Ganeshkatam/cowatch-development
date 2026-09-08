@@ -176,6 +176,25 @@ CREATE INDEX IF NOT EXISTS vbrowser_pool_state_idx ON public.vbrowser USING btre
 CREATE INDEX IF NOT EXISTS "vbrowser_roomId_idx" ON public.vbrowser USING btree ("roomId");
 CREATE INDEX IF NOT EXISTS vbrowser_uid_idx ON public.vbrowser USING btree (uid);
 
+-- Table: announcements
+CREATE TABLE IF NOT EXISTS public.announcements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  message text NOT NULL,
+  type text NOT NULL CHECK (type IN ('info', 'feature', 'maintenance', 'important')),
+  action_label text,
+  action_url text,
+  target_pages text[] NOT NULL DEFAULT ARRAY['all']::text[],
+  is_active boolean NOT NULL DEFAULT true,
+  published_at timestamp with time zone NOT NULL DEFAULT now(),
+  expires_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS announcements_active_published_idx ON public.announcements USING btree (is_active, published_at DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS announcements_target_pages_gin ON public.announcements USING gin (target_pages);
+
 -- ==============================================================================
 -- 3. FUNCTIONS & TRIGGERS
 -- ==============================================================================
@@ -231,6 +250,18 @@ ALTER TABLE public.active_user ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.room_lifecycle_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.room_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.room_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can view active published announcements" ON public.announcements;
+CREATE POLICY "Public can view active published announcements"
+  ON public.announcements
+  FOR SELECT
+  TO anon, authenticated
+  USING (
+    is_active = true
+    AND published_at <= now()
+    AND (expires_at IS NULL OR expires_at > now())
+  );
 
 DROP POLICY IF EXISTS "room_invites_no_direct_client_access" ON public.room_invites;
 CREATE POLICY "room_invites_no_direct_client_access"

@@ -1,39 +1,340 @@
-.announce {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  background-color: var(--info);
-  width: 500px;
-  max-width: 100%;
-  position: fixed;
-  top: 0px;
-  left: 50%;
-  transform: translate(-50%, 0);
-  border-radius: 4px;
-  z-index: 900;
-  height: 48px;
-  color: var(--text-primary);
-  overflow: hidden;
+/* ==========================================================================
+   CoWatch First-Party Announcements System
+   Thin, atmospheric cinema banner & slide-over drawer
+   ========================================================================== */
+
+.bannerSurface {
+  width: 100%;
+  background: rgba(18, 20, 32, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.22);
+  position: relative;
+  z-index: 40;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  animation: bannerSlideDown 0.25s ease-out;
 }
 
-@media only screen and (max-width: 600px) {
-  .announce {
-    bottom: 0px;
-    top: initial;
+@keyframes bannerSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.announce main {
-  padding: 6px 10px;
-  flex-grow: 1;
+.bannerContent {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.announce main a {
-  color: var(--text-primary);
+/* Left text group */
+.bannerTextGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bannerTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.bannerSeparator {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 12px;
+}
+
+.bannerMessage {
+  font-size: 13px;
+  color: #cbd5e1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+/* Right action group */
+.bannerActionGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* Badges */
+.badgeFeature {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.badgeImportant {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.badgeMaintenance {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.badgeInfo {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #38bdf8;
+  background: rgba(14, 165, 233, 0.18);
+  border: 1px solid rgba(14, 165, 233, 0.35);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+/* Buttons */
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 650;
+  color: #ffffff;
+  background: rgba(139, 92, 246, 0.28);
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  padding: 4px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+  white-space: nowrap;
+}
+
+.actionBtn:hover {
+  background: rgba(139, 92, 246, 0.45);
+  transform: translateY(-1px);
+}
+
+.viewAllBtn {
+  background: none;
+  border: none;
+  color: #a78bfa;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: color 0.15s ease;
+  white-space: nowrap;
+}
+
+.viewAllBtn:hover {
+  color: #c4b5fd;
   text-decoration: underline;
-  font-weight: bold;
 }
 
-.announce aside {
-  padding: 6px 10px;
+.dismissBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.dismissBtn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Drawer Styles */
+.drawerContent {
+  background: #0f111a !important;
+  color: #ffffff !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.drawerHeader {
+  background: #0f111a !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px 24px !important;
+}
+
+.drawerTitle {
+  font-size: 18px;
+  font-weight: 750;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.drawerBody {
+  padding: 24px;
+}
+
+.announcementList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drawerItem {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 18px;
+  text-align: left;
+}
+
+.drawerItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.drawerItemMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawerItemDate {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.itemDismissBtn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.itemDismissBtn:hover {
+  color: #ffffff;
+}
+
+.drawerItemTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 6px;
+  line-height: 1.3;
+}
+
+.drawerItemMessage {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
+.drawerItemAction {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.drawerActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+  color: #ffffff;
+  background: rgba(139, 92, 246, 0.3);
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  padding: 6px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.drawerActionBtn:hover {
+  background: rgba(139, 92, 246, 0.5);
+}
+
+.emptyNotice {
+  padding: 40px 20px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .bannerContent {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 16px;
+  }
+
+  .bannerTextGroup {
+    width: 100%;
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .bannerMessage {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .bannerActionGroup {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
 }

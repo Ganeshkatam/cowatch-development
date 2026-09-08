@@ -22,14 +22,17 @@ import {
 } from "@tabler/icons-react";
 import styles from "./Home.module.css";
 import { MetadataContext } from "../../MetadataContext";
+import { Announce } from "../Announce/Announce";
 
 export const Home = () => {
   const { user } = useContext(MetadataContext);
   const history = useHistory();
 
   return (
-    <div className={styles.container}>
-      <div className={styles.ambientGlowTop} />
+    <>
+      <Announce page="home" />
+      <div className={styles.container}>
+        <div className={styles.ambientGlowTop} />
       <div className={styles.ambientGlowMid} />
 
       {/* Hero Section */}
@@ -504,7 +507,8 @@ export const Home = () => {
         </div>
       </div>
     </div>
-  );
+  </>
+);
 };
 
 

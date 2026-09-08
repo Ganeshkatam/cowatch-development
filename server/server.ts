@@ -440,6 +440,79 @@ app.get("/youtubePlaylist/:playlistId", async (req, res) => {
   }
 });
 
+app.get("/api/announcements", async (req, res) => {
+  try {
+    if (!postgres) {
+      res.json({ announcements: [] });
+      return;
+    }
+
+    const allowedPages = new Set(["home", "myrooms", "room", "join", "all"]);
+    const rawPage = String(req.query.page || "all").toLowerCase();
+    const page = allowedPages.has(rawPage) ? rawPage : "all";
+
+    const query = `
+      SELECT
+        id,
+        title,
+        message,
+        type,
+        published_at,
+        action_label,
+        action_url,
+        target_pages
+      FROM public.announcements
+      WHERE is_active = true
+        AND published_at <= NOW()
+        AND (expires_at IS NULL OR expires_at > NOW())
+        AND (
+          ($1 = 'all' AND target_pages @> ARRAY['all']::text[])
+          OR
+          ($1 != 'all' AND (target_pages @> ARRAY[$1]::text[] OR target_pages @> ARRAY['all']::text[]))
+        )
+      ORDER BY published_at DESC, created_at DESC
+      LIMIT 10;
+    `;
+
+    const result = await postgres.query(query, [page]);
+
+    const announcements = result.rows.map((row) => {
+      let safeActionUrl: string | null = null;
+      if (row.action_url) {
+        const urlStr = String(row.action_url).trim();
+        if (urlStr.startsWith("/") && !urlStr.startsWith("//")) {
+          safeActionUrl = urlStr;
+        } else {
+          try {
+            const parsed = new URL(urlStr);
+            if (parsed.protocol === "https:") {
+              safeActionUrl = parsed.toString();
+            }
+          } catch {
+            safeActionUrl = null;
+          }
+        }
+      }
+
+      return {
+        id: row.id,
+        title: row.title,
+        message: row.message,
+        type: row.type,
+        published_at: row.published_at,
+        action_label: row.action_label || null,
+        action_url: safeActionUrl,
+        target_pages: row.target_pages || ["all"],
+      };
+    });
+
+    res.json({ announcements });
+  } catch (error) {
+    console.error("[Announcements] Failed to fetch announcements:", error);
+    res.json({ announcements: [] });
+  }
+});
+
 async function authenticateRequest(req: express.Request, requireConfirmation: boolean = true) {
   let token: string | undefined;
   const authHeader = req.headers.authorization;
