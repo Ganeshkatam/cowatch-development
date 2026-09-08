@@ -28,27 +28,6 @@ import { MetadataContext } from "../../MetadataContext";
 export const Home = () => {
   const { user } = useContext(MetadataContext);
   const history = useHistory();
-  const [joinCode, setJoinCode] = useState("");
-
-  const handleJoinSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = joinCode.trim();
-    if (!trimmed) return;
-
-    // Handle full URL or room path or just room code
-    let roomName = trimmed;
-    if (roomName.includes("/watch/")) {
-      roomName = roomName.split("/watch/")[1];
-    } else if (roomName.startsWith("/")) {
-      roomName = roomName.substring(1);
-    }
-    // Remove query params or hash if pasted
-    roomName = roomName.split("?")[0].split("#")[0];
-
-    if (roomName) {
-      history.push(`/watch/${roomName}`);
-    }
-  };
 
   return (
     <div className={styles.container}>
@@ -61,7 +40,7 @@ export const Home = () => {
           <div className={styles.heroContent}>
             <div className={styles.badgePill}>
               <span className={styles.pulseDot} />
-              Private watch rooms for you and your friends
+              Free and private watch rooms
             </div>
 
             <h1 className={styles.heroTitle}>
@@ -70,8 +49,8 @@ export const Home = () => {
             </h1>
 
             <p className={styles.heroSubtitle}>
-              Create a free account in seconds, invite your friends, and enjoy
-              videos, YouTube, and streams together from anywhere.
+              Create a room, invite your friends, and enjoy videos, YouTube, and
+              streams together from anywhere.
             </p>
 
             <div className={styles.actionArea}>
@@ -121,35 +100,12 @@ export const Home = () => {
                 )}
               </div>
 
-              {/* Direct Room Code Join Bar */}
-              <form onSubmit={handleJoinSubmit} className={styles.joinBar}>
-                <input
-                  type="text"
-                  className={styles.joinInput}
-                  placeholder="Have a room code or link? Paste here..."
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value)}
-                />
-                <Button
-                  type="submit"
-                  size="xs"
-                  variant="light"
-                  color="violet"
-                  rightSection={<IconArrowRight size={14} />}
-                >
-                  Join
-                </Button>
-              </form>
-
               <div className={styles.perksRow}>
                 <span className={styles.perkItem}>
-                  <IconCircleCheck size={16} color="var(--color-success)" /> 100% Free account
+                  <IconCircleCheck size={16} color="var(--color-success)" /> 100% free, no credit card
                 </span>
                 <span className={styles.perkItem}>
-                  <IconCircleCheck size={16} color="var(--color-success)" /> Quick email verification
-                </span>
-                <span className={styles.perkItem}>
-                  <IconCircleCheck size={16} color="var(--color-success)" /> Save your rooms & history
+                  <IconCircleCheck size={16} color="var(--color-success)" /> Works on any browser
                 </span>
               </div>
             </div>

@@ -139,37 +139,6 @@
   align-items: center;
 }
 
-.joinBar {
-  display: flex;
-  align-items: center;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 4px 6px 4px 14px;
-  width: 100%;
-  max-width: 380px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.joinBar:focus-within {
-  border-color: var(--color-violet);
-  box-shadow: 0 0 0 3px var(--focus-ring);
-}
-
-.joinInput {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-primary);
-  font-size: 14px;
-  min-width: 0;
-}
-
-.joinInput::placeholder {
-  color: var(--text-muted);
-}
-
 .perksRow {
   display: flex;
   flex-wrap: wrap;
@@ -977,10 +946,6 @@
 
     .actionRow {
       justify-content: center;
-    }
-
-    .joinBar {
-      max-width: 100%;
     }
 
     .perksRow {
