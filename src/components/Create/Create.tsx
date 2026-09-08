@@ -1,11 +1,10 @@
 import React, { useContext, useState, useEffect } from "react";
-import { Badge, Alert } from "@mantine/core";
+import { Badge, Alert, Button, Loader } from "@mantine/core";
 import { IconCirclePlusFilled, IconArrowLeft } from "@tabler/icons-react";
 import { MetadataContext } from "../../MetadataContext";
 import { useHistory } from "react-router-dom";
 import { useRoomFormState, submitRoomCreation } from "./roomCreationDomain";
 import { SharedRoomFields } from "./SharedRoomFields";
-import { SharedRoomPreview } from "./SharedRoomPreview";
 import styles from "./Create.module.css";
 
 export const Create: React.FC = () => {
@@ -78,18 +77,22 @@ export const Create: React.FC = () => {
 
             <form id="create-room-form" onSubmit={handleSubmit}>
               <SharedRoomFields formState={formState} />
+
+              <Button
+                type="submit"
+                size="lg"
+                variant="gradient"
+                gradient={{ from: "violet", to: "grape", deg: 135 }}
+                disabled={loading || !formState.roomTitle.trim()}
+                leftSection={loading ? <Loader size={20} color="white" /> : <IconCirclePlusFilled size={20} />}
+                className={styles.createBtnPrimary}
+                fullWidth
+                mt="xl"
+              >
+                {loading ? "Creating..." : "Start Watch Party"}
+              </Button>
             </form>
           </div>
-
-          {/* Right Column: Live Room Card Preview */}
-          <SharedRoomPreview
-            formState={formState}
-            mode="now"
-            loading={loading}
-            submitLabel="Start Watch Party"
-            submitIcon={<IconCirclePlusFilled size={20} />}
-            formId="create-room-form"
-          />
         </div>
       </div>
     </div>

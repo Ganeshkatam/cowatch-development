@@ -29,9 +29,10 @@ import styles from "./Create.module.css";
 
 interface SharedRoomFieldsProps {
   formState: RoomFormState;
+  afterTitle?: React.ReactNode;
 }
 
-export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({ formState }) => {
+export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({ formState, afterTitle }) => {
   const [isDescriptionOpen, setIsDescriptionOpen] = useState<boolean>(
     Boolean(formState.roomDescription && formState.roomDescription.trim().length > 0)
   );
@@ -63,11 +64,9 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({ formState })
                 },
               }}
             />
-            <div className={styles.inputHelp}>
-              <span>A clear, memorable name for your party</span>
-              <span>{formState.roomTitle.length}/50</span>
-            </div>
           </div>
+
+          {afterTitle}
 
           {!showDescription ? (
             <div>
@@ -116,7 +115,7 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({ formState })
                 }}
               />
               <div className={styles.inputHelp}>
-                <span>Visible to invited guests on the preview card</span>
+                <span>Visible to invited guests</span>
                 <span>{formState.roomDescription.length}/200</span>
               </div>
             </div>

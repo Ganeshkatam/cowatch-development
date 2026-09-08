@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect, useMemo } from "react";
 import { useHistory } from "react-router-dom";
-import { Badge, Alert, Text } from "@mantine/core";
+import { Badge, Alert, Text, Button, Loader } from "@mantine/core";
 import {
   IconArrowLeft,
   IconCalendarEvent,
@@ -15,7 +15,6 @@ import {
 } from "../Create/roomCreationDomain";
 
 import { SharedRoomFields } from "../Create/SharedRoomFields";
-import { SharedRoomPreview } from "../Create/SharedRoomPreview";
 import { DatePickerDropdown } from "./DatePickerDropdown";
 import { TimePickerDropdown } from "./TimePickerDropdown";
 import createStyles from "../Create/Create.module.css";
@@ -80,26 +79,6 @@ export const ScheduleRoom: React.FC = () => {
     document.title = "Schedule a Watch Party - CoWatch";
   }, []);
 
-  // Format a friendly display string for the live preview card
-  const formattedScheduleDisplay = useMemo(() => {
-    if (!scheduleDate || !scheduleTime) return "";
-    try {
-      const combined = new Date(`${scheduleDate}T${scheduleTime}`);
-      if (isNaN(combined.getTime())) return "";
-      const dateStr = combined.toLocaleDateString(undefined, {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-      });
-      const timeStr = combined.toLocaleTimeString(undefined, {
-        hour: "numeric",
-        minute: "2-digit",
-      });
-      return `${dateStr} · ${timeStr}`;
-    } catch {
-      return "";
-    }
-  }, [scheduleDate, scheduleTime]);
 
   const handleDateChange = (val: string) => {
     setScheduleDate(val);
@@ -190,60 +169,65 @@ export const ScheduleRoom: React.FC = () => {
             )}
 
             <form id="schedule-room-form" onSubmit={handleSubmit}>
-              {/* Top Hero Section: When (Date & Time) */}
-              <div className={scheduleStyles.whenCard}>
-                <div className={scheduleStyles.whenHeader}>
-                  <div className={scheduleStyles.whenIconWrap}>
-                    <IconCalendarEvent size={20} />
+              {/* Shared Room Fields with When section placed directly after Room Title */}
+              <SharedRoomFields
+                formState={formState}
+                afterTitle={
+                  <div className={scheduleStyles.whenCard} style={{ margin: "4px 0" }}>
+                    <div className={scheduleStyles.whenHeader}>
+                      <div className={scheduleStyles.whenIconWrap}>
+                        <IconCalendarEvent size={20} />
+                      </div>
+                      <span className={scheduleStyles.whenTitle}>When</span>
+                    </div>
+
+                    <div className={scheduleStyles.dateTimeGrid}>
+                      <div>
+                        <Text size="xs" fw={700} c="var(--text-secondary)" tt="uppercase" lts={0.5} mb={6}>
+                          Date
+                        </Text>
+                        <DatePickerDropdown
+                          value={scheduleDate}
+                          onChange={handleDateChange}
+                          minDate={minDate}
+                        />
+                      </div>
+
+                      <div>
+                        <Text size="xs" fw={700} c="var(--text-secondary)" tt="uppercase" lts={0.5} mb={6}>
+                          Time
+                        </Text>
+                        <TimePickerDropdown
+                          value={scheduleTime}
+                          onChange={handleTimeChange}
+                          selectedDate={scheduleDate}
+                        />
+                      </div>
+                    </div>
+
+                    <div className={scheduleStyles.timezoneNote}>
+                      <IconWorld size={15} />
+                      <span>Your local time: {timezoneDisplay}</span>
+                    </div>
                   </div>
-                  <span className={scheduleStyles.whenTitle}>When</span>
-                </div>
+                }
+              />
 
-                <div className={scheduleStyles.dateTimeGrid}>
-                  <div>
-                    <Text size="xs" fw={700} c="var(--text-secondary)" tt="uppercase" lts={0.5} mb={6}>
-                      Date
-                    </Text>
-                    <DatePickerDropdown
-                      value={scheduleDate}
-                      onChange={handleDateChange}
-                      minDate={minDate}
-                    />
-                  </div>
-
-                  <div>
-                    <Text size="xs" fw={700} c="var(--text-secondary)" tt="uppercase" lts={0.5} mb={6}>
-                      Time
-                    </Text>
-                    <TimePickerDropdown
-                      value={scheduleTime}
-                      onChange={handleTimeChange}
-                      selectedDate={scheduleDate}
-                    />
-                  </div>
-                </div>
-
-                <div className={scheduleStyles.timezoneNote}>
-                  <IconWorld size={15} />
-                  <span>Your local time: {timezoneDisplay}</span>
-                </div>
-              </div>
-
-              {/* Shared Room Fields (Identity, Security, Party Settings) */}
-              <SharedRoomFields formState={formState} />
+              <Button
+                type="submit"
+                size="lg"
+                variant="gradient"
+                gradient={{ from: "violet", to: "grape", deg: 135 }}
+                disabled={loading || !formState.roomTitle.trim()}
+                leftSection={loading ? <Loader size={20} color="white" /> : <IconCalendarEvent size={20} />}
+                className={createStyles.createBtnPrimary}
+                fullWidth
+                mt="xl"
+              >
+                {loading ? "Scheduling..." : "Schedule Watch Party"}
+              </Button>
             </form>
           </div>
-
-          {/* Right Column: Live Room Card Preview */}
-          <SharedRoomPreview
-            formState={formState}
-            mode="schedule"
-            scheduledDisplay={formattedScheduleDisplay}
-            loading={loading}
-            submitLabel="Schedule Watch Party"
-            submitIcon={<IconCalendarEvent size={20} />}
-            formId="schedule-room-form"
-          />
         </div>
       </div>
     </div>
