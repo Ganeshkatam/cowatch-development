@@ -338,3 +338,82 @@
     margin-top: 4px;
   }
 }
+
+/* Light Mode Theme Adaptation */
+:global([data-color-scheme="light"]) .bannerSurface {
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.22);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+:global([data-color-scheme="light"]) .bannerTitle {
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .bannerMessage {
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .bannerSeparator {
+  color: var(--border-strong);
+}
+
+:global([data-color-scheme="light"]) .actionBtn {
+  background: rgba(112, 72, 232, 0.08);
+  border-color: rgba(112, 72, 232, 0.25);
+  color: var(--color-violet);
+}
+
+:global([data-color-scheme="light"]) .actionBtn:hover {
+  background: rgba(112, 72, 232, 0.16);
+  color: #5528b8;
+}
+
+:global([data-color-scheme="light"]) .viewAllBtn {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .viewAllBtn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .dismissBtn {
+  color: var(--text-muted);
+}
+
+:global([data-color-scheme="light"]) .dismissBtn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .drawerNoticeCard {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+:global([data-color-scheme="light"]) .cardHeaderTitle {
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .cardBodyText {
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .metaText {
+  color: var(--text-muted);
+}
+
+:global([data-color-scheme="light"]) .drawerActionBtn {
+  background: rgba(112, 72, 232, 0.1);
+  border-color: rgba(112, 72, 232, 0.28);
+  color: var(--color-violet);
+}
+
+:global([data-color-scheme="light"]) .drawerActionBtn:hover {
+  background: rgba(112, 72, 232, 0.2);
+}
+

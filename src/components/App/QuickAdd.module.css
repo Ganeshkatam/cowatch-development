@@ -138,3 +138,22 @@
   line-height: 1.4;
 }
 
+/* Light Theme Adaptation */
+:global([data-color-scheme="light"]) .triggerBtn {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--border-subtle);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+:global([data-color-scheme="light"]) .triggerBtn:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(112, 72, 232, 0.4);
+}
+
+:global([data-color-scheme="light"]) .kbdBadge {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: var(--text-muted);
+}
+
+

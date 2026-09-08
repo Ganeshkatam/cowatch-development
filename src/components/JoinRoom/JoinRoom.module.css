@@ -707,3 +707,121 @@
     font-size: 28px;
   }
 }
+
+/* ==========================================================================
+   Light Mode Theme Adaptation for Cinema Pre-Flight Lobby
+   ========================================================================== */
+:global([data-color-scheme="light"]) .lobbyContainer {
+  background: radial-gradient(
+    ellipse at 50% 15%,
+    rgba(139, 92, 246, 0.06) 0%,
+    #f0f3f8 65%
+  );
+}
+
+:global([data-color-scheme="light"]) .roomTitle {
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .roomDescription {
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .hostLabel {
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .hostName {
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .metaItem {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .consolePanel {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+:global([data-color-scheme="light"]) .consoleHeading {
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .consoleSubheading {
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .statusTitle {
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .statusDesc {
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .operationalItem {
+  background: rgba(112, 72, 232, 0.06);
+  border: 1px solid rgba(112, 72, 232, 0.18);
+}
+
+:global([data-color-scheme="light"]) .instructionNotice {
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .countdownCard {
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+:global([data-color-scheme="light"]) .countdownTimer {
+  color: var(--color-violet);
+}
+
+:global([data-color-scheme="light"]) .scheduledTimestamp {
+  color: var(--text-muted);
+}
+
+:global([data-color-scheme="light"]) .secondaryButton {
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .statusScreenTitle {
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .statusScreenMessage {
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .passcodeCard {
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+:global([data-color-scheme="light"]) .passcodeTitle {
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .passcodeSubtitle {
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .lockIconCircle {
+  background: var(--surface-hover);
+  color: var(--color-violet);
+  border: 1px solid var(--border-subtle);
+}
+
+:global([data-color-scheme="light"]) .cinemaStageBox {
+  background: linear-gradient(135deg, #1e2235 0%, #111424 100%);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.15);
+}
+

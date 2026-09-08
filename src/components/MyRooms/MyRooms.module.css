@@ -998,3 +998,49 @@
     padding: 12px 14px;
   }
 }
+
+/* Light Theme Adaptation */
+:global([data-color-scheme="light"]) .roomCard {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+}
+
+:global([data-color-scheme="light"]) .roomCard:hover {
+  border-color: rgba(112, 72, 232, 0.35);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.09);
+}
+
+:global([data-color-scheme="light"]) .roomCardTitle {
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .roomCardDesc {
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .statCard {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+}
+
+:global([data-color-scheme="light"]) .statValue {
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .statLabel {
+  color: var(--text-muted);
+}
+
+:global([data-color-scheme="light"]) .searchBar {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .metaPill {
+  background: var(--surface-secondary);
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+}
+

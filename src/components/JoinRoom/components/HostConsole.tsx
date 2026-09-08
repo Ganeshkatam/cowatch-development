@@ -61,7 +61,7 @@ export const HostConsole: React.FC<HostConsoleProps> = ({
         leftSection={<IconPlayerPlayFilled size={18} />}
         className={styles.primaryActionButton}
       >
-        Enter Room as Host
+        Start Room
       </Button>
 
       {/* Operational Status Badges */}

@@ -178,3 +178,53 @@
     padding: 18px 14px;
   }
 }
+
+/* Light Theme Adaptation */
+:global([data-color-scheme="light"]) .pickerTrigger {
+  background-color: var(--bg-surface);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .pickerTrigger:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+:global([data-color-scheme="light"]) .calendarDropdown {
+  background: #ffffff !important;
+  border-color: var(--border-subtle) !important;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12) !important;
+}
+
+:global([data-color-scheme="light"]) .shortcutBtn {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .shortcutBtn:hover {
+  background: rgba(112, 72, 232, 0.12);
+  border-color: var(--color-violet);
+  color: var(--color-violet);
+}
+
+:global([data-color-scheme="light"]) .monthTitle {
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .dayCell {
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .dayCell:hover:not(.dayDisabled):not(.daySelected) {
+  background: rgba(112, 72, 232, 0.12);
+  color: var(--color-violet);
+}
+
+:global([data-color-scheme="light"]) .durationPill {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+}
+

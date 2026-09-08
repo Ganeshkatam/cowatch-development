@@ -389,3 +389,41 @@
     max-width: 100%;
   }
 }
+
+/* Light Theme Adaptation */
+:global([data-color-scheme="light"]) .scheduleCard {
+  background-color: var(--bg-surface);
+  border-color: var(--border-subtle);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+:global([data-color-scheme="light"]) .navRow,
+:global([data-color-scheme="light"]) .cardFooter {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-subtle);
+}
+
+:global([data-color-scheme="light"]) .todayBtn {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .todayBtn:hover {
+  background-color: var(--surface-hover);
+}
+
+:global([data-color-scheme="light"]) .eventItem {
+  background-color: var(--bg-surface);
+  border-color: var(--border-subtle);
+}
+
+:global([data-color-scheme="light"]) .eventItem:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+:global([data-color-scheme="light"]) .emptyStateSvg {
+  filter: drop-shadow(0 4px 12px rgba(15, 23, 42, 0.06));
+}
+

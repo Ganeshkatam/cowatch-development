@@ -25,7 +25,7 @@
 .title {
   font-size: 28px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 8px;
   letter-spacing: -0.5px;
 }
@@ -95,7 +95,7 @@
 
 .statValue {
   font-size: 20px;
-  color: #fff;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -109,7 +109,7 @@
 .settingsHeader {
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 24px;
   display: flex;
   align-items: center;
@@ -141,10 +141,24 @@
 
 .settingsRowValue {
   font-size: 16px;
-  color: #fff;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .primaryAction {
   margin-top: 16px;
 }
+
+/* Light Theme Adaptation */
+:global([data-color-scheme="light"]) .statCard {
+  background: #ffffff;
+  border-color: var(--border-subtle);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+:global([data-color-scheme="light"]) .settingsSection {
+  background: #ffffff;
+  border-color: var(--border-subtle);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+

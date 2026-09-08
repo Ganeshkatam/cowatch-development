@@ -125,6 +125,54 @@ const theme = createTheme({
         },
       },
     },
+    Textarea: {
+      defaultProps: {
+        radius: "md",
+      },
+      styles: {
+        input: {
+          backgroundColor: "var(--bg-surface)",
+          borderColor: "var(--border-subtle)",
+          color: "var(--text-primary)",
+        },
+      },
+    },
+    Select: {
+      defaultProps: {
+        radius: "md",
+      },
+      styles: {
+        input: {
+          backgroundColor: "var(--bg-surface)",
+          borderColor: "var(--border-subtle)",
+          color: "var(--text-primary)",
+        },
+      },
+    },
+    Modal: {
+      styles: {
+        content: {
+          backgroundColor: "var(--bg-surface)",
+          color: "var(--text-primary)",
+        },
+        header: {
+          backgroundColor: "var(--bg-surface)",
+          color: "var(--text-primary)",
+        },
+      },
+    },
+    Drawer: {
+      styles: {
+        content: {
+          backgroundColor: "var(--bg-surface)",
+          color: "var(--text-primary)",
+        },
+        header: {
+          backgroundColor: "var(--bg-surface)",
+          color: "var(--text-primary)",
+        },
+      },
+    },
   },
 });
 

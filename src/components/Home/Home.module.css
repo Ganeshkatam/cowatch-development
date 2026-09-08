@@ -997,3 +997,75 @@
       height: 240px;
     }
   }
+
+/* Light Theme Adaptation */
+:global([data-color-scheme="light"]) .heroImageFrame {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+:global([data-color-scheme="light"]) .heroWindowBar {
+  background: #f1f5f9;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+:global([data-color-scheme="light"]) .windowUrl {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-secondary);
+  border-color: var(--border-subtle);
+}
+
+:global([data-color-scheme="light"]) .bentoCardWide,
+:global([data-color-scheme="light"]) .bentoCardVoice,
+:global([data-color-scheme="light"]) .bentoCardSecurity,
+:global([data-color-scheme="light"]) .bentoCardSources {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+}
+
+:global([data-color-scheme="light"]) .bentoCardWide:hover,
+:global([data-color-scheme="light"]) .bentoCardVoice:hover,
+:global([data-color-scheme="light"]) .bentoCardSecurity:hover,
+:global([data-color-scheme="light"]) .bentoCardSources:hover {
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+:global([data-color-scheme="light"]) .voiceFeatureItem,
+:global([data-color-scheme="light"]) .securityItem,
+:global([data-color-scheme="light"]) .sourceBadge {
+  background: var(--surface-secondary);
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+:global([data-color-scheme="light"]) .timelineStepCard {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+:global([data-color-scheme="light"]) .showcaseStage {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+:global([data-color-scheme="light"]) .showcaseTabButton {
+  background: var(--surface-secondary);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+:global([data-color-scheme="light"]) .showcaseTabActive {
+  background: var(--bg-surface) !important;
+  border-color: var(--color-violet) !important;
+  box-shadow: 0 4px 14px rgba(112, 72, 232, 0.12);
+}
+
+:global([data-color-scheme="light"]) .ctaCard {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(236, 72, 153, 0.06) 100%);
+  border-color: rgba(139, 92, 246, 0.25);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}

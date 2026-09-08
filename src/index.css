@@ -40,6 +40,18 @@
   --glass-bg: rgba(23, 25, 35, 0.75);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+
+  --surface-secondary: #171923;
+  --bg-base: #08090D;
+  --bg-card: #11131A;
+  --bg-surface-soft: rgba(255, 255, 255, 0.03);
+  --bg-surface-hover: rgba(139, 92, 246, 0.10);
+  --border-default: rgba(139, 92, 246, 0.18);
+  --border-card: rgba(139, 92, 246, 0.22);
+  --text-main: #F5F3FF;
+  --text: #F5F3FF;
+  --shadow-xl: 0 20px 48px rgba(0, 0, 0, 0.5);
+  --color-yellow: #FBBF24;
 }
 
 html[data-color-scheme="light"] {
@@ -86,6 +98,18 @@ html[data-color-scheme="light"] {
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(112, 72, 232, 0.12);
   --glass-shadow: rgba(0, 0, 0, 0.08);
+
+  --surface-secondary: #f8fafc;
+  --bg-base: #f0f3f8;
+  --bg-card: #ffffff;
+  --bg-surface-soft: rgba(0, 0, 0, 0.03);
+  --bg-surface-hover: rgba(112, 72, 232, 0.06);
+  --border-default: #e2e8f0;
+  --border-card: #e2e8f0;
+  --text-main: #0f172a;
+  --text: #0f172a;
+  --shadow-xl: 0 20px 48px rgba(15, 23, 42, 0.12);
+  --color-yellow: #D97706;
 }
 
 html body {
@@ -278,6 +302,42 @@ html[data-color-scheme="light"] .mantine-Menu-dropdown {
   background: rgba(255, 255, 255, 0.95) !important;
   border: 1px solid var(--border-subtle) !important;
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Mantine Modal & Drawer Theme Consistency */
+.mantine-Modal-content,
+.mantine-Modal-header,
+.mantine-Drawer-content,
+.mantine-Drawer-header {
+  background-color: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+}
+
+.mantine-Modal-title,
+.mantine-Drawer-title {
+  color: var(--text-primary) !important;
+  font-weight: 700 !important;
+}
+
+.mantine-Modal-close,
+.mantine-Drawer-close {
+  color: var(--text-secondary) !important;
+}
+
+.mantine-Modal-close:hover,
+.mantine-Drawer-close:hover {
+  background-color: var(--surface-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Mantine Paper & Card Theme Consistency */
+.mantine-Paper-root {
+  color: var(--text-primary) !important;
+}
+
+html[data-color-scheme="light"] .mantine-Paper-root {
+  background-color: var(--bg-surface);
+  border-color: var(--border-subtle);
 }
 
 @keyframes menuDropdownEntrance {
