@@ -16,10 +16,8 @@ const RATE_LIMIT_MAX_ATTEMPTS = 5;
  */
 export async function createAdmissionToken(roomId: string, userId: string | null): Promise<string | null> {
   if (!redis) {
-    // If Redis is not available, we can't properly store admission tokens.
-    // We could fallback to in-memory, but Redis is required for production.
-    console.warn("Redis is not configured, returning fallback token.");
-    return `fallback_${crypto.randomBytes(16).toString("hex")}`;
+    console.error("Redis is unavailable. Denying admission token creation (fail-closed).");
+    return null;
   }
 
   const token = crypto.randomBytes(32).toString("hex");
@@ -40,9 +38,7 @@ export async function createAdmissionToken(roomId: string, userId: string | null
  */
 export async function getAdmissionRecord(roomId: string, token: string): Promise<AdmissionRecord | null> {
   if (!redis) {
-    if (token.startsWith("fallback_")) {
-      return { roomId, userId: null, issuedAt: Date.now() };
-    }
+    console.error("Redis is unavailable. Denying admission verification (fail-closed).");
     return null;
   }
 

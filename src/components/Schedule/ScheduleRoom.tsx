@@ -12,6 +12,7 @@ import {
   submitRoomCreation,
   getLocalTimezoneDisplay,
   getSchedulePresets,
+  formatDate,
 } from "../Create/roomCreationDomain";
 import { RoomCreationModeSwitcher } from "../Create/RoomCreationModeSwitcher";
 import { SharedRoomFields } from "../Create/SharedRoomFields";
@@ -29,7 +30,7 @@ export const ScheduleRoom: React.FC = () => {
 
   // Default to the first preset (e.g. Tonight 8:00 PM or Tomorrow)
   const defaultPreset = presets[0] || {
-    date: new Date().toISOString().split("T")[0],
+    date: formatDate(new Date()),
     time: "20:00",
   };
   const [scheduleDate, setScheduleDate] = useState<string>(defaultPreset.date);
@@ -123,7 +124,7 @@ export const ScheduleRoom: React.FC = () => {
     }
   };
 
-  const minDate = new Date().toISOString().split("T")[0];
+  const minDate = useMemo(() => formatDate(new Date()), []);
 
   return (
     <div className={createStyles.pageWrapper}>

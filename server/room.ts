@@ -387,7 +387,7 @@ export class Room {
           this.status = 'expired';
           if (postgres) {
             postgres.query(
-              `UPDATE rooms SET status = 'expired', "endedAt" = NOW() WHERE "roomId" = $1`,
+              `UPDATE rooms SET status = 'expired', "lastUpdateTime" = NOW() WHERE "roomId" = $1`,
               [this.roomId]
             ).catch(console.error);
           }
@@ -448,7 +448,7 @@ export class Room {
           socket.emit("errorMessage", "This room has ended or expired.");
           if (postgres) {
             postgres.query(
-              `UPDATE rooms SET status = 'expired', "endedAt" = NOW() WHERE "roomId" = $1`,
+              `UPDATE rooms SET status = 'expired', "lastUpdateTime" = NOW() WHERE "roomId" = $1`,
               [this.roomId]
             ).catch(e => console.error("Failed to update status on real-time check:", e));
           }

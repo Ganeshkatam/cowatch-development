@@ -96,7 +96,7 @@ export async function createRoomInvite(roomId: string, uid: string, expiresInHou
   const room = roomResult.rows[0];
   if (!room) throw new Error("Room not found");
   if (room.owner_id !== uid) throw new Error("Forbidden");
-  if (["expired", "ended"].includes(room.status)) throw new Error("Room is not joinable");
+  if (["expired", "ended", "cancelled"].includes(room.status)) throw new Error("Room is not joinable");
   if (!room.isPermanent && room.expiresAt && new Date(room.expiresAt).getTime() <= Date.now()) throw new Error("Room is expired");
   const inviteToken = generateInviteToken();
   const tokenHash = hashInviteToken(inviteToken);
@@ -127,7 +127,7 @@ export async function redeemRoomInvite(roomId: string, token: string): Promise<{
     const roomResult = await client.query(`SELECT status, "isPermanent", "expiresAt" FROM rooms WHERE "roomId" = $1`, [roomId]);
     const room = roomResult.rows[0];
     if (!room) throw new Error("Room not found");
-    if (["expired", "ended"].includes(room.status)) throw new Error("Room is not joinable");
+    if (["expired", "ended", "cancelled"].includes(room.status)) throw new Error("Room is not joinable");
     if (!room.isPermanent && room.expiresAt && new Date(room.expiresAt).getTime() <= Date.now()) throw new Error("Room is expired");
     await client.query(`UPDATE room_invites SET uses = uses + 1, used_at = COALESCE(used_at, NOW()) WHERE id = $1`, [invite.id]);
     const inviteCredential = generateRoomInviteCredential(roomId, invite.id);

@@ -209,7 +209,7 @@ export interface SchedulePreset {
   time: string; // HH:mm
 }
 
-function formatDate(d: Date): string {
+export function formatDate(d: Date): string {
   const y = d.getFullYear();
   const m = (d.getMonth() + 1).toString().padStart(2, "0");
   const day = d.getDate().toString().padStart(2, "0");

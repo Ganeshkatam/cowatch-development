@@ -50,17 +50,36 @@ CREATE TABLE IF NOT EXISTS public.rooms (
   "roomDescription" text,
   "mediaPath" text,
   status text NOT NULL DEFAULT 'waiting'::text,
+  "scheduledStartsAt" timestamp with time zone,
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
   "endedAt" timestamp with time zone,
+  "cancelledAt" timestamp with time zone,
   "isPermanent" boolean NOT NULL DEFAULT false,
   "durationMinutes" integer,
   "lastActiveAt" timestamp with time zone,
   owner_passcode text,
-  CONSTRAINT room_status_check CHECK (status IN ('waiting', 'scheduled', 'active', 'inactive', 'ended', 'expired')),
+  CONSTRAINT room_status_check CHECK (status IN ('waiting', 'scheduled', 'active', 'inactive', 'ended', 'expired', 'cancelled')),
   CONSTRAINT room_title_not_empty CHECK (btrim("roomTitle") <> ''),
-  CONSTRAINT rooms_expiration_policy_check CHECK ((("isPermanent" = true AND "durationMinutes" IS NULL AND "expiresAt" IS NULL AND ((status IN ('waiting', 'scheduled') AND "startedAt" IS NULL) OR (status IN ('active', 'inactive', 'ended') AND "startedAt" IS NOT NULL))) OR ("isPermanent" = false AND "durationMinutes" IS NOT NULL AND "durationMinutes" BETWEEN 15 AND 1440 AND ((status IN ('waiting', 'scheduled') AND "startedAt" IS NULL AND "expiresAt" IS NULL) OR (status IN ('active', 'inactive', 'ended', 'expired') AND "startedAt" IS NOT NULL AND "expiresAt" IS NOT NULL)))))
+  CONSTRAINT rooms_expiration_policy_check CHECK (
+    (("isPermanent" = true) AND ("expiresAt" IS NULL))
+    OR
+    (("isPermanent" = false) AND ((status IN ('waiting', 'scheduled', 'cancelled')) OR ("expiresAt" IS NOT NULL)))
+  ),
+  CONSTRAINT rooms_lifecycle_invariants_check CHECK (
+    (status <> 'scheduled' OR ("scheduledStartsAt" IS NOT NULL AND "startedAt" IS NULL AND "endedAt" IS NULL AND "expiresAt" IS NULL AND "cancelledAt" IS NULL))
+    AND
+    (status <> 'active' OR ("startedAt" IS NOT NULL AND "endedAt" IS NULL AND "cancelledAt" IS NULL))
+    AND
+    (status <> 'ended' OR ("startedAt" IS NOT NULL AND "endedAt" IS NOT NULL AND "endedAt" >= "startedAt" AND "cancelledAt" IS NULL))
+    AND
+    (status <> 'expired' OR ("startedAt" IS NOT NULL AND "expiresAt" IS NOT NULL AND "endedAt" IS NULL AND "cancelledAt" IS NULL AND "isPermanent" = false))
+    AND
+    (status <> 'cancelled' OR ("scheduledStartsAt" IS NOT NULL AND "cancelledAt" IS NOT NULL AND "startedAt" IS NULL AND "endedAt" IS NULL AND "expiresAt" IS NULL))
+  )
 );
+
+CREATE INDEX IF NOT EXISTS idx_rooms_scheduled_due ON public.rooms (status, "scheduledStartsAt") WHERE status = 'scheduled';
 
 CREATE INDEX IF NOT EXISTS "room_creationTime_idx" ON public.rooms USING btree ("creationTime");
 CREATE INDEX IF NOT EXISTS room_owner_id_idx ON public.rooms USING btree (owner_id);

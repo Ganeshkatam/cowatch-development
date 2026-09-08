@@ -1057,6 +1057,10 @@ app.post("/api/room/verifyPasscode", bodyParser.json(), async (req, res) => {
     }
 
     const admissionToken = await createAdmissionToken(roomId, authenticatedUserId);
+    if (!admissionToken) {
+      res.status(503).json({ success: false, error: "ADMISSION_SERVICE_UNAVAILABLE" });
+      return;
+    }
     res.status(200).json({ success: true, admissionToken });
   } catch (err) {
     console.error("Error verifying passcode:", err);
@@ -1359,18 +1363,36 @@ app.post("/endRoom", async (req, res) => {
     }
 
     const roomRow = selectResult.rows[0];
-    if (roomRow.status === "ended" || roomRow.status === "expired") {
-      res.json({ success: true, status: roomRow.status });
+    if (roomRow.status === "ended") {
+      res.json({ success: true, status: "ended" });
+      return;
+    }
+    if (roomRow.status === "expired" || roomRow.status === "cancelled") {
+      res.status(400).json({ error: `Cannot end a room that is ${roomRow.status}.` });
+      return;
+    }
+    if (roomRow.status === "scheduled") {
+      res.status(400).json({ error: "Cannot end a scheduled room that has not started. Cancel the room instead." });
+      return;
+    }
+    if (roomRow.status !== "active") {
+      res.status(400).json({ error: `Cannot end a room with status '${roomRow.status}'.` });
       return;
     }
 
-    await postgres.query(
+    const now = new Date();
+    const updateRes = await postgres.query(
       `UPDATE rooms 
-       SET status = 'ended', "endedAt" = NOW() 
-       WHERE "roomId" = $1 AND owner_id = $2
+       SET status = 'ended', "endedAt" = $1, "lastUpdateTime" = $1
+       WHERE "roomId" = $2 AND owner_id = $3 AND status = 'active'
        RETURNING *`,
-      [roomId, decoded.uid],
+      [now, roomId, decoded.uid],
     );
+
+    if (updateRes.rowCount === 0) {
+      res.status(400).json({ error: "Room state changed before it could be ended." });
+      return;
+    }
 
     await postgres.query(`
       INSERT INTO room_lifecycle_events 
@@ -1548,9 +1570,9 @@ async function expireRooms() {
   try {
     const result = await postgres.query(`
       UPDATE rooms
-      SET status = 'expired', "endedAt" = NOW()
+      SET status = 'expired', "lastUpdateTime" = NOW()
       WHERE status IN ('active', 'inactive') AND "expiresAt" <= NOW() AND "isPermanent" = false
-      RETURNING "roomId", "expiresAt" as "previousExpiresAt", "endedAt" as "timestamp"
+      RETURNING "roomId", "expiresAt" as "previousExpiresAt", "lastUpdateTime" as "timestamp"
     `);
     if (result.rowCount && result.rowCount > 0) {
       console.log(`[EXPIRE] Expired ${result.rowCount} rooms`);

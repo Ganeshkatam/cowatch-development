@@ -111,19 +111,32 @@ export async function startRoomLifecycle(roomId: string, uid: string | "SYSTEM")
   }
 
   // 6. Concurrency guard: Atomic database update
-  const updateRes = await postgres.query(
-    `UPDATE rooms
-     SET
-       status = 'active',
-       "startedAt" = $1,
-       "expiresAt" = $2,
-       "lastUpdateTime" = $1,
-       "lastActiveAt" = $1
-     WHERE "roomId" = $3 AND (status = 'waiting' OR status = 'scheduled')
-     ${uid !== "SYSTEM" ? `AND owner_id = '${uid}'` : ""}
-     RETURNING *`,
-    [now, expiresAt, targetRoomId]
-  );
+  const isSystem = uid === "SYSTEM";
+  const updateRes = isSystem
+    ? await postgres.query(
+        `UPDATE rooms
+         SET
+           status = 'active',
+           "startedAt" = $1,
+           "expiresAt" = $2,
+           "lastUpdateTime" = $1,
+           "lastActiveAt" = $1
+         WHERE "roomId" = $3 AND (status = 'waiting' OR status = 'scheduled')
+         RETURNING *`,
+        [now, expiresAt, targetRoomId]
+      )
+    : await postgres.query(
+        `UPDATE rooms
+         SET
+           status = 'active',
+           "startedAt" = $1,
+           "expiresAt" = $2,
+           "lastUpdateTime" = $1,
+           "lastActiveAt" = $1
+         WHERE "roomId" = $3 AND (status = 'waiting' OR status = 'scheduled') AND owner_id = $4
+         RETURNING *`,
+        [now, expiresAt, targetRoomId, uid]
+      );
 
   if (updateRes.rowCount === 0) {
     // Another request may have transitioned the room concurrently. Check if active.
@@ -157,11 +170,11 @@ export async function startRoomLifecycle(roomId: string, uid: string | "SYSTEM")
         targetRoomId,
         uid,
         "room.started",
-        "waiting",
+        room.status,
         "active",
         null,
         expiresAt,
-        "host started watch party",
+        uid === "SYSTEM" ? "scheduled start time reached" : "host started watch party",
         now,
       ]
     );
@@ -236,23 +249,45 @@ export async function cancelRoomLifecycle(roomId: string, uid: string) {
   if (room.owner_id !== uid) throw new Error("Only the room owner can cancel the watch party.");
   if (room.status !== "scheduled") throw new Error(`Cannot cancel a room that is ${room.status}. Only scheduled rooms can be cancelled.`);
 
+  const now = new Date();
   const updateRes = await postgres.query(
-    `UPDATE rooms SET status = 'cancelled', "lastUpdateTime" = NOW() WHERE "roomId" = $1 AND owner_id = $2 AND status = 'scheduled' RETURNING *`,
-    [targetRoomId, uid]
+    `UPDATE rooms SET status = 'cancelled', "cancelledAt" = $1, "lastUpdateTime" = $1 WHERE "roomId" = $2 AND owner_id = $3 AND status = 'scheduled' RETURNING *`,
+    [now, targetRoomId, uid]
   );
   if (updateRes.rowCount === 0) throw new Error("Failed to transition room to cancelled state.");
+
+  try {
+    await postgres.query(
+      `INSERT INTO room_lifecycle_events
+       ("roomId", actor, event, "previousStatus", "newStatus", "previousExpiresAt", "newExpiresAt", reason, timestamp)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        targetRoomId,
+        uid,
+        "room.cancelled",
+        room.status,
+        "cancelled",
+        null,
+        null,
+        "host cancelled scheduled watch party",
+        now,
+      ]
+    );
+  } catch (auditErr) {
+    console.warn("Failed to write room.cancelled audit event:", auditErr);
+  }
 
   const memoryRoom = roomsMap?.get(targetRoomId) || roomsMap?.get(normalizedId) || roomsMap?.get(slashedId);
   if (memoryRoom) {
     memoryRoom.status = "cancelled";
-    memoryRoom.lastUpdateTime = new Date();
+    memoryRoom.lastUpdateTime = now;
   }
   if (ioInstance) {
-    const broadcastPayload = { status: "cancelled", serverNow: Date.now() };
+    const broadcastPayload = { status: "cancelled", cancelledAt: now.toISOString(), serverNow: Date.now() };
     ioInstance.of(targetRoomId).emit("REC:roomCancelled", broadcastPayload);
     if (normalizedId !== targetRoomId) ioInstance.of(normalizedId).emit("REC:roomCancelled", broadcastPayload);
   }
-  return { success: true, status: "cancelled" };
+  return { success: true, status: "cancelled", cancelledAt: now.toISOString() };
 }
 
 export async function rescheduleRoomLifecycle(roomId: string, uid: string, newTimestamp: string) {
