@@ -436,6 +436,34 @@ app.get("/youtubePlaylist/:playlistId", async (req, res) => {
   }
 });
 
+async function authenticateRequest(req: express.Request, requireConfirmation: boolean = true) {
+  let token: string | undefined;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.substring(7).trim();
+  }
+  if (!token) {
+    token = (req.query?.token || req.body?.token) as string | undefined;
+  }
+  const uid = (req.query?.uid || req.body?.uid) as string | undefined;
+
+  if (!token) return undefined;
+
+  if (!uid) {
+    if (!supabaseAdmin) return undefined;
+    try {
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (error || !user) return undefined;
+      if (requireConfirmation && user.email_confirmed_at == null) return "EMAIL_NOT_VERIFIED";
+      return { uid: user.id, email: user.email, email_verified: user.email_confirmed_at != null };
+    } catch {
+      return undefined;
+    }
+  }
+
+  return await validateUserToken(uid, token, requireConfirmation);
+}
+
 app.post("/createRoom", async (req, res) => {
   // Authentication is required to create a room
   if (!req.body?.token || !req.body?.uid) {
@@ -874,10 +902,7 @@ app.delete("/deleteAccount", async (req, res) => {
 });
 
 app.get("/metadata", async (req, res) => {
-  const decoded = await validateUserToken(
-    String(req.query?.uid),
-    String(req.query?.token),
-  );
+  const decoded = await authenticateRequest(req);
   if (decoded === "EMAIL_NOT_VERIFIED") {
     res.status(403).json({ error: { code: "EMAIL_NOT_VERIFIED", message: "Email verification is required." } });
     return;
@@ -1172,10 +1197,7 @@ app.get("/resolveShard/:roomId", async (req, res) => {
 
 app.get("/listRooms", async (req, res) => {
   try {
-    const decoded = await validateUserToken(
-      String(req.query?.uid),
-      String(req.query?.token),
-    );
+    const decoded = await authenticateRequest(req);
     if (decoded === "EMAIL_NOT_VERIFIED") {
       res.status(403).json({ error: { code: "EMAIL_NOT_VERIFIED", message: "Email verification is required." } });
       return;
@@ -1227,10 +1249,7 @@ app.get("/listRooms", async (req, res) => {
 });
 
 app.get("/roomDetails", async (req, res) => {
-  const decoded = await validateUserToken(
-    String(req.query?.uid),
-    String(req.query?.token),
-  );
+  const decoded = await authenticateRequest(req);
   if (decoded === "EMAIL_NOT_VERIFIED") {
     res.status(403).json({ error: { code: "EMAIL_NOT_VERIFIED", message: "Email verification is required." } });
     return;
@@ -1414,10 +1433,7 @@ app.post("/endRoom", async (req, res) => {
 
 app.delete("/deleteRoom", async (req, res) => {
   try {
-    const decoded = await validateUserToken(
-      String(req.query?.uid),
-      String(req.query?.token),
-    );
+    const decoded = await authenticateRequest(req);
     if (decoded === "EMAIL_NOT_VERIFIED") {
       res.status(403).json({ error: { code: "EMAIL_NOT_VERIFIED", message: "Email verification is required." } });
       return;

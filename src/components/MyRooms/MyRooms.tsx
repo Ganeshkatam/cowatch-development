@@ -85,7 +85,9 @@ const useRooms = (user: any) => {
       for (let i = 0; i < candidatesToTry.length; i++) {
         const candidate = candidatesToTry[i];
         try {
-          const res = await fetch(`${candidate}/listRooms?uid=${user.id}&token=${token}`);
+          const res = await fetch(`${candidate}/listRooms`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
           const contentType = res.headers.get("content-type") || "";
           if (res.ok && contentType.includes("application/json")) {
             response = res;
@@ -171,8 +173,9 @@ const useRooms = (user: any) => {
         console.warn("Storage cleanup error:", storageErr);
       }
 
-      const response = await fetch(`${serverPath}/deleteRoom?uid=${user.id}&token=${token}&roomId=${roomId}`, {
+      const response = await fetch(`${serverPath}/deleteRoom?roomId=${roomId}`, {
         method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         setRooms(prev => prev.filter(r => r.roomId !== roomId));

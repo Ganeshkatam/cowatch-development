@@ -33,6 +33,7 @@ export interface RoomMessageRow {
   profile_name?: string;
   profile_picture?: string;
 }
+export const ROOM_MESSAGE_MAX_LENGTH = 10000;
 
 export async function persistRoomMessage(
   roomId: string,
@@ -1088,6 +1089,15 @@ export class Room {
       );
       if (dbRow) {
         dbId = dbRow.id;
+      } else {
+        if (socket) {
+          socket.emit("ROOM_MESSAGE", {
+            cmd: "system",
+            msg: "Failed to send message. Please try again.",
+            timestamp: new Date().toISOString(),
+          });
+        }
+        return;
       }
     }
 
@@ -1352,7 +1362,7 @@ export class Room {
   };
 
   private isValidChatMessage = (msg: string | undefined) => {
-    return Boolean(msg && msg.length <= 10000);
+    return Boolean(msg && msg.length <= ROOM_MESSAGE_MAX_LENGTH);
   };
 
   private sendChatMessage = (socket: Socket, raw: unknown) => {
@@ -1410,7 +1420,7 @@ export class Room {
     const data = raw as { messageId: string; newMessage: string };
     if (!data || typeof data.messageId !== 'string' || typeof data.newMessage !== 'string') return;
     const trimmedMsg = data.newMessage.trim();
-    if (trimmedMsg.length === 0 || trimmedMsg.length > 50000) return;
+    if (trimmedMsg.length === 0 || trimmedMsg.length > ROOM_MESSAGE_MAX_LENGTH) return;
 
     if (!postgres) return;
 

@@ -5,6 +5,7 @@ export interface AdmissionRecord {
   roomId: string;
   userId: string | null;
   issuedAt: number;
+  expiresAt: number;
 }
 
 const ADMISSION_TTL = 3600; // 1 hour
@@ -22,11 +23,13 @@ export async function createAdmissionToken(roomId: string, userId: string | null
 
   const token = crypto.randomBytes(32).toString("hex");
   const key = `admission:${roomId}:${token}`;
+  const now = Date.now();
   
   const record: AdmissionRecord = {
     roomId,
     userId,
-    issuedAt: Date.now(),
+    issuedAt: now,
+    expiresAt: now + ADMISSION_TTL * 1000,
   };
 
   await redis.setex(key, ADMISSION_TTL, JSON.stringify(record));
@@ -47,7 +50,16 @@ export async function getAdmissionRecord(roomId: string, token: string): Promise
   if (!data) return null;
 
   try {
-    return JSON.parse(data) as AdmissionRecord;
+    const record = JSON.parse(data) as AdmissionRecord;
+    // Strict defense-in-depth binding validation
+    if (record.roomId !== roomId) {
+      console.warn(`[AdmissionSecurity] Token for room ${record.roomId} used against room ${roomId}`);
+      return null;
+    }
+    if (record.expiresAt && Date.now() > record.expiresAt) {
+      return null;
+    }
+    return record;
   } catch (e) {
     return null;
   }
