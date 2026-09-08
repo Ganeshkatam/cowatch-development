@@ -1,7 +1,7 @@
 export default {
   VITE_SERVER_HOST:
     import.meta.env.VITE_SERVER_HOST ||
-    "https://cowatchwatchparty-production.up.railway.app,https://cowatch-watchparty.onrender.com",
+    "https://cowatchwatchparty-production.up.railway.app,https://cowatch-watchparty.onrender.com,https://cowatch-development-production.up.railway.app,https://cowatch-development.onrender.com",
   VITE_OAUTH_REDIRECT_HOSTNAME:
     import.meta.env.VITE_OAUTH_REDIRECT_HOSTNAME ?? "https://www.cowatch.me",
   VITE_AUTH_SIGNIN_METHODS: import.meta.env.VITE_AUTH_SIGNIN_METHODS ?? "google,email",

@@ -120,9 +120,34 @@ export class VideoChat extends React.Component<VideoChatProps> {
     this.lastPrefMicOn = this.context.profile?.pref_mic_on ?? false;
     this.socket?.on("signal", this.handleSignal);
 
-    // Sync any pre-existing remoteStreams from global cowatch state
+    // Sync any pre-existing remoteStreams from global cowatch state or active PCs
     if (window.cowatch?.remoteStreams) {
       Object.assign(this.remoteStreams, window.cowatch.remoteStreams);
+    }
+
+    // Also recover any streams directly from existing RTCPeerConnection receivers
+    if (window.cowatch?.videoPCs) {
+      const selfId = getOrCreateClientId();
+      Object.entries(window.cowatch.videoPCs).forEach(([id, pc]: [string, any]) => {
+        if (id === selfId) return;
+        if (pc && pc.getReceivers) {
+          const tracks = pc.getReceivers().map((r: any) => r.track).filter(Boolean);
+          if (tracks.length > 0) {
+            let stream = window.cowatch.remoteStreams?.[id] || this.remoteStreams[id];
+            if (!stream) {
+              stream = new MediaStream(tracks);
+            } else {
+              tracks.forEach((t: MediaStreamTrack) => {
+                if (!stream.getTracks().includes(t)) stream.addTrack(t);
+              });
+            }
+            this.remoteStreams[id] = stream;
+            if (window.cowatch.remoteStreams) {
+              window.cowatch.remoteStreams[id] = stream;
+            }
+          }
+        }
+      });
     }
 
     // If ourStream is already initialized, establish or refresh connections
@@ -173,6 +198,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
     const ourStream = window.cowatch.ourStream;
     const videoPCs = window.cowatch.videoPCs;
     const videoRefs = window.cowatch.videoRefs;
+    const selfId = getOrCreateClientId();
 
     if (videoPCs[id]) {
       try {
@@ -183,17 +209,6 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
     const pc = new RTCPeerConnection({ iceServers: iceServers() });
     videoPCs[id] = pc;
-
-    // Attach our outgoing tracks if ourStream is present
-    if (ourStream) {
-      ourStream.getTracks().forEach((track) => {
-        try {
-          pc.addTrack(track, ourStream);
-        } catch (e) {
-          console.warn(`[VideoChat] Could not add track (${track.kind}) to pc ${id}:`, e);
-        }
-      });
-    }
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
@@ -249,7 +264,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
     pc.oniceconnectionstatechange = () => {
       console.log(`[VideoChat] ICE state for ${id}: ${pc.iceConnectionState}`);
       if (pc.iceConnectionState === "failed") {
-        console.warn(`[VideoChat] ICE connection to ${id} failed, attempting teardown and restart`);
+        console.warn(`[VideoChat] ICE connection to ${id} failed, tearing down`);
         try {
           pc.close();
         } catch (e) {}
@@ -258,9 +273,35 @@ export class VideoChat extends React.Component<VideoChatProps> {
         if (window.cowatch.remoteStreams) {
           delete window.cowatch.remoteStreams[id];
         }
-        this.updateWebRTC();
       }
     };
+
+    // Attach onnegotiationneeded BEFORE adding tracks so initial negotiation fires cleanly
+    const isOfferer = selfId < id;
+    if (isOfferer) {
+      pc.onnegotiationneeded = async () => {
+        try {
+          if (pc.signalingState !== "stable") return;
+          const offer = await pc.createOffer();
+          if (pc.signalingState !== "stable") return;
+          await pc.setLocalDescription(offer);
+          this.sendSignal(id, { sdp: pc.localDescription });
+        } catch (e) {
+          console.warn("[VideoChat] Negotiation error:", e);
+        }
+      };
+    }
+
+    // Attach our outgoing tracks if ourStream is present
+    if (ourStream) {
+      ourStream.getTracks().forEach((track) => {
+        try {
+          pc.addTrack(track, ourStream);
+        } catch (e) {
+          console.warn(`[VideoChat] Could not add track (${track.kind}) to pc ${id}:`, e);
+        }
+      });
+    }
 
     return pc;
   };
@@ -273,15 +314,22 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
       let pc = window.cowatch.videoPCs[from];
 
-      // Handle offer: create PC if missing or failed, apply offer, and answer
+      // Handle offer: create PC if missing or closed/failed
       if (msg.sdp && msg.sdp.type === "offer") {
-        if (
-          !pc ||
-          pc.connectionState === "failed" ||
-          pc.connectionState === "closed" ||
-          pc.iceConnectionState === "failed"
-        ) {
+        if (!pc || pc.connectionState === "closed" || pc.connectionState === "failed") {
           pc = this.createPeerConnection(from);
+        }
+
+        const isOfferer = getOrCreateClientId() < from;
+        // Perfect negotiation glare resolution: if we are impolite (isOfferer=true), ignore collision
+        // If we are polite (isOfferer=false), rollback local offer to accept incoming offer
+        if (pc.signalingState !== "stable") {
+          if (isOfferer) {
+            console.log("[VideoChat] Impolite peer ignoring offer collision from", from);
+            return;
+          }
+          console.log("[VideoChat] Polite peer rolling back for incoming offer from", from);
+          await pc.setLocalDescription({ type: "rollback" } as any).catch(() => {});
         }
 
         await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
@@ -295,7 +343,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
               console.warn("[VideoChat] Error adding drained ICE candidate:", e);
             }
           }
-          this.pendingCandidates[from] = [];
+          delete this.pendingCandidates[from];
         }
 
         const answer = await pc.createAnswer();
@@ -318,7 +366,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
                 console.warn("[VideoChat] Error adding drained ICE candidate:", e);
               }
             }
-            this.pendingCandidates[from] = [];
+            delete this.pendingCandidates[from];
           }
         }
         return;
@@ -537,38 +585,10 @@ export class VideoChat extends React.Component<VideoChatProps> {
           return;
         }
 
-        // Get or create RTCPeerConnection for remote peer
+        // Get or create RTCPeerConnection for remote peer if missing
         let pc = videoPCs[id];
         if (!pc || pc.connectionState === "closed" || pc.connectionState === "failed") {
-          pc = this.createPeerConnection(id);
-        }
-
-        // For each pair, have the lexicographically smaller ID be the offerer
-        const isOfferer = selfId < id;
-        if (isOfferer) {
-          if (pc.signalingState === "stable") {
-            (async () => {
-              try {
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-                this.sendSignal(id, { sdp: pc.localDescription });
-              } catch (e) {
-                console.warn("[VideoChat] Error sending initial offer:", e);
-              }
-            })();
-          }
-
-          pc.onnegotiationneeded = async () => {
-            try {
-              if (pc.signalingState === "stable") {
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-                this.sendSignal(id, { sdp: pc.localDescription });
-              }
-            } catch (e) {
-              console.warn("[VideoChat] Negotiation error:", e);
-            }
-          };
+          this.createPeerConnection(id);
         }
       });
     } catch (err) {
