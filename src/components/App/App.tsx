@@ -94,6 +94,7 @@ declare global {
       ourStream: MediaStream | undefined;
       videoRefs: HTMLVideoElementDict;
       videoPCs: PCDict;
+      remoteStreams: Record<string, MediaStream>;
       webtorrent?: WebTorrent.Instance;
       hls?: Hls;
       dash?: MediaPlayerClass;
@@ -105,6 +106,7 @@ window.cowatch = {
   ourStream: undefined,
   videoRefs: {},
   videoPCs: {},
+  remoteStreams: {},
 };
 
 const clientId = getOrCreateClientId();
@@ -2768,6 +2770,7 @@ export class App extends React.Component<AppProps, AppState> {
                 }`}
             >
               <Tabs
+                keepMounted={true}
                 value={this.state.currentTab}
                 onChange={(val) => this.setState({ currentTab: val ?? "people" })}
                 style={{

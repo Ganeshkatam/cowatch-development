@@ -91,6 +91,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
   // Stores remote MediaStreams keyed by peer clientId so they survive
   // the race between ontrack firing and the <video> ref being mounted.
   private remoteStreams: Record<string, MediaStream> = {};
+  private pendingCandidates: Record<string, RTCIceCandidateInit[]> = {};
 
   state = {
     copied: false,
@@ -118,6 +119,16 @@ export class VideoChat extends React.Component<VideoChatProps> {
     this.lastPrefCameraOn = this.context.profile?.pref_camera_on ?? false;
     this.lastPrefMicOn = this.context.profile?.pref_mic_on ?? false;
     this.socket?.on("signal", this.handleSignal);
+
+    // Sync any pre-existing remoteStreams from global cowatch state
+    if (window.cowatch?.remoteStreams) {
+      Object.assign(this.remoteStreams, window.cowatch.remoteStreams);
+    }
+
+    // If ourStream is already initialized, establish or refresh connections
+    if (window.cowatch?.ourStream) {
+      this.updateWebRTC();
+    }
   }
 
   componentWillUnmount() {
@@ -158,34 +169,179 @@ export class VideoChat extends React.Component<VideoChatProps> {
     this.socket.emit("CMD:userMute", { isMuted: !this.getAudioWebRTC() });
   };
 
-  handleSignal = async (data: any) => {
-    // Handle messages received from signaling server
-    const msg = data.msg;
-    const from = data.from;
-    let pc = window.cowatch.videoPCs[from];
-    if (!pc) {
-      return;
+  createPeerConnection = (id: string): RTCPeerConnection => {
+    const ourStream = window.cowatch.ourStream;
+    const videoPCs = window.cowatch.videoPCs;
+    const videoRefs = window.cowatch.videoRefs;
+
+    if (videoPCs[id]) {
+      try {
+        videoPCs[id].close();
+      } catch (e) {}
+      delete videoPCs[id];
     }
-    console.log("recv", from, data);
-    if (msg.ice !== undefined) {
-      pc.addIceCandidate(new RTCIceCandidate(msg.ice));
-    } else if (msg.sdp && msg.sdp.type === "offer") {
-      // If our PC is stale, replace it with a fresh one before handling the offer
-      if (pc.connectionState === "failed" || pc.connectionState === "closed") {
-        pc.close();
-        delete window.cowatch.videoPCs[from];
-        this.updateWebRTC();
-        pc = window.cowatch.videoPCs[from];
-        if (!pc) {
-          return;
+
+    const pc = new RTCPeerConnection({ iceServers: iceServers() });
+    videoPCs[id] = pc;
+
+    // Attach our outgoing tracks if ourStream is present
+    if (ourStream) {
+      ourStream.getTracks().forEach((track) => {
+        try {
+          pc.addTrack(track, ourStream);
+        } catch (e) {
+          console.warn(`[VideoChat] Could not add track (${track.kind}) to pc ${id}:`, e);
+        }
+      });
+    }
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        this.sendSignal(id, { ice: event.candidate });
+      }
+    };
+
+    pc.ontrack = (event: RTCTrackEvent) => {
+      console.log(`[VideoChat] ontrack event from ${id} (${event.track.kind})`);
+      let stream = event.streams && event.streams[0];
+      if (!stream) {
+        let existing = window.cowatch.remoteStreams?.[id] || this.remoteStreams[id];
+        if (!existing) {
+          existing = new MediaStream();
+        }
+        if (!existing.getTracks().some((t) => t.id === event.track.id)) {
+          existing.addTrack(event.track);
+        }
+        stream = existing;
+      }
+
+      this.remoteStreams[id] = stream;
+      if (window.cowatch.remoteStreams) {
+        window.cowatch.remoteStreams[id] = stream;
+      }
+
+      event.track.onunmute = () => {
+        console.log(`[VideoChat] Track unmuted from ${id} (${event.track.kind})`);
+        this.forceUpdate();
+      };
+      event.track.onmute = () => {
+        console.log(`[VideoChat] Track muted from ${id} (${event.track.kind})`);
+        this.forceUpdate();
+      };
+      event.track.onended = () => {
+        this.forceUpdate();
+      };
+
+      if (videoRefs && videoRefs[id]) {
+        try {
+          if (videoRefs[id].srcObject !== stream) {
+            videoRefs[id].srcObject = stream;
+          }
+          videoRefs[id].play().catch(() => {});
+        } catch (e) {
+          console.warn(`[VideoChat] Error mounting remote stream to video element for ${id}:`, e);
         }
       }
-      await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      this.sendSignal(from, { sdp: pc.localDescription });
-    } else if (msg.sdp && msg.sdp.type === "answer") {
-      pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+
+      this.forceUpdate();
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log(`[VideoChat] ICE state for ${id}: ${pc.iceConnectionState}`);
+      if (pc.iceConnectionState === "failed") {
+        console.warn(`[VideoChat] ICE connection to ${id} failed, attempting teardown and restart`);
+        try {
+          pc.close();
+        } catch (e) {}
+        delete videoPCs[id];
+        delete this.remoteStreams[id];
+        if (window.cowatch.remoteStreams) {
+          delete window.cowatch.remoteStreams[id];
+        }
+        this.updateWebRTC();
+      }
+    };
+
+    return pc;
+  };
+
+  handleSignal = async (data: any) => {
+    try {
+      const msg = data.msg;
+      const from = data.from;
+      if (!from || !msg) return;
+
+      let pc = window.cowatch.videoPCs[from];
+
+      // Handle offer: create PC if missing or failed, apply offer, and answer
+      if (msg.sdp && msg.sdp.type === "offer") {
+        if (
+          !pc ||
+          pc.connectionState === "failed" ||
+          pc.connectionState === "closed" ||
+          pc.iceConnectionState === "failed"
+        ) {
+          pc = this.createPeerConnection(from);
+        }
+
+        await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+
+        // Drain any pending ICE candidates for this peer
+        if (this.pendingCandidates[from] && this.pendingCandidates[from].length > 0) {
+          for (const cand of this.pendingCandidates[from]) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(cand));
+            } catch (e) {
+              console.warn("[VideoChat] Error adding drained ICE candidate:", e);
+            }
+          }
+          this.pendingCandidates[from] = [];
+        }
+
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        this.sendSignal(from, { sdp: pc.localDescription });
+        return;
+      }
+
+      // Handle answer
+      if (msg.sdp && msg.sdp.type === "answer") {
+        if (!pc) return;
+        if (pc.signalingState === "have-local-offer") {
+          await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+
+          if (this.pendingCandidates[from] && this.pendingCandidates[from].length > 0) {
+            for (const cand of this.pendingCandidates[from]) {
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(cand));
+              } catch (e) {
+                console.warn("[VideoChat] Error adding drained ICE candidate:", e);
+              }
+            }
+            this.pendingCandidates[from] = [];
+          }
+        }
+        return;
+      }
+
+      // Handle ICE candidate
+      if (msg.ice !== undefined) {
+        if (!pc || !pc.remoteDescription) {
+          if (!this.pendingCandidates[from]) {
+            this.pendingCandidates[from] = [];
+          }
+          this.pendingCandidates[from].push(msg.ice);
+          return;
+        }
+
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(msg.ice));
+        } catch (e) {
+          console.warn("[VideoChat] Error adding ICE candidate:", e);
+        }
+      }
+    } catch (err) {
+      console.error("[VideoChat] Error in handleSignal:", err);
     }
   };
 
@@ -219,6 +375,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
       // alert server we've joined video chat
       this.socket?.emit("CMD:joinVideo");
       this.emitUserMute();
+      this.updateWebRTC();
       this.forceUpdate();
     } catch (err) {
       console.error("Critical error in setupWebRTC:", err);
@@ -242,6 +399,10 @@ export class VideoChat extends React.Component<VideoChatProps> {
         delete videoPCs[key];
       });
       this.remoteStreams = {};
+      if (window.cowatch.remoteStreams) {
+        window.cowatch.remoteStreams = {};
+      }
+      this.pendingCandidates = {};
       this.socket?.emit("CMD:leaveVideo");
       this.forceUpdate();
     } catch (err) {
@@ -251,11 +412,21 @@ export class VideoChat extends React.Component<VideoChatProps> {
   addTrackToAllPCs = (track: MediaStreamTrack) => {
     const ourStream = window.cowatch.ourStream;
     const videoPCs = window.cowatch.videoPCs;
+    const selfId = getOrCreateClientId();
     if (!ourStream) return;
-    Object.values(videoPCs).forEach((pc: any) => {
-      const senders = pc.getSenders();
-      if (!senders.find((s: any) => s.track === track)) {
-        pc.addTrack(track, ourStream);
+
+    Object.entries(videoPCs).forEach(([id, pc]: [string, any]) => {
+      if (id === selfId) return;
+      try {
+        const senders = pc.getSenders();
+        const existingSender = senders.find((s: any) => s.track && s.track.kind === track.kind);
+        if (existingSender) {
+          existingSender.replaceTrack(track);
+        } else {
+          pc.addTrack(track, ourStream);
+        }
+      } catch (e) {
+        console.warn(`[VideoChat] Error updating track on PC for ${id}:`, e);
       }
     });
   };
@@ -332,92 +503,72 @@ export class VideoChat extends React.Component<VideoChatProps> {
         this.props.participants.filter((p) => p.isVideoChat).map((p) => p.id),
       );
       Object.entries(videoPCs).forEach(([key, value]) => {
-        if (!clientIds.has(key)) {
+        if (key !== selfId && !clientIds.has(key)) {
           try {
             value.close();
           } catch (e) {}
           delete videoPCs[key];
           delete this.remoteStreams[key];
+          if (window.cowatch.remoteStreams) {
+            delete window.cowatch.remoteStreams[key];
+          }
+          delete this.pendingCandidates[key];
         }
       });
 
       this.props.participants.forEach((user) => {
         const id = user.id;
-        if (!user.isVideoChat || videoPCs[id]) {
-          // User isn't in video chat, or we already have a connection to them
+        if (!user.isVideoChat) {
           return;
         }
         if (id === selfId) {
-          videoPCs[id] = new RTCPeerConnection();
+          if (!videoPCs[id]) {
+            videoPCs[id] = new RTCPeerConnection();
+          }
           if (videoRefs && videoRefs[id] && ourStream) {
             try {
-              videoRefs[id].srcObject = ourStream;
+              if (videoRefs[id].srcObject !== ourStream) {
+                videoRefs[id].srcObject = ourStream;
+              }
             } catch (e) {
               console.warn("Could not set local stream on video element:", e);
             }
           }
-        } else {
-          const pc = new RTCPeerConnection({ iceServers: iceServers() });
-          videoPCs[id] = pc;
-          // Add our own video as outgoing stream
-          ourStream?.getTracks().forEach((track) => {
-            if (ourStream) {
+          return;
+        }
+
+        // Get or create RTCPeerConnection for remote peer
+        let pc = videoPCs[id];
+        if (!pc || pc.connectionState === "closed" || pc.connectionState === "failed") {
+          pc = this.createPeerConnection(id);
+        }
+
+        // For each pair, have the lexicographically smaller ID be the offerer
+        const isOfferer = selfId < id;
+        if (isOfferer) {
+          if (pc.signalingState === "stable") {
+            (async () => {
               try {
-                pc.addTrack(track, ourStream);
-              } catch (e) {
-                console.warn("Could not add track to pc:", e);
-              }
-            }
-          });
-          pc.onicecandidate = (event) => {
-            // We generated an ICE candidate, send it to peer
-            if (event.candidate) {
-              this.sendSignal(id, { ice: event.candidate });
-            }
-          };
-          pc.ontrack = (event: RTCTrackEvent) => {
-            if (event.streams && event.streams[0]) {
-              // Persist the stream so it can be applied even if the
-              // <video> ref hasn't mounted yet (race condition fix).
-              this.remoteStreams[id] = event.streams[0];
-              if (videoRefs && videoRefs[id]) {
-                try {
-                  videoRefs[id].srcObject = event.streams[0];
-                } catch (e) {
-                  console.warn("Could not set remote stream on video element:", e);
-                }
-              }
-              // Re-render so peerHasVideoStream picks up the new stream
-              this.forceUpdate();
-            }
-          };
-          pc.oniceconnectionstatechange = () => {
-            console.log(`[VideoChat] ICE state for ${id}: ${pc.iceConnectionState}`);
-            if (pc.iceConnectionState === "failed") {
-              // ICE failed (permanently, not a temporary disconnection, which would be "disconnected"), tear down and attempt to re-establish
-              console.warn(`[VideoChat] ICE connection to ${id} failed, tearing down and retrying`);
-              try {
-                pc.close();
-              } catch (e) {}
-              delete videoPCs[id];
-              delete this.remoteStreams[id];
-              this.updateWebRTC();
-            }
-          };
-          // For each pair, have the lexicographically smaller ID be the offerer
-          const isOfferer = selfId < id;
-          if (isOfferer) {
-            pc.onnegotiationneeded = async () => {
-              try {
-                // Start connection for peer's video
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
                 this.sendSignal(id, { sdp: pc.localDescription });
               } catch (e) {
-                console.warn("Negotiation error:", e);
+                console.warn("[VideoChat] Error sending initial offer:", e);
               }
-            };
+            })();
           }
+
+          pc.onnegotiationneeded = async () => {
+            try {
+              if (pc.signalingState === "stable") {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                this.sendSignal(id, { sdp: pc.localDescription });
+              }
+            } catch (e) {
+              console.warn("[VideoChat] Negotiation error:", e);
+            }
+          };
         }
       });
     } catch (err) {
@@ -552,13 +703,15 @@ export class VideoChat extends React.Component<VideoChatProps> {
           const isSelfInCall = Boolean(isSelf && ourStream);
           const isSelfVideoActive = Boolean(isSelfInCall && this.getVideoWebRTC());
           const isPeerInCall = Boolean(!isSelf && p.isVideoChat);
+          const remoteStream =
+            window.cowatch?.remoteStreams?.[p.id] || this.remoteStreams[p.id];
           // Only show the video element if we actually have a remote stream
           // with active video tracks. Otherwise show the avatar placeholder
           // to avoid displaying a black rectangle.
           const peerHasVideoStream = Boolean(
             isPeerInCall &&
-            this.remoteStreams[p.id] &&
-            this.remoteStreams[p.id].getVideoTracks().some((t) => t.enabled)
+            remoteStream &&
+            remoteStream.getVideoTracks().some((t) => t.readyState === "live" || t.enabled)
           );
           const showVideoFeed = isSelf ? isSelfVideoActive : peerHasVideoStream;
 
@@ -576,10 +729,13 @@ export class VideoChat extends React.Component<VideoChatProps> {
                           console.warn("Error assigning srcObject to local video:", e);
                         }
                       }
-                      // Apply any remote stream that arrived before this ref was mounted
-                      if (!isSelf && this.remoteStreams[p.id] && el.srcObject !== this.remoteStreams[p.id]) {
+                      // Apply any remote stream that arrived before or after this ref was mounted
+                      const stream =
+                        window.cowatch?.remoteStreams?.[p.id] || this.remoteStreams[p.id];
+                      if (!isSelf && stream && el.srcObject !== stream) {
                         try {
-                          el.srcObject = this.remoteStreams[p.id];
+                          el.srcObject = stream;
+                          el.play().catch(() => {});
                         } catch (e) {
                           console.warn("Error assigning remote stream on ref mount:", e);
                         }
@@ -633,7 +789,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
                   {!isSelf && (
                     <span className={styles.peerStatusNotice}>
                       {p.isVideoChat
-                        ? this.remoteStreams[p.id]
+                        ? remoteStream
                           ? "Camera is turned off"
                           : "Connecting..."
                         : "Watching"}
