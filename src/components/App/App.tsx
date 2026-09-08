@@ -54,6 +54,11 @@ import { WaitingForHostOverlay } from "../WaitingForHost/WaitingForHostOverlay";
 import { MediaDock } from "./MediaDock";
 import config from "../../config";
 import { MetadataContext } from "../../MetadataContext";
+import {
+  openRealPiP,
+  closeRealPiP,
+  isPiPActive,
+} from "../../utils/PictureInPictureManager";
 import { ActionIcon, Badge, Button } from "@mantine/core";
 import {
   IconAntennaBars5,
@@ -178,7 +183,6 @@ interface AppState {
   waitingLoungeState: WaitingLoungeState | null;
   waitingList: WaitingGuest[];
   isWaitingLoungeEnabled: boolean;
-  isRoomMinimized?: boolean;
   // Room lifecycle state (authoritative from server)
   roomStatus: string;
   roomStartedAt: string | null;
@@ -273,7 +277,6 @@ export class App extends React.Component<AppProps, AppState> {
     waitingLoungeState: null,
     waitingList: [],
     isWaitingLoungeEnabled: true,
-    isRoomMinimized: false,
     // Room lifecycle initial state
     roomStatus: "waiting",
     roomStartedAt: null,
@@ -327,25 +330,9 @@ export class App extends React.Component<AppProps, AppState> {
 
   handleReturnToRoom = () => {
     this.hasLostFocus = false;
-    if (this.focusRestoreTimeout) {
-      window.clearTimeout(this.focusRestoreTimeout);
-      this.focusRestoreTimeout = null;
-    }
-    this.setState({ isRoomMinimized: false });
-  };
-
-  debounceRestore = () => {
-    if (this.focusRestoreTimeout) {
-      window.clearTimeout(this.focusRestoreTimeout);
-    }
-    this.focusRestoreTimeout = window.setTimeout(() => {
-      this.focusRestoreTimeout = null;
-      if (!this.isLeaving && this.isActiveRoom() && this.state.isRoomMinimized) {
-        if (!document.hidden && document.hasFocus()) {
-          this.setState({ isRoomMinimized: false });
-        }
-      }
-    }, 60);
+    try {
+      window.focus();
+    } catch (e) {}
   };
 
   handleExitClick = () => {
@@ -390,11 +377,7 @@ export class App extends React.Component<AppProps, AppState> {
 
   confirmLeave = () => {
     this.isLeaving = true;
-    if (this.focusRestoreTimeout) {
-      window.clearTimeout(this.focusRestoreTimeout);
-      this.focusRestoreTimeout = null;
-    }
-    this.setState({ isRoomMinimized: false });
+    closeRealPiP();
     try {
       if (window.cowatch?.ourStream) {
         window.cowatch.ourStream.getTracks().forEach((t) => t.stop());
@@ -412,68 +395,69 @@ export class App extends React.Component<AppProps, AppState> {
   };
 
   localTogglePiP = async () => {
-    try {
-      const videoEl = document.getElementById("leftVideo") as HTMLVideoElement | null;
-      if (videoEl && document.pictureInPictureEnabled) {
-        if (document.pictureInPictureElement) {
-          await document.exitPictureInPicture();
-        } else {
-          await videoEl.requestPictureInPicture();
-        }
-      }
-    } catch (e) {
-      console.warn("[App] Error toggling Picture-in-Picture:", e);
+    if (isPiPActive()) {
+      await closeRealPiP();
+      return;
     }
+    await this.triggerRealPiP();
   };
 
-  enterPictureInPicture = async () => {
+  triggerRealPiP = async () => {
     if (this.isLeaving || !this.isActiveRoom()) return;
     try {
       const videoEl = document.getElementById("leftVideo") as HTMLVideoElement | null;
-      if (
-        videoEl &&
-        document.pictureInPictureEnabled &&
-        !videoEl.paused &&
-        !videoEl.ended &&
-        videoEl.readyState >= 2
-      ) {
-        if (document.pictureInPictureElement !== videoEl) {
-          await videoEl.requestPictureInPicture();
-        }
-      }
+      await openRealPiP({
+        roomTitle: this.state.roomTitle || "Watch Party",
+        mediaUrl: this.state.roomMedia,
+        isYouTube: this.usingYoutube(),
+        isNative: this.usingNative(),
+        videoElement: videoEl,
+        currentTime: this.Player().getCurrentTime(),
+        duration: this.Player().getDuration(),
+        isMuted: this.Player().isMuted(),
+        isMicEnabled: this.isMicEnabled(),
+        isVideoEnabled: this.isVideoEnabled(),
+        onReturnToRoom: () => {
+          try {
+            window.focus();
+          } catch (e) {}
+        },
+        onToggleMic: this.handleToggleMic,
+        onToggleVideo: this.handleToggleVideo,
+        onSyncTime: (targetTime: number) => {
+          if (typeof targetTime === "number" && isFinite(targetTime) && targetTime >= 0) {
+            this.Player().seekVideo(targetTime);
+            if (this.socket) {
+              const toSend = this.getRoomTSToSet(targetTime);
+              this.socket.emit("CMD:ts", toSend);
+            }
+          }
+        },
+      });
     } catch (e) {
-      // Ignore background or permission errors
+      console.warn("[App] Error opening Real Picture-in-Picture:", e);
     }
   };
 
-  exitPictureInPicture = async () => {
-    try {
-      if (document.pictureInPictureElement) {
-        await document.exitPictureInPicture();
-      }
-    } catch (e) {
-      // Ignore exit errors
-    }
-  };
-
-  handleVisibilityChange = () => {
+  handleVisibilityChange = async () => {
     if (this.isLeaving || !this.isActiveRoom()) return;
 
     if (document.hidden) {
-      this.enterPictureInPicture();
-    } else {
-      this.exitPictureInPicture();
+      if (!isPiPActive() && this.state.roomMedia) {
+        await this.triggerRealPiP();
+      }
     }
   };
 
-  handleWindowBlur = () => {
+  handleWindowBlur = async () => {
     if (this.isLeaving || !this.isActiveRoom()) return;
-    this.enterPictureInPicture();
+    if (!isPiPActive() && this.state.roomMedia && !document.hasFocus()) {
+      await this.triggerRealPiP();
+    }
   };
 
   handleWindowFocus = () => {
-    if (this.isLeaving || !this.isActiveRoom()) return;
-    this.exitPictureInPicture();
+    // Keep PiP active or retain cinema stage focus
   };
 
   isMicEnabled = (): boolean => {
@@ -547,6 +531,16 @@ export class App extends React.Component<AppProps, AppState> {
     window.addEventListener("blur", this.handleWindowBlur);
     window.addEventListener("focus", this.handleWindowFocus);
 
+    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+      try {
+        navigator.mediaSession.setActionHandler("enterpictureinpicture" as any, async () => {
+          await this.triggerRealPiP();
+        });
+      } catch (e) {
+        // enterpictureinpicture action handler may not be supported by all browsers
+      }
+    }
+
     // Send heartbeat to the server
     this.heartbeat = window.setInterval(
       () => {
@@ -568,11 +562,13 @@ export class App extends React.Component<AppProps, AppState> {
     document.removeEventListener("visibilitychange", this.handleVisibilityChange);
     window.removeEventListener("blur", this.handleWindowBlur);
     window.removeEventListener("focus", this.handleWindowFocus);
-    window.clearInterval(this.heartbeat);
-    if (this.focusRestoreTimeout) {
-      window.clearTimeout(this.focusRestoreTimeout);
-      this.focusRestoreTimeout = null;
+    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+      try {
+        navigator.mediaSession.setActionHandler("enterpictureinpicture" as any, null);
+      } catch (e) {}
     }
+    closeRealPiP();
+    window.clearInterval(this.heartbeat);
     if (this.startingTimer) {
       window.clearTimeout(this.startingTimer);
       this.startingTimer = null;

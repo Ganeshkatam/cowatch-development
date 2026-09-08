@@ -146,3 +146,29 @@ interface WaitingLoungeState {
   rejected?: boolean;
 }
 
+interface DocumentPictureInPicture {
+  requestWindow(options?: {
+    width?: number;
+    height?: number;
+    disallowReturnToOpener?: boolean;
+    preferInitialWindowPlacement?: boolean;
+  }): Promise<Window>;
+  window: Window | null;
+  onenter: ((event: Event) => void) | null;
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | EventListenerOptions
+  ): void;
+}
+
+interface Window {
+  documentPictureInPicture?: DocumentPictureInPicture;
+}
+
+
