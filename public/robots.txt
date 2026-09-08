@@ -1,3 +1,27 @@
+# Robots.txt for CoWatch
 # https://www.robotstxt.org/robotstxt.html
+
 User-agent: *
-Disallow:
+Allow: /
+Allow: /faq
+Allow: /terms
+Allow: /privacy
+Allow: /login
+Allow: /signup
+Allow: /room/new
+
+# Disallow private user accounts, settings, and dynamic authenticated room sessions
+Disallow: /settings
+Disallow: /profile
+Disallow: /myrooms
+Disallow: /myrooms/
+Disallow: /watch/
+Disallow: /api/
+Disallow: /metadata
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /verify-email
+Disallow: /debug
+
+# Sitemap index
+Sitemap: https://cowatch-dev.vercel.app/sitemap.xml

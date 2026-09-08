@@ -22,6 +22,7 @@ import { DEFAULT_STATE, MetadataContext } from "./MetadataContext";
 import { createTheme, MantineProvider, Loader, Center } from "@mantine/core";
 import { ThemeProvider, useAppearance } from "./theme/ThemeProvider";
 import type { AppearanceMode } from "./theme/types";
+import { RouteSEO } from "./utils/seo";
 
 // Route-level code splitting for rapid initial page loads
 const Home = lazy(() => import("./components/Home/Home").then((m) => ({ default: m.Home })));
@@ -434,6 +435,7 @@ class CoWatch extends React.Component {
             <MantineProvider theme={theme} forceColorScheme={resolvedColorScheme}>
               <MetadataContext.Provider value={this.state}>
                 <BrowserRouter>
+                  <RouteSEO />
                   <Suspense fallback={<RouteFallback />}>
                     <Route
                       path="/"
