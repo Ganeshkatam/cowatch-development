@@ -324,62 +324,22 @@ export const EditRoomModal = ({
     <Modal
       opened={opened}
       onClose={onClose}
-      centered={false}
-      yOffset="2vh"
-      xOffset="8px"
-      size={580}
+      centered
+      size="min(560px, calc(100vw - 20px))"
       radius="lg"
       padding={0}
       withCloseButton={true}
+      classNames={{
+        root: styles.editRoomModalRoot,
+        inner: styles.editRoomModalInner,
+        content: styles.editRoomModalContent,
+        header: styles.editRoomModalHeader,
+        body: styles.editRoomModalBody,
+      }}
       styles={{
-        root: {
-          overflow: "hidden",
-        },
-        inner: {
-          padding: "10px 8px",
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "center",
-          boxSizing: "border-box",
-        },
-        content: {
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-subtle)",
-          color: "var(--text-primary)",
-          boxShadow: "var(--shadow-xl)",
-          overflow: "hidden",
-          maxHeight: "calc(96dvh - 20px)",
-          display: "flex",
-          flexDirection: "column",
-          width: "100%",
-          maxWidth: "580px",
-          boxSizing: "border-box",
-        },
-        header: {
-          background: "var(--bg-surface)",
-          borderBottom: "1px solid var(--border-subtle)",
-          padding: "12px 16px",
-          color: "var(--text-primary)",
-          flexShrink: 0,
-          width: "100%",
-          boxSizing: "border-box",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        },
         title: {
           flex: "1 1 auto",
           minWidth: 0,
-        },
-        body: {
-          padding: 0,
-          display: "flex",
-          flexDirection: "column",
-          flex: "1 1 0%",
-          minHeight: 0,
-          overflow: "hidden",
-          width: "100%",
-          boxSizing: "border-box",
         },
         close: {
           color: "var(--text-secondary)",
