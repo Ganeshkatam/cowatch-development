@@ -86,6 +86,20 @@ export const AUDIO_CONSTRAINTS: MediaTrackConstraints = {
   echoCancellation: true,
   noiseSuppression: true,
   autoGainControl: true,
+  channelCount: 1,
+  sampleRate: 48000,
+  ...({ latency: 0 } as any),
+};
+
+const optimizeReceiver = (receiver: RTCRtpReceiver) => {
+  try {
+    if ("playoutDelayHint" in receiver) {
+      (receiver as any).playoutDelayHint = 0;
+    }
+    if ("jitterBufferTarget" in receiver) {
+      (receiver as any).jitterBufferTarget = 0;
+    }
+  } catch (e) {}
 };
 
 export class VideoChat extends React.Component<VideoChatProps> {
@@ -224,6 +238,9 @@ export class VideoChat extends React.Component<VideoChatProps> {
     };
 
     pc.ontrack = (event: RTCTrackEvent) => {
+      if (event.receiver) {
+        optimizeReceiver(event.receiver);
+      }
       console.log(`[VideoChat] ontrack event from ${id} (${event.track.kind})`);
       let existing = window.cowatch.remoteStreams?.[id] || this.remoteStreams[id];
       if (!existing) {
@@ -312,6 +329,9 @@ export class VideoChat extends React.Component<VideoChatProps> {
         isMakingOffer = true;
         const offer = await pc.createOffer();
         if (pc.signalingState !== "stable") return;
+        if (offer.sdp) {
+          offer.sdp = offer.sdp.replace(/useinbandfec=1/g, "useinbandfec=1;minptime=10");
+        }
         await pc.setLocalDescription(offer);
         this.sendSignal(id, { sdp: pc.localDescription });
       } catch (e) {
@@ -362,6 +382,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
         }
 
         await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+        pc.getReceivers().forEach(optimizeReceiver);
 
         // Drain any pending ICE candidates for this peer
         if (this.pendingCandidates[from] && this.pendingCandidates[from].length > 0) {
@@ -376,6 +397,9 @@ export class VideoChat extends React.Component<VideoChatProps> {
         }
 
         const answer = await pc.createAnswer();
+        if (answer.sdp) {
+          answer.sdp = answer.sdp.replace(/useinbandfec=1/g, "useinbandfec=1;minptime=10");
+        }
         await pc.setLocalDescription(answer);
         this.sendSignal(from, { sdp: pc.localDescription });
         return;
@@ -386,6 +410,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
         if (!pc) return;
         if (pc.signalingState === "have-local-offer") {
           await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+          pc.getReceivers().forEach(optimizeReceiver);
 
           if (this.pendingCandidates[from] && this.pendingCandidates[from].length > 0) {
             for (const cand of this.pendingCandidates[from]) {

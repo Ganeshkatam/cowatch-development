@@ -193,7 +193,7 @@ export class Room {
         this.lastTsMap = Date.now();
         this.emitToRoom("REC:tsMap", this.tsMap);
       }
-    }, 1000);
+    }, 500);
 
     io.of(roomId).use(async (socket, next) => {
       if (postgres) {
@@ -1192,22 +1192,24 @@ export class Room {
   };
 
   private playVideo = (socket: Socket) => {
-    socket.broadcast.emit("REC:play", this.video);
+    const ts = this.tsMap[socket.clientId] ?? this.videoTS;
+    socket.broadcast.emit("REC:play", { video: this.video, ts });
     const chatMsg = {
       id: socket.clientId,
       cmd: "play",
-      msg: this.tsMap[socket.clientId]?.toString(),
+      msg: ts?.toString(),
     };
     this.paused = false;
     this.addChatMessage(socket, chatMsg);
   };
 
   private pauseVideo = (socket: Socket) => {
-    socket.broadcast.emit("REC:pause");
+    const ts = this.tsMap[socket.clientId] ?? this.videoTS;
+    socket.broadcast.emit("REC:pause", { ts });
     const chatMsg = {
       id: socket.clientId,
       cmd: "pause",
-      msg: this.tsMap[socket.clientId]?.toString(),
+      msg: ts?.toString(),
     };
     this.paused = true;
     this.addChatMessage(socket, chatMsg);
@@ -1218,6 +1220,7 @@ export class Room {
       return;
     }
     this.videoTS = data;
+    this.tsMap[socket.clientId] = data;
     socket.broadcast.emit("REC:seek", data);
     const chatMsg = { id: socket.clientId, cmd: "seek", msg: data?.toString() };
     this.addChatMessage(socket, chatMsg);
@@ -1262,11 +1265,14 @@ export class Room {
       this.videoTS = data;
     }
     // Normalize the received TS based on how long since the last tsMap emit
-    // Later sends will have higher values so subtract the difference
-    // Add 1 as we will emit 1 second from the last one
-    const timeSinceTsMap = Date.now() - this.lastTsMap;
-    // console.log(socket.clientId, 'offset', offset, 'ms');
-    this.tsMap[socket.clientId] = data - timeSinceTsMap / 1000 + 1;
+    // When playing, project forward to upcoming 500ms emit tick
+    // When paused, maintain exact static timestamp
+    const timeSinceTsMap = Math.max(0, Date.now() - this.lastTsMap);
+    if (this.paused) {
+      this.tsMap[socket.clientId] = data;
+    } else {
+      this.tsMap[socket.clientId] = Math.max(0, data - timeSinceTsMap / 1000 + 0.5);
+    }
   };
 
   private isValidChatMessage = (msg: string | undefined) => {

@@ -105,7 +105,7 @@ export const Controls = (props: ControlsProps) => {
     roomPlaybackRate,
   } = props;
   // console.log(leaderTime, currentTime);
-  const behindThreshold = 10;
+  const behindThreshold = 0.8;
   const isLeaderTimeValid = typeof leaderTime === "number" && isFinite(leaderTime) && leaderTime >= 0;
   const behindTime =
     !isLiveStream && isLeaderTimeValid

@@ -520,11 +520,36 @@ export class App extends React.Component<AppProps, AppState> {
     socket.on("kicked", () => {
       window.location.assign("/");
     });
-    socket.on("REC:play", () => {
+    socket.on("REC:play", (data?: any) => {
+      if (
+        data &&
+        typeof data === "object" &&
+        typeof data.ts === "number" &&
+        isFinite(data.ts) &&
+        data.ts >= 0
+      ) {
+        if (this.hasDuration() && !this.state.isLiveStream) {
+          const curr = this.Player().getCurrentTime();
+          if (typeof curr === "number" && Math.abs(curr - data.ts) > 0.25) {
+            this.Player().seekVideo(data.ts);
+          }
+        }
+      }
       this.localPlay();
     });
-    socket.on("REC:pause", () => {
+    socket.on("REC:pause", (data?: any) => {
       this.localPause();
+      if (
+        data &&
+        typeof data === "object" &&
+        typeof data.ts === "number" &&
+        isFinite(data.ts) &&
+        data.ts >= 0
+      ) {
+        if (this.hasDuration() && !this.state.isLiveStream) {
+          this.Player().seekVideo(data.ts);
+        }
+      }
     });
     socket.on("REC:seek", (data: number) => {
       this.localSeek(data);
@@ -887,28 +912,69 @@ export class App extends React.Component<AppProps, AppState> {
     });
     socket.on("REC:tsMap", (data: NumberDict) => {
       this.setState({ tsMap: data }, () => {
-        // Dynamic playback rate based on timestamps
-        // Disable for sharing types where the users can have different timestamps
-        // e.g. screenshare, fileshare, .m3u8 HLS streams
-        // Also not necessary for WebRTC sharing since it should be close to realtime
+        // Dual-tier zero-latency synchronization engine
+        // Keeps viewers locked frame-accurately to the room leader
         if (
-          !this.state.roomPaused &&
           !this.state.isLiveStream &&
           this.hasDuration() &&
-          this.state.roomPlaybackRate === 0
+          this.state.roomPlaybackRate === 0 &&
+          !this.playingScreenShare() &&
+          !this.playingFileShare() &&
+          !this.playingVBrowser()
         ) {
-          const leader = this.getLeaderTime();
-          const delta = leader - data[clientId];
-          // Set leader pbr to 1
-          let pbr = 1;
-          // Add .01 pbr for each 100ms delay
-          if (delta > 0.5) {
-            pbr += Number((delta / 10).toFixed(2));
-            pbr = Math.min(pbr, 1.1);
-          }
-          // console.log(delta, pbr);
-          if (this.Player().getPlaybackRate() !== pbr) {
-            this.Player().setPlaybackRate(pbr);
+          const isHost = Boolean(this.state.owner && clientId === this.state.owner);
+          if (!isHost) {
+            const leader = this.getLeaderTime();
+            const myTs =
+              typeof data[clientId] === "number" && isFinite(data[clientId])
+                ? data[clientId]
+                : this.Player().getCurrentTime();
+
+            if (
+              typeof leader === "number" &&
+              isFinite(leader) &&
+              leader >= 0 &&
+              typeof myTs === "number" &&
+              isFinite(myTs)
+            ) {
+              const delta = leader - myTs; // Positive = we are behind leader; Negative = ahead
+
+              if (this.state.roomPaused) {
+                // If paused, ensure exact frame alignment if drift exceeds 200ms
+                if (Math.abs(delta) > 0.2) {
+                  this.Player().seekVideo(leader);
+                }
+              } else {
+                // Active playback synchronization
+                // Tier 1: Hard snap if desync exceeds 0.85s
+                if (Math.abs(delta) > 0.85) {
+                  this.Player().seekVideo(leader);
+                  this.Player().setPlaybackRate(1.0);
+                  if (this.Player().shouldPlay()) {
+                    this.localPlay();
+                  }
+                } else if (Math.abs(delta) >= 0.08) {
+                  // Tier 2: Sub-second continuous pacing between 80ms and 850ms
+                  let targetRate = 1.0;
+                  if (delta > 0) {
+                    // Behind: accelerate up to 1.25x to quickly close gap
+                    targetRate = Math.min(1.0 + delta * 0.35, 1.25);
+                  } else {
+                    // Ahead: decelerate down to 0.85x to let leader catch up
+                    targetRate = Math.max(1.0 + delta * 0.35, 0.85);
+                  }
+                  targetRate = Number(targetRate.toFixed(2));
+                  if (Math.abs(this.Player().getPlaybackRate() - targetRate) >= 0.02) {
+                    this.Player().setPlaybackRate(targetRate);
+                  }
+                } else {
+                  // Within 80ms deadband: synchronized, restore standard rate
+                  if (this.Player().getPlaybackRate() !== 1.0) {
+                    this.Player().setPlaybackRate(1.0);
+                  }
+                }
+              }
+            }
           }
         }
         if (this.state.roomSubtitle) {
@@ -1012,7 +1078,7 @@ export class App extends React.Component<AppProps, AppState> {
           this.socket.emit("CMD:ts", toSend);
         }
       }
-    }, 1000);
+    }, 500);
     } catch (criticalErr) {
       console.error("Critical error in join:", criticalErr);
       if (this.startingTimer) {
@@ -1794,6 +1860,16 @@ export class App extends React.Component<AppProps, AppState> {
         }
       };
       pc.ontrack = (event: RTCTrackEvent) => {
+        if (event.receiver) {
+          try {
+            if ("playoutDelayHint" in event.receiver) {
+              (event.receiver as any).playoutDelayHint = 0;
+            }
+            if ("jitterBufferTarget" in event.receiver) {
+              (event.receiver as any).jitterBufferTarget = 0;
+            }
+          } catch (e) {}
+        }
         // Mount the stream from sharer
         // console.log(stream);
         const leftVideo = this.HTMLInterface.getVideoEl();
