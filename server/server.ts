@@ -650,10 +650,27 @@ app.post("/updateRoomSettings", async (req, res) => {
 
     if (permanenceChanged) {
       await client.query(
-        `INSERT INTO room_lifecycle_events (room_id, actor_id, event_type, previous_status, new_status, previous_expires_at, new_expires_at, reason)
+        `INSERT INTO room_lifecycle_events 
+         ("roomId", actor, event, "previousStatus", "newStatus", "previousExpiresAt", "newExpiresAt", reason)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [roomId, decoded.uid, 'room.permanence_changed', null, null, room.expiresAt, newExpiresAt, isPermanent ? "Room converted from temporary to permanent" : "Room converted from permanent to temporary"]
+        [
+          roomId,
+          decoded.uid,
+          'room.permanence_changed',
+          room.status,
+          room.status,
+          room.expiresAt,
+          newExpiresAt,
+          isPermanent ? "Room converted from temporary to permanent" : "Room converted from permanent to temporary"
+        ]
       );
+    }
+
+    const memoryRoom = rooms.get(roomId);
+    if (memoryRoom) {
+      memoryRoom.isPermanent = isPermanent;
+      memoryRoom.expiresAt = newExpiresAt ? new Date(newExpiresAt) : undefined;
+      memoryRoom.isChatDisabled = isChatDisabled;
     }
 
     await client.query('COMMIT');
