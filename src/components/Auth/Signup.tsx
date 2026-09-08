@@ -16,6 +16,7 @@ import config from "../../config";
 import styles from "./AuthShell.module.css";
 
 export const Signup = () => {
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -74,14 +75,15 @@ export const Signup = () => {
 
     setSubmitting(true);
     try {
-      const derivedDisplayName = email.split("@")[0] || "User";
+      const derivedUsername = email.split("@")[0] || "user";
+      const finalDisplayName = displayName.trim() || derivedUsername;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            display_name: derivedDisplayName,
-            username: derivedDisplayName,
+            display_name: finalDisplayName,
+            username: derivedUsername,
           },
         },
       });
@@ -193,6 +195,13 @@ export const Signup = () => {
 
             {enabledOptions.includes("email") && (
               <form onSubmit={handleSignup} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                <TextInput
+                  label="Display Name"
+                  placeholder="Your display name"
+                  required
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                />
                 <TextInput
                   label="Email"
                   placeholder="your@email.com"
