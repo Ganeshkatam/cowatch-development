@@ -7,11 +7,13 @@ import {
   IconLock,
   IconLockOpen,
   IconSettings,
+  IconUsers,
   IconX,
 } from "@tabler/icons-react";
 import { Menu, Tooltip } from "@mantine/core";
 import { SignInButton } from "./TopBar";
 import { HeaderSearchBar } from "./HeaderSearchBar";
+import { WaitingParticipantsPopover } from "../WaitingLounge/WaitingParticipantsPopover";
 import styles from "./RoomHeader.module.css";
 
 interface RoomHeaderProps {
@@ -30,6 +32,11 @@ interface RoomHeaderProps {
   roomSetMedia?: (value: string) => void;
   playlistAdd?: (value: string) => void;
   mediaPath?: string;
+  waitingList?: WaitingGuest[];
+  onAdmitAll?: () => void;
+  onAdmitUser?: (clientId: string) => void;
+  onDeclineUser?: (clientId: string) => void;
+  isOwner?: boolean;
 }
 
 export const RoomHeader: React.FC<RoomHeaderProps> = ({
@@ -48,6 +55,11 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
   roomSetMedia,
   playlistAdd,
   mediaPath,
+  waitingList,
+  onAdmitAll,
+  onAdmitUser,
+  onDeclineUser,
+  isOwner,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -174,6 +186,26 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
       )}
 
       <div className={styles.rightSection}>
+        {isOwner && waitingList && waitingList.length > 0 && (
+          <WaitingParticipantsPopover
+            waitingList={waitingList}
+            onAdmitUser={onAdmitUser}
+            onDeclineUser={onDeclineUser}
+            onAdmitAll={onAdmitAll}
+            position="bottom-end"
+          >
+            <button
+              type="button"
+              className={styles.waitingHeaderBtn}
+              title={`${waitingList.length} guest(s) waiting in lounge - Click to review`}
+            >
+              <div className={styles.waitingHeaderDot} />
+              <IconUsers size={15} stroke={2} />
+              <span className={styles.waitingHeaderCount}>{waitingList.length}</span>
+            </button>
+          </WaitingParticipantsPopover>
+        )}
+
         <button
           type="button"
           className={styles.iconOnlyBtn}

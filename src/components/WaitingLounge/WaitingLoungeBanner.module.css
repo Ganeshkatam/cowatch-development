@@ -125,9 +125,11 @@
   white-space: nowrap;
 }
 
-.reviewBtn:hover {
-  background: rgba(139, 92, 246, 0.25);
+.reviewBtn:hover,
+.reviewBtnActive {
+  background: rgba(139, 92, 246, 0.35);
   color: #FFFFFF;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.3);
 }
 
 .dismissBtn {

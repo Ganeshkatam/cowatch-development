@@ -2374,6 +2374,8 @@ export class App extends React.Component<AppProps, AppState> {
             <WaitingLoungeBanner
               waitingList={this.state.waitingList}
               onAdmitAll={this.admitAllWaitingUsers}
+              onAdmitUser={this.admitWaitingUser}
+              onDeclineUser={this.declineWaitingUser}
               onOpenPeople={() => this.setState({ currentTab: "people", showChatColumn: true, showPeopleColumn: true })}
             />
           )}
@@ -2546,6 +2548,11 @@ export class App extends React.Component<AppProps, AppState> {
             roomSetMedia={this.roomSetMedia}
             playlistAdd={this.roomPlaylistAdd}
             mediaPath={this.state.mediaPath}
+            waitingList={this.state.waitingList}
+            onAdmitAll={this.admitAllWaitingUsers}
+            onAdmitUser={this.admitWaitingUser}
+            onDeclineUser={this.declineWaitingUser}
+            isOwner={Boolean(this.state.owner && this.context.user?.id === this.state.owner)}
           />
         )}
         {

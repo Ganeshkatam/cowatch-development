@@ -26,6 +26,7 @@ import {
 } from "@tabler/icons-react";
 import styles from "./VideoChat.module.css";
 import { InviteModal } from "../Modal/InviteModal";
+import { WaitingParticipantsPopover } from "../WaitingLounge/WaitingParticipantsPopover";
 
 interface VideoChatProps {
   socket: Socket;
@@ -738,10 +739,22 @@ export class VideoChat extends React.Component<VideoChatProps> {
         {isOwner && waitingList && waitingList.length > 0 && (
           <div className={styles.waitingSection}>
             <div className={styles.waitingHeader}>
-              <div className={styles.waitingHeaderTitle}>
-                <span>Waiting Lounge</span>
-                <span className={styles.waitingBadge}>{waitingList.length}</span>
-              </div>
+              <WaitingParticipantsPopover
+                waitingList={waitingList}
+                onAdmitUser={onAdmitUser}
+                onDeclineUser={onDeclineUser}
+                onAdmitAll={onAdmitAll}
+                position="bottom-start"
+              >
+                <div
+                  className={styles.waitingHeaderTitle}
+                  style={{ cursor: "pointer" }}
+                  title="Click to view waiting participants popover"
+                >
+                  <span>Waiting Lounge</span>
+                  <span className={styles.waitingBadge}>{waitingList.length}</span>
+                </div>
+              </WaitingParticipantsPopover>
               {onAdmitAll && (
                 <button
                   type="button"
