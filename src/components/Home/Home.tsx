@@ -1,27 +1,17 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState } from "react";
 import { useHistory, Link } from "react-router-dom";
-import { Container, Title, Text, Button, Accordion } from "@mantine/core";
+import { Button, Accordion } from "@mantine/core";
 import {
-  IconPlayerPlayFilled,
-  IconPlayerPauseFilled,
   IconRefresh,
   IconDeviceTv,
-  IconMessageDots,
   IconLock,
   IconLink,
   IconDevices,
   IconCircleCheck,
-  IconHeartFilled,
-  IconFlame,
-  IconStarFilled,
-  IconThumbUpFilled,
-  IconSparkles,
   IconArrowRight,
   IconUsers,
   IconCirclePlusFilled,
-  IconVolume,
   IconUserPlus,
-  IconUserCheck,
   IconMicrophone,
   IconShieldCheck,
   IconBrandYoutubeFilled,
@@ -32,13 +22,6 @@ import {
 import { SignInButton } from "../TopBar/TopBar";
 import styles from "./Home.module.css";
 import { MetadataContext } from "../../MetadataContext";
-
-interface FloatingReaction {
-  id: number;
-  label: string;
-  icon: React.ReactNode;
-  leftPercent: number;
-}
 
 export const Home = () => {
   const { user } = useContext(MetadataContext);
@@ -170,10 +153,24 @@ export const Home = () => {
             </div>
           </div>
 
-          {/* Interactive Live Theater Preview */}
+          {/* Real CoWatch Product Interface Preview */}
           <div className={styles.previewStage}>
             <div className={styles.stageBacklight} />
-            <InteractiveTheaterPreview />
+            <div className={styles.heroImageFrame}>
+              <div className={styles.heroWindowBar}>
+                <div className={styles.windowControls}>
+                  <span className={styles.dotRed} />
+                  <span className={styles.dotYellow} />
+                  <span className={styles.dotGreen} />
+                </div>
+                <div className={styles.windowUrl}>cowatch.app/watch/party-room</div>
+              </div>
+              <img
+                src="/screenshot_full.png"
+                alt="CoWatch watchparty interface preview"
+                className={styles.heroScreenshot}
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -520,206 +517,6 @@ export const Home = () => {
   );
 };
 
-/* Interactive Theater Preview Subcomponent */
-const CHAT_SNIPPETS = [
-  { user: "Maya", text: "Wait rewind 10 seconds!" },
-  { user: "Sam", text: "This scene is so good" },
-  { user: "Alex", text: "Pass the popcorn please" },
-  { user: "Chris", text: "Audio sync is spot on" },
-];
-
-const PREVIEW_MODES = [
-  { id: "youtube", label: "YouTube", image: "/previews/youtube.jpg", title: "YouTube Video" },
-  { id: "vbrowser", label: "VBrowser", image: "/screenshot_full.png", title: "Virtual Browser" },
-  { id: "screenshare", label: "Screenshare", image: "/reactions_preview.png", title: "Screen Sharing" },
-];
-
-const InteractiveTheaterPreview = () => {
-  const [activeMode, setActiveMode] = useState("youtube");
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [progress, setProgress] = useState(42);
-  const [reactions, setReactions] = useState<FloatingReaction[]>([]);
-  const [chatIndex, setChatIndex] = useState(0);
-
-  // Playback timer simulation
-  useEffect(() => {
-    if (!isPlaying) return;
-    const interval = setInterval(() => {
-      setProgress((prev) => (prev >= 98 ? 10 : prev + 0.5));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isPlaying]);
-
-  // Rotate simulated chat message every 4 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setChatIndex((prev) => (prev + 1) % CHAT_SNIPPETS.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const triggerReaction = (label: string, icon: React.ReactNode) => {
-    const id = Date.now() + Math.random();
-    const leftPercent = 20 + Math.random() * 60;
-    const newReaction: FloatingReaction = { id, label, icon, leftPercent };
-
-    setReactions((prev) => [...prev.slice(-6), newReaction]);
-
-    setTimeout(() => {
-      setReactions((prev) => prev.filter((r) => r.id !== id));
-    }, 2200);
-  };
-
-  const currentMode = PREVIEW_MODES.find((m) => m.id === activeMode) || PREVIEW_MODES[0];
-  const activeChat = CHAT_SNIPPETS[chatIndex];
-
-  return (
-    <div className={styles.theaterFrame}>
-      {/* Theater Topbar */}
-      <div className={styles.theaterHeader}>
-        <div className={styles.windowControls}>
-          <span className={styles.dotRed} />
-          <span className={styles.dotYellow} />
-          <span className={styles.dotGreen} />
-        </div>
-
-        <div className={styles.modeTabs}>
-          {PREVIEW_MODES.map((mode) => (
-            <button
-              key={mode.id}
-              type="button"
-              className={`${styles.modeTab} ${activeMode === mode.id ? styles.modeTabActive : ""}`}
-              onClick={() => setActiveMode(mode.id)}
-            >
-              {mode.label}
-            </button>
-          ))}
-        </div>
-
-        <div className={styles.viewerCount}>
-          <IconUsers size={14} />
-          <span>4 watching</span>
-        </div>
-      </div>
-
-      {/* Main Video Screen */}
-      <div className={styles.theaterScreen}>
-        <img
-          src={currentMode.image}
-          alt={currentMode.title}
-          className={styles.screenMedia}
-        />
-
-        {/* Floating animated reactions */}
-        {reactions.map((r) => (
-          <div
-            key={r.id}
-            className={styles.floatingReaction}
-            style={{ left: `${r.leftPercent}%` }}
-          >
-            <div className={styles.reactionBadge}>
-              {r.icon}
-              <span>{r.label}</span>
-            </div>
-          </div>
-        ))}
-
-        {/* Live chat message pill overlay */}
-        <div className={styles.screenChatOverlay}>
-          <div className={styles.chatBubble} key={chatIndex}>
-            <span className={styles.chatUser}>{activeChat.user}:</span>
-            <span>{activeChat.text}</span>
-          </div>
-        </div>
-
-        {/* Synchronized playback scrubber overlay */}
-        <div className={styles.screenBottomControls}>
-          <div
-            className={styles.progressBarContainer}
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const clickX = e.clientX - rect.left;
-              const newProgress = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
-              setProgress(newProgress);
-            }}
-          >
-            <div
-              className={styles.progressBarFill}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-
-          <div className={styles.screenControlButtons}>
-            <div className={styles.controlLeft}>
-              <button
-                type="button"
-                className={styles.miniPlayBtn}
-                onClick={() => setIsPlaying(!isPlaying)}
-                aria-label={isPlaying ? "Pause" : "Play"}
-              >
-                {isPlaying ? (
-                  <IconPlayerPauseFilled size={14} />
-                ) : (
-                  <IconPlayerPlayFilled size={14} />
-                )}
-              </button>
-              <span className={styles.timeText}>
-                {Math.floor(progress * 0.4)}:
-                {String(Math.floor((progress * 24) % 60)).padStart(2, "0")} / 42:00
-              </span>
-            </div>
-            <IconVolume size={16} color="#aaa" />
-          </div>
-        </div>
-      </div>
-
-      {/* Reaction & Friends Dock */}
-      <div className={styles.reactionDock}>
-        <div className={styles.reactionButtonsGroup}>
-          <button
-            type="button"
-            className={styles.reactionButton}
-            onClick={() => triggerReaction("Love", <IconHeartFilled size={14} color="#EC4899" />)}
-          >
-            <IconHeartFilled size={14} color="#EC4899" />
-            <span>Love</span>
-          </button>
-          <button
-            type="button"
-            className={styles.reactionButton}
-            onClick={() => triggerReaction("Fire", <IconFlame size={14} color="#F59E0B" />)}
-          >
-            <IconFlame size={14} color="#F59E0B" />
-            <span>Fire</span>
-          </button>
-          <button
-            type="button"
-            className={styles.reactionButton}
-            onClick={() => triggerReaction("Cheers", <IconThumbUpFilled size={14} color="#3B82F6" />)}
-          >
-            <IconThumbUpFilled size={14} color="#3B82F6" />
-            <span>Cheers</span>
-          </button>
-          <button
-            type="button"
-            className={styles.reactionButton}
-            onClick={() => triggerReaction("Sparkle", <IconSparkles size={14} color="#8B5CF6" />)}
-          >
-            <IconSparkles size={14} color="#8B5CF6" />
-            <span>Magic</span>
-          </button>
-        </div>
-
-        <div className={styles.friendsStack}>
-          <div className={styles.friendAvatar} style={{ background: "#8B5CF6" }}>M</div>
-          <div className={styles.friendAvatar} style={{ background: "#EC4899" }}>S</div>
-          <div className={styles.friendAvatar} style={{ background: "#10B981" }}>A</div>
-          <div className={styles.friendAvatar} style={{ background: "#3B82F6" }}>C</div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const OCCASIONS = [
   {

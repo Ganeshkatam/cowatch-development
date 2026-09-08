@@ -84,9 +84,20 @@
 }
 
 @keyframes pulse {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.25); opacity: 1; }
-  100% { transform: scale(0.95); opacity: 0.8; }
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
 }
 
 .heroTitle {
@@ -175,996 +186,772 @@
   font-weight: 500;
 }
 
-/* Interactive Preview Theater */
+/* Real Product Hero Preview */
 .previewStage {
   position: relative;
   width: 100%;
   display: flex;
   justify-content: center;
+  align-items: center;
 }
 
 .stageBacklight {
   position: absolute;
-  top: 10%;
-  left: 10%;
-  right: 10%;
-  bottom: 10%;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.35) 0%, rgba(236, 72, 153, 0.2) 60%, transparent 80%);
-  filter: blur(48px);
+  top: 5%;
+  left: 5%;
+  right: 5%;
+  bottom: 5%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.35) 0%, rgba(236, 72, 153, 0.18) 60%, transparent 80%);
+  filter: blur(52px);
   z-index: 0;
   pointer-events: none;
 }
 
-.theaterFrame {
+.heroImageFrame {
   position: relative;
   width: 100%;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-hero);
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-hero);
   z-index: 1;
+  background: var(--bg-surface);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.theaterHeader {
+.heroImageFrame:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.45);
+}
+
+.heroWindowBar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 18px;
-  background: var(--bg-elevated);
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-surface-soft);
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .windowControls {
   display: flex;
+  align-items: center;
   gap: 6px;
 }
 
-.dotRed, .dotYellow, .dotGreen {
+.dotRed,
+.dotYellow,
+.dotGreen {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-}
-.dotRed { background: #EF4444; }
-.dotYellow { background: #F59E0B; }
-.dotGreen { background: #10B981; }
-
-.modeTabs {
-  display: flex;
-  gap: 6px;
+  display: inline-block;
 }
 
-.modeTab {
-  background: transparent;
-  border: none;
-  padding: 5px 12px;
-  font-size: 12px;
-  font-weight: 600;
+.dotRed {
+  background: #ff5f56;
+}
+
+.dotYellow {
+  background: #ffbd2e;
+}
+
+.dotGreen {
+  background: #27c93f;
+}
+
+.windowUrl {
+  font-size: 11px;
+  font-family: monospace;
   color: var(--text-muted);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: all 0.15s ease;
-}
-
-.modeTabActive {
-  background: rgba(139, 92, 246, 0.2);
-  color: var(--text-primary);
-}
-
-.viewerCount {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--color-live);
-  font-weight: 600;
-  background: rgba(16, 185, 129, 0.1);
-  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 3px 12px;
   border-radius: 9999px;
-  border: 1px solid rgba(16, 185, 129, 0.25);
-}
-
-.theaterScreen {
-  position: relative;
-  width: 100%;
-  height: 310px;
-  background: #000;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.screenMedia {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.floatingReaction {
-  position: absolute;
-  bottom: 60px;
-  pointer-events: none;
-  z-index: 10;
-  animation: floatUp 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-@keyframes floatUp {
-  0% { opacity: 1; transform: translateY(0) scale(0.85); }
-  60% { opacity: 0.95; transform: translateY(-70px) scale(1.2); }
-  100% { opacity: 0; transform: translateY(-130px) scale(0.9); }
-}
-
-.reactionBadge {
-  background: rgba(17, 19, 26, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 6px 12px;
-  border-radius: 9999px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-}
-
-.screenChatOverlay {
-  position: absolute;
-  bottom: 50px;
-  left: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 280px;
-  pointer-events: none;
-  z-index: 5;
-}
-
-.chatBubble {
-  background: rgba(17, 19, 26, 0.82);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-md);
-  padding: 6px 12px;
-  font-size: 12px;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
-  animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.chatUser {
-  font-weight: 700;
-  color: var(--color-pink);
-  white-space: nowrap;
-}
-
-.screenBottomControls {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
-  padding: 12px 14px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 6;
-}
-
-.progressBarContainer {
-  width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 9999px;
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.progressBarFill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-violet), var(--color-pink));
-  border-radius: 9999px;
-  transition: width 0.3s ease;
-}
-
-.screenControlButtons {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.controlLeft {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.miniPlayBtn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.miniPlayBtn:hover {
-  background: rgba(255, 255, 255, 0.35);
-}
-
-.timeText {
-  color: #ddd;
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.reactionDock {
-  padding: 12px 16px;
-  background: var(--bg-elevated);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.reactionButtonsGroup {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.reactionButton {
-  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 9999px;
-  padding: 6px 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
-.reactionButton:hover {
-  transform: translateY(-2px);
-  border-color: var(--color-violet);
-  background: var(--surface-hover);
+.heroScreenshot {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
 }
 
-.reactionButton:active {
-  transform: scale(0.95);
-}
-
-.friendsStack {
-  display: flex;
-  align-items: center;
-}
-
-.friendAvatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid var(--bg-elevated);
-  margin-left: -8px;
-  background-color: var(--bg-surface);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
-}
-
-.friendAvatar:first-child {
-  margin-left: 0;
-}
-
-/* =========================================================================
+  /* =========================================================================
    2. SECTION: ASYMMETRIC BENTO GRID (NON-REPETITIVE)
    ========================================================================= */
-.sectionContainer {
-  position: relative;
-  max-width: 1240px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 88px 20px;
-  z-index: 1;
-}
-
-.sectionHeader {
-  text-align: center;
-  max-width: 680px;
-  margin: 0 auto 52px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: center;
-}
-
-.sectionTag {
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--color-violet);
-  background: rgba(139, 92, 246, 0.12);
-  padding: 4px 12px;
-  border-radius: 9999px;
-  border: 1px solid rgba(139, 92, 246, 0.25);
-}
-
-.sectionTitle {
-  font-size: clamp(28px, 3.4vw, 44px);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
-  margin: 0;
-  line-height: 1.2;
-}
-
-.sectionDesc {
-  font-size: 17px;
-  color: var(--text-secondary);
-  line-height: 1.55;
-  margin: 0;
-}
-
-/* Bento Layout */
-.bentoGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: auto auto;
-  gap: 24px;
-}
-
-/* Card 1: Wide 2-column card with live sync visualization */
-.bentoCardWide {
-  grid-column: span 2;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  padding: 36px 32px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 24px;
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.bentoCardWide:hover {
-  border-color: var(--color-violet);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
-}
-
-.bentoCardBody {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 520px;
-}
-
-.bentoTitle {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.bentoText {
-  font-size: 15px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
-}
-
-/* Sync visualizer widget inside Card 1 */
-.syncWidget {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.syncWidgetHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.syncStatusPill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-live);
-  background: rgba(16, 185, 129, 0.12);
-  padding: 3px 10px;
-  border-radius: 9999px;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.syncAvatarsRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.userSyncNode {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.syncNodeName {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.syncNodeTime {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.syncLineTrack {
-  height: 4px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 9999px;
-  position: relative;
-  overflow: hidden;
-}
-
-.syncLineGlow {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 100%;
-  background: linear-gradient(90deg, var(--color-violet), var(--color-teal));
-  border-radius: 9999px;
-}
-
-/* Card 2: Square card - Voice & Lounge */
-.bentoCardSquare {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  padding: 36px 28px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 20px;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.bentoCardSquare:hover {
-  border-color: var(--color-violet);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
-}
-
-/* Audio wave graphic */
-.audioWaveBox {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 80px;
-}
-
-.waveBar {
-  width: 5px;
-  background: linear-gradient(to top, var(--color-violet), var(--color-pink));
-  border-radius: 9999px;
-  animation: waveAnim 1.2s ease-in-out infinite alternate;
-}
-
-@keyframes waveAnim {
-  0% { height: 16px; }
-  100% { height: 58px; }
-}
-
-/* Card 3: Security & Verification Card */
-.bentoCardSecurity {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  padding: 36px 28px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 20px;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.bentoCardSecurity:hover {
-  border-color: var(--color-violet);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
-}
-
-.securityList {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.securityItem {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: var(--bg-elevated);
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
-}
-
-/* Card 4: Media Sources Wide Card */
-.bentoCardSources {
-  grid-column: span 2;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  padding: 36px 32px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 24px;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.bentoCardSources:hover {
-  border-color: var(--color-violet);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
-}
-
-.sourcePillRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.sourceBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 9999px;
-  font-size: 13px;
-  font-weight: 600;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  transition: all 0.2s ease;
-}
-
-.sourceBadge:hover {
-  background: var(--surface-hover);
-  border-color: var(--color-violet);
-}
-
-/* =========================================================================
-   3. SECTION: CONNECTED HORIZONTAL STEPPER TIMELINE (HOW IT WORKS)
-   ========================================================================= */
-.timelineSection {
-  position: relative;
-  max-width: 1240px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 72px 20px;
-  z-index: 1;
-}
-
-.timelineTrackContainer {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
-  margin-top: 48px;
-}
-
-.timelineTrackContainer::before {
-  content: "";
-  position: absolute;
-  top: 36px;
-  left: 10%;
-  right: 10%;
-  height: 2px;
-  background: linear-gradient(90deg, var(--color-violet), var(--color-pink));
-  z-index: 0;
-  opacity: 0.4;
-}
-
-.timelineNodeCard {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 16px;
-}
-
-.nodeMarker {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: var(--bg-surface);
-  border: 3px solid var(--color-violet);
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--text-primary);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.timelineNodeCard:hover .nodeMarker {
-  transform: scale(1.1);
-  box-shadow: 0 0 28px rgba(139, 92, 246, 0.6);
-}
-
-.nodeContentBox {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 24px 20px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  transition: border-color 0.2s ease;
-}
-
-.timelineNodeCard:hover .nodeContentBox {
-  border-color: var(--border-strong);
-}
-
-.nodeTitle {
-  font-size: 19px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.nodeDesc {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
-}
-
-/* =========================================================================
-   4. SECTION: SPLIT-SCREEN INTERACTIVE SHOWCASE (OCCASIONS)
-   ========================================================================= */
-.showcaseSection {
-  position: relative;
-  max-width: 1240px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 72px 20px;
-  z-index: 1;
-}
-
-.showcaseStage {
-  display: grid;
-  grid-template-columns: 1fr 1.35fr;
-  gap: 40px;
-  align-items: center;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  padding: 40px;
-  box-shadow: var(--shadow-md);
-}
-
-.showcaseTabsList {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.showcaseTabButton {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-lg);
-  padding: 20px 22px;
-  text-align: left;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.showcaseTabButton:hover {
-  background: var(--surface-hover);
-}
-
-.showcaseTabActive {
-  background: var(--bg-elevated);
-  border-color: var(--color-violet);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
-}
-
-.tabHeading {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.tabPreviewText {
-  font-size: 13.5px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin: 0;
-}
-
-.showcaseDisplay {
-  position: relative;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  height: 380px;
-  border: 1px solid var(--border-strong);
-  box-shadow: var(--shadow-hero);
-}
-
-.showcaseDisplayImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: opacity 0.3s ease;
-}
-
-.showcaseOverlayTag {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  right: 20px;
-  background: rgba(17, 19, 26, 0.85);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-md);
-  padding: 14px 18px;
-  color: #fff;
-  font-size: 13px;
-  line-height: 1.45;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-}
-
-/* =========================================================================
-   5. SECTION: TWO-COLUMN FAQ
-   ========================================================================= */
-.faqSection {
-  position: relative;
-  max-width: 1240px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 72px 20px;
-  z-index: 1;
-}
-
-.faqLayout {
-  display: grid;
-  grid-template-columns: 1fr 1.6fr;
-  gap: 56px;
-  align-items: flex-start;
-}
-
-.faqSidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.faqContactBox {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.faqContactTitle {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.faqContactText {
-  font-size: 13.5px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin: 0;
-}
-
-/* =========================================================================
-   6. SECTION: AMBIENT CINEMA CALL TO ACTION
-   ========================================================================= */
-.ctaWrapper {
-  position: relative;
-  max-width: 1240px;
-  width: 100%;
-  margin: 30px auto 90px;
-  padding: 0 20px;
-  z-index: 1;
-}
-
-.ctaCard {
-  position: relative;
-  background: radial-gradient(ellipse at bottom, rgba(139, 92, 246, 0.25) 0%, rgba(236, 72, 153, 0.12) 50%, var(--bg-surface) 100%);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-xl);
-  padding: 72px 32px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  box-shadow: var(--shadow-hero);
-  overflow: hidden;
-}
-
-.ctaCard::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 65%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--color-violet), transparent);
-}
-
-.ctaTitle {
-  font-size: clamp(30px, 3.8vw, 48px);
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 0;
-  letter-spacing: -0.02em;
-}
-
-.ctaSubtitle {
-  font-size: 17px;
-  color: var(--text-secondary);
-  max-width: 540px;
-  margin: 0;
-  line-height: 1.6;
-}
-
-.ctaButtons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  justify-content: center;
-  margin-top: 8px;
-}
-
-/* =========================================================================
-   RESPONSIVENESS
-   ========================================================================= */
-@media (max-width: 992px) {
-  .heroInner {
-    grid-template-columns: 1fr;
-    gap: 48px;
-    text-align: center;
+  .sectionContainer {
+    position: relative;
+    max-width: 1240px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 88px 20px;
+    z-index: 1;
   }
 
-  .heroContent {
+  .sectionHeader {
+    text-align: center;
+    max-width: 680px;
+    margin: 0 auto 52px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     align-items: center;
   }
 
-  .actionRow {
-    justify-content: center;
+  .sectionTag {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-violet);
+    background: rgba(139, 92, 246, 0.12);
+    padding: 4px 12px;
+    border-radius: 9999px;
+    border: 1px solid rgba(139, 92, 246, 0.25);
   }
 
-  .joinBar {
-    max-width: 100%;
+  .sectionTitle {
+    font-size: clamp(28px, 3.4vw, 44px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.2;
   }
 
-  .perksRow {
-    justify-content: center;
+  .sectionDesc {
+    font-size: 17px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    margin: 0;
   }
 
+  /* Bento Layout */
   .bentoGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .bentoCardWide, .bentoCardSources {
-    grid-column: span 1;
-  }
-
-  .timelineTrackContainer {
-    grid-template-columns: 1fr;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto auto;
     gap: 24px;
   }
 
+  /* Card 1: Wide 2-column card with live sync visualization */
+  .bentoCardWide {
+    grid-column: span 2;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: 36px 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .bentoCardWide:hover {
+    border-color: var(--color-violet);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+  }
+
+  .bentoCardBody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 520px;
+  }
+
+  .bentoTitle {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .bentoText {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Sync visualizer widget inside Card 1 */
+  .syncWidget {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .syncWidgetHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .syncStatusPill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-live);
+    background: rgba(16, 185, 129, 0.12);
+    padding: 3px 10px;
+    border-radius: 9999px;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  .syncAvatarsRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .userSyncNode {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .syncNodeName {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .syncNodeTime {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .syncLineTrack {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 9999px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .syncLineGlow {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(90deg, var(--color-violet), var(--color-teal));
+    border-radius: 9999px;
+  }
+
+  /* Card 2: Square card - Voice & Lounge */
+  .bentoCardSquare {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: 36px 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 20px;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .bentoCardSquare:hover {
+    border-color: var(--color-violet);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Audio wave graphic */
+  .audioWaveBox {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 80px;
+  }
+
+  .waveBar {
+    width: 5px;
+    background: linear-gradient(to top, var(--color-violet), var(--color-pink));
+    border-radius: 9999px;
+    animation: waveAnim 1.2s ease-in-out infinite alternate;
+  }
+
+  @keyframes waveAnim {
+    0% {
+      height: 16px;
+    }
+
+    100% {
+      height: 58px;
+    }
+  }
+
+  /* Card 3: Security & Verification Card */
+  .bentoCardSecurity {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: 36px 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 20px;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .bentoCardSecurity:hover {
+    border-color: var(--color-violet);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+  }
+
+  .securityList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .securityItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* Card 4: Media Sources Wide Card */
+  .bentoCardSources {
+    grid-column: span 2;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: 36px 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 24px;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .bentoCardSources:hover {
+    border-color: var(--color-violet);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+  }
+
+  .sourcePillRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .sourceBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+  }
+
+  .sourceBadge:hover {
+    background: var(--surface-hover);
+    border-color: var(--color-violet);
+  }
+
+  /* =========================================================================
+   3. SECTION: CONNECTED HORIZONTAL STEPPER TIMELINE (HOW IT WORKS)
+   ========================================================================= */
+  .timelineSection {
+    position: relative;
+    max-width: 1240px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 72px 20px;
+    z-index: 1;
+  }
+
+  .timelineTrackContainer {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    margin-top: 48px;
+  }
+
   .timelineTrackContainer::before {
-    display: none;
+    content: "";
+    position: absolute;
+    top: 36px;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--color-violet), var(--color-pink));
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  .timelineNodeCard {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .nodeMarker {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--bg-surface);
+    border: 3px solid var(--color-violet);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-primary);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .timelineNodeCard:hover .nodeMarker {
+    transform: scale(1.1);
+    box-shadow: 0 0 28px rgba(139, 92, 246, 0.6);
+  }
+
+  .nodeContentBox {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 24px 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color 0.2s ease;
+  }
+
+  .timelineNodeCard:hover .nodeContentBox {
+    border-color: var(--border-strong);
+  }
+
+  .nodeTitle {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .nodeDesc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* =========================================================================
+   4. SECTION: SPLIT-SCREEN INTERACTIVE SHOWCASE (OCCASIONS)
+   ========================================================================= */
+  .showcaseSection {
+    position: relative;
+    max-width: 1240px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 72px 20px;
+    z-index: 1;
   }
 
   .showcaseStage {
-    grid-template-columns: 1fr;
-    padding: 24px;
+    display: grid;
+    grid-template-columns: 1fr 1.35fr;
+    gap: 40px;
+    align-items: center;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: 40px;
+    box-shadow: var(--shadow-md);
   }
 
-  .faqLayout {
-    grid-template-columns: 1fr;
-    gap: 36px;
-  }
-}
-
-@media (max-width: 600px) {
-  .hero {
-    padding: 36px 16px 48px;
-  }
-
-  .sectionContainer, .timelineSection, .showcaseSection, .faqSection {
-    padding: 56px 16px;
-  }
-
-  .reactionDock {
+  .showcaseTabsList {
+    display: flex;
     flex-direction: column;
     gap: 12px;
-    align-items: flex-start;
   }
 
-  .reactionButtonsGroup {
-    width: 100%;
+  .showcaseTabButton {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: all 0.2s ease;
+  }
+
+  .showcaseTabButton:hover {
+    background: var(--surface-hover);
+  }
+
+  .showcaseTabActive {
+    background: var(--bg-elevated);
+    border-color: var(--color-violet);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+  }
+
+  .tabHeading {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
     justify-content: space-between;
   }
 
-  .theaterScreen {
-    height: 220px;
+  .tabPreviewText {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
   }
 
   .showcaseDisplay {
-    height: 240px;
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    height: 380px;
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-hero);
   }
-}
 
+  .showcaseDisplayImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.3s ease;
+  }
+
+  .showcaseOverlayTag {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    background: rgba(17, 19, 26, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    color: #fff;
+    font-size: 13px;
+    line-height: 1.45;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  }
+
+  /* =========================================================================
+   5. SECTION: TWO-COLUMN FAQ
+   ========================================================================= */
+  .faqSection {
+    position: relative;
+    max-width: 1240px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 72px 20px;
+    z-index: 1;
+  }
+
+  .faqLayout {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 56px;
+    align-items: flex-start;
+  }
+
+  .faqSidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .faqContactBox {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .faqContactTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .faqContactText {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* =========================================================================
+   6. SECTION: AMBIENT CINEMA CALL TO ACTION
+   ========================================================================= */
+  .ctaWrapper {
+    position: relative;
+    max-width: 1240px;
+    width: 100%;
+    margin: 30px auto 90px;
+    padding: 0 20px;
+    z-index: 1;
+  }
+
+  .ctaCard {
+    position: relative;
+    background: radial-gradient(ellipse at bottom, rgba(139, 92, 246, 0.25) 0%, rgba(236, 72, 153, 0.12) 50%, var(--bg-surface) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xl);
+    padding: 72px 32px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    box-shadow: var(--shadow-hero);
+    overflow: hidden;
+  }
+
+  .ctaCard::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 65%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-violet), transparent);
+  }
+
+  .ctaTitle {
+    font-size: clamp(30px, 3.8vw, 48px);
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .ctaSubtitle {
+    font-size: 17px;
+    color: var(--text-secondary);
+    max-width: 540px;
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  .ctaButtons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 8px;
+  }
+
+  /* =========================================================================
+   RESPONSIVENESS
+   ========================================================================= */
+  @media (max-width: 992px) {
+    .heroInner {
+      grid-template-columns: 1fr;
+      gap: 48px;
+      text-align: center;
+    }
+
+    .heroContent {
+      align-items: center;
+    }
+
+    .actionRow {
+      justify-content: center;
+    }
+
+    .joinBar {
+      max-width: 100%;
+    }
+
+    .perksRow {
+      justify-content: center;
+    }
+
+    .bentoGrid {
+      grid-template-columns: 1fr;
+    }
+
+    .bentoCardWide,
+    .bentoCardSources {
+      grid-column: span 1;
+    }
+
+    .timelineTrackContainer {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    .timelineTrackContainer::before {
+      display: none;
+    }
+
+    .showcaseStage {
+      grid-template-columns: 1fr;
+      padding: 24px;
+    }
+
+    .faqLayout {
+      grid-template-columns: 1fr;
+      gap: 36px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .hero {
+      padding: 36px 16px 48px;
+    }
+
+    .sectionContainer,
+    .timelineSection,
+    .showcaseSection,
+    .faqSection {
+      padding: 56px 16px;
+    }
+
+    .showcaseDisplay {
+      height: 240px;
+    }
+  }
