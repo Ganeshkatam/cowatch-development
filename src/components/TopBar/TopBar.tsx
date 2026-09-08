@@ -105,23 +105,16 @@ export const TopBar = (props: { hideNewRoom?: boolean; hideSignin?: boolean; hid
         {!props.roomTitle && !props.roomDescription && <div className={styles.brandName}>CoWatch</div>}
       </Link>
       
-      {(props.roomTitle || props.roomDescription) ? (
+      {(props.roomTitle || props.roomDescription) && (
         <div className={styles.roomContext}>
           <div className={styles.roomContextTitle}>{props.roomTitle?.toUpperCase()}</div>
           {props.roomDescription && <Text size="sm" c="dimmed">{props.roomDescription}</Text>}
         </div>
-      ) : (
-        <nav className={styles.centerNav}>
-          <Link to="/" className={`${styles.navLink} ${path === '/' ? styles.navLinkActive : ''}`}>Home</Link>
-          <Link to="/discover" className={`${styles.navLink} ${path === '/discover' ? styles.navLinkActive : ''}`}>Discover</Link>
-          {context.user && !props.hideMyRooms && (
-            <Link to="/myrooms" className={`${styles.navLink} ${path.startsWith('/myrooms') ? styles.navLinkActive : ''}`}>My Rooms</Link>
-          )}
-        </nav>
       )}
 
       <Announce />
       <div className={styles.actionsGroup}>
+        {!props.hideMyRooms && context.user && <ListRoomsButton />}
         {!props.hideNewRoom && context.user && <NewRoomButton size="sm" />}
         {props.showExit && <Button color="red" variant="subtle" onClick={() => window.location.assign("/")} leftSection={<IconX size={16} />}>Exit</Button>}
         {props.onOpenSettings && <Button color="violet" variant="subtle" onClick={props.onOpenSettings} leftSection={<IconSettings size={16} />}>Settings</Button>}

@@ -72,33 +72,6 @@
   text-overflow: ellipsis;
 }
 
-.centerNav {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex: 1;
-  justify-content: center;
-}
-
-.navLink {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-decoration: none;
-  transition: color 0.15s ease;
-}
-
-.navLink:hover {
-  color: var(--text-primary);
-}
-
-.navLinkActive {
-  background: linear-gradient(135deg, var(--color-violet), var(--color-pink));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
 .actionsGroup {
   display: flex;
   align-items: center;
@@ -153,7 +126,6 @@
   .brandName { font-size: 18px; }
   .actionsGroup { gap: 2px; }
   .roomContextTitle { font-size: 14px; }
-  .centerNav { display: none; }
 }
 
 @media (max-width: 480px) {
