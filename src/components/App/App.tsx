@@ -1,6 +1,7 @@
 import type MediasoupClient from "mediasoup-client";
 import React from "react";
-import { Alert, Loader, Overlay, Select, Title, Tabs, Text } from "@mantine/core";
+import { Alert, Loader, Overlay, Select, Title, Tabs, Text, Modal } from "@mantine/core";
+import { IconPlayerStop, IconLogout } from "@tabler/icons-react";
 import io, { Socket } from "socket.io-client";
 import {
   formatSpeed,
@@ -23,8 +24,6 @@ import {
   VIDEO_MAX_HEIGHT_CSS,
   createUuid,
   softWhite,
-  getSavedPasscodes,
-  addAndSavePasscode,
   getRoomUrl,
   decodeEntities,
 } from "../../utils/utils";
@@ -39,11 +38,10 @@ import { Controls } from "../Controls/Controls";
 import { VBrowserModal } from "../Modal/VBrowserModal";
 import { SettingsModal } from "../Settings/SettingsModal";
 import { ErrorModal } from "../Modal/ErrorModal";
-import { PasscodeModal } from "../Modal/PasscodeModal";
 import { ScreenShareModal } from "../Modal/ScreenShareModal";
 import { FileShareModal } from "../Modal/FileShareModal";
 import type { User } from "@supabase/supabase-js";
-import { supabase, safeGetSession } from "../../utils/supabaseClient";
+import { supabase, safeGetSession, getAccessToken } from "../../utils/supabaseClient";
 import { SubtitleModal } from "../Modal/SubtitleModal";
 import { MiniLiveRoomPopover } from "../Modal/MiniLiveRoomPopover";
 import { WaitingLounge } from "../WaitingLounge/WaitingLounge";
@@ -189,6 +187,8 @@ interface AppState {
   roomIsPermanent: boolean;
   roomDurationMinutes: number | null;
   roomServerNow: number | null;
+  hostExitModalOpen: boolean;
+  isEndingRoom: boolean;
 }
 
 export class App extends React.Component<AppProps, AppState> {
@@ -282,6 +282,8 @@ export class App extends React.Component<AppProps, AppState> {
     roomIsPermanent: false,
     roomDurationMinutes: null,
     roomServerNow: null,
+    hostExitModalOpen: false,
+    isEndingRoom: false,
   };
   private hasLostFocus = false;
   private exitIntentCooldownUntil = 0;
@@ -344,6 +346,46 @@ export class App extends React.Component<AppProps, AppState> {
     }, 100);
   };
 
+  handleExitClick = () => {
+    const isOwner = Boolean(this.state.owner && this.context.user?.id === this.state.owner);
+    if (isOwner) {
+      this.setState({ hostExitModalOpen: true });
+    } else {
+      this.confirmLeave();
+    }
+  };
+
+  handleHostEndRoomForEveryone = async () => {
+    this.setState({ isEndingRoom: true });
+    try {
+      const cleanRoomId = this.state.roomId.startsWith("/")
+        ? this.state.roomId.substring(1)
+        : this.state.roomId;
+      const token = await getAccessToken();
+      const user = await supabase.auth.getUser();
+
+      await fetch(`${serverPath}/endRoom`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: user.data.user?.id,
+          token,
+          roomId: cleanRoomId,
+        }),
+      });
+    } catch (e) {
+      console.warn("Failed to end room on server:", e);
+    } finally {
+      this.setState({ hostExitModalOpen: false, isEndingRoom: false });
+      this.confirmLeave();
+    }
+  };
+
+  handleHostLeaveOnly = () => {
+    this.setState({ hostExitModalOpen: false });
+    this.confirmLeave();
+  };
+
   confirmLeave = () => {
     this.isLeaving = true;
     if (this.focusRestoreTimeout) {
@@ -363,7 +405,8 @@ export class App extends React.Component<AppProps, AppState> {
     } catch (e) {
       console.warn("[App] Error during leave cleanup:", e);
     }
-    window.location.href = "/home";
+    const isOwner = Boolean(this.state.owner && this.context.user?.id === this.state.owner);
+    window.location.href = isOwner ? "/home" : "/";
   };
 
   handleVisibilityChange = () => {
@@ -704,7 +747,8 @@ export class App extends React.Component<AppProps, AppState> {
         }, 3000);
       });
       socket.on("kicked", () => {
-        window.location.assign("/home");
+        const isOwner = Boolean(this.state.owner && this.context.user?.id === this.state.owner);
+        window.location.assign(isOwner ? "/home" : "/");
       });
       socket.on("REC:play", (data?: any) => {
         if (
@@ -2688,7 +2732,7 @@ export class App extends React.Component<AppProps, AppState> {
           onReturnToRoom={this.handleReturnToRoom}
           onToggleMic={this.handleToggleMic}
           onToggleVideo={this.handleToggleVideo}
-          onLeaveRoom={this.confirmLeave}
+          onLeaveRoom={this.handleExitClick}
         />
 
         {this.state.state === "starting" && (
@@ -2736,6 +2780,106 @@ export class App extends React.Component<AppProps, AppState> {
             socket={this.socket}
           />
         )}
+
+        {/* Host Exit Room Confirmation Modal */}
+        <Modal
+          opened={this.state.hostExitModalOpen}
+          onClose={() => this.setState({ hostExitModalOpen: false })}
+          title="Exit Watch Party Session"
+          centered
+          overlayProps={{ blur: 5, color: "var(--overlay-scrim)", opacity: 0.8 }}
+          styles={{
+            header: {
+              backgroundColor: "var(--bg-surface)",
+              color: "var(--text-primary)",
+              borderBottom: "1px solid var(--border-subtle)",
+              paddingBottom: "12px",
+            },
+            content: {
+              backgroundColor: "var(--bg-surface)",
+              color: "var(--text-primary)",
+              borderRadius: "16px",
+              border: "1px solid var(--border-subtle)",
+              boxShadow: "0 20px 50px rgba(0, 0, 0, 0.6)",
+            },
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "8px 0" }}>
+            <Text size="sm" c="var(--text-secondary)">
+              You are the host of this watch room. Choose how you would like to conclude your session.
+            </Text>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                padding: "14px",
+                borderRadius: "12px",
+                backgroundColor: "rgba(239, 68, 68, 0.08)",
+                border: "1px solid rgba(239, 68, 68, 0.2)",
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "14px" }}>
+                  End Room for Everyone
+                </div>
+                <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                  Dismiss all participants and close the room session. You will return to your dashboard.
+                </div>
+              </div>
+              <Button
+                color="red"
+                variant="filled"
+                leftSection={<IconPlayerStop size={15} />}
+                loading={this.state.isEndingRoom}
+                onClick={this.handleHostEndRoomForEveryone}
+                fullWidth
+              >
+                End Room for Everyone
+              </Button>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                padding: "14px",
+                borderRadius: "12px",
+                backgroundColor: "var(--bg-surface-hover, rgba(255, 255, 255, 0.03))",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "14px" }}>
+                  Leave Room
+                </div>
+                <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                  Keep the room open for remaining participants. You will return to your dashboard.
+                </div>
+              </div>
+              <Button
+                variant="default"
+                leftSection={<IconLogout size={15} />}
+                onClick={this.handleHostLeaveOnly}
+                fullWidth
+              >
+                Leave Room (Keep Session Open)
+              </Button>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "4px" }}>
+              <Button
+                variant="subtle"
+                color="gray"
+                onClick={() => this.setState({ hostExitModalOpen: false })}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Modal>
 
         {this.state.overlayMsg && <ErrorModal error={this.state.overlayMsg} />}
         <SettingsModal
@@ -2822,8 +2966,8 @@ export class App extends React.Component<AppProps, AppState> {
               }
             }}
             onOpenSettings={() => this.setSettingsModalOpen(true)}
-            onExit={this.confirmLeave}
-            onLogoClick={this.confirmLeave}
+            onExit={this.handleExitClick}
+            onLogoClick={this.handleExitClick}
             isLocked={Boolean(this.state.roomLock)}
             onToggleLock={this.toggleLock}
             haveLock={this.haveLock()}

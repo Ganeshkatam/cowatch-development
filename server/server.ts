@@ -1608,6 +1608,12 @@ app.post("/endRoom", async (req, res) => {
       memoryRoom.status = "ended";
     }
 
+    const cleanId = roomId.startsWith("/") ? roomId.substring(1) : roomId;
+    const nsp = io._nsps.get(roomId) || io._nsps.get("/" + cleanId) || io._nsps.get(cleanId);
+    if (nsp) {
+      nsp.emit("kicked");
+    }
+
     res.json({ success: true, status: "ended" });
   } catch (e) {
     console.error("Error ending room:", e);
