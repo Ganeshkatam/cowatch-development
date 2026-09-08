@@ -1,15 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  IconCheck,
-  IconChevronDown,
-  IconCopy,
-  IconLock,
-  IconLockOpen,
-  IconSettings,
-  IconUsers,
-  IconX,
-} from "@tabler/icons-react";
+import { IconCheck, IconChevronDown, IconCopy, IconLock, IconLockOpen, IconSettings, IconUsers, IconX } from "@tabler/icons-react";
 import { Menu, Tooltip } from "@mantine/core";
 import { SignInButton } from "./TopBar";
 import { HeaderSearchBar } from "./HeaderSearchBar";
@@ -65,159 +56,68 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
   };
+
+  const roomIdentity = (
+    <div className={styles.roomIdentity}>
+      <div className={styles.roomTitleRow}>
+        <span className={styles.roomTitle}>{roomTitle || "Watch Party Room"}</span>
+        <span className={styles.liveBadge}>
+          <span className={styles.liveDot} />
+          LIVE
+        </span>
+      </div>
+      <Tooltip
+        label={currentMedia ? `Now Playing: ${mediaDisplayName || currentMedia} (Click to change)` : "Nothing playing (Click to add media)"}
+        position="bottom"
+        openDelay={300}
+      >
+        <button type="button" className={styles.nowPlayingSubtitle} onClick={onOpenQuickAdd} title={currentMedia ? `Playing: ${mediaDisplayName || currentMedia}` : "Add something to play"}>
+          <span className={currentMedia ? styles.playingDot : styles.idleDot} />
+          <span className={styles.nowPlayingSubtitleLabel}>{currentMedia ? "Playing" : "Nothing playing"}</span>
+          {currentMedia && <span className={styles.nowPlayingSubtitleTitle}>{mediaDisplayName || currentMedia}</span>}
+        </button>
+      </Tooltip>
+    </div>
+  );
 
   return (
     <header className={styles.header}>
       <div className={styles.leftSection}>
         {onLogoClick ? (
-          <button
-            type="button"
-            className={styles.logoLink}
-            onClick={onLogoClick}
-            title="Go to home"
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
-          >
-            <img
-              src="/logo192.png"
-              alt="CoWatch"
-              className={styles.logoImg}
-            />
+          <button type="button" className={styles.logoLink} onClick={onLogoClick} title="Go to home">
+            <img src="/logo192.png" alt="CoWatch" className={styles.logoImg} />
             <span className={styles.logoText}>CoWatch</span>
           </button>
         ) : (
           <Link to="/" className={styles.logoLink} title="Go to home">
-            <img
-              src="/logo192.png"
-              alt="CoWatch"
-              className={styles.logoImg}
-            />
+            <img src="/logo192.png" alt="CoWatch" className={styles.logoImg} />
             <span className={styles.logoText}>CoWatch</span>
           </Link>
         )}
-
-        <div className={styles.divider} />
-
-        <Menu shadow="md" width={220} position="bottom-start">
-          <Menu.Target>
-            <button
-              className={styles.roomDropdownBtn}
-              type="button"
-              title="Room details and options"
-            >
-              <span>{roomTitle || "Watch Party Room"}</span>
-              <IconChevronDown size={14} stroke={1.5} />
-            </button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Label>Room Options</Menu.Label>
-            <Menu.Item
-              leftSection={
-                copied ? (
-                  <IconCheck size={16} color="var(--color-live)" />
-                ) : (
-                  <IconCopy size={16} />
-                )
-              }
-              onClick={handleCopyLink}
-            >
-              {copied ? "Link Copied!" : "Copy room link"}
-            </Menu.Item>
-            {onToggleLock && (
-              <Menu.Item
-                disabled={!haveLock}
-                leftSection={
-                  isLocked ? (
-                    <IconLock size={16} color="var(--color-warning)" />
-                  ) : (
-                    <IconLockOpen size={16} />
-                  )
-                }
-                onClick={onToggleLock}
-              >
-                {isLocked ? "Unlock room controls" : "Lock room controls"}
-              </Menu.Item>
-            )}
-            <Menu.Item
-              leftSection={<IconSettings size={16} />}
-              onClick={onOpenSettings}
-            >
-              Room settings
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
-
-        <div className={styles.divider} />
-
-        <Tooltip
-          label={
-            currentMedia
-              ? `Now Playing: ${mediaDisplayName || currentMedia} (Click to change)`
-              : "Nothing playing (Click to add media)"
-          }
-          position="bottom"
-          openDelay={300}
-        >
-          <button
-            type="button"
-            className={`${styles.nowPlayingBadge} ${
-              currentMedia ? styles.nowPlayingActive : styles.nowPlayingIdle
-            }`}
-            onClick={onOpenQuickAdd}
-            title={
-              currentMedia
-                ? `Playing: ${mediaDisplayName || currentMedia}`
-                : "Add something to play"
-            }
-          >
-            {currentMedia ? (
-              <>
-                <div className={styles.playingDot} />
-                <span className={styles.nowPlayingLabel}>Playing:</span>
-                <span className={styles.nowPlayingTitle}>
-                  {mediaDisplayName || currentMedia}
-                </span>
-              </>
-            ) : (
-              <>
-                <div className={styles.idleDot} />
-                <span className={styles.idleText}>Nothing playing</span>
-              </>
-            )}
-          </button>
-        </Tooltip>
       </div>
 
-      {/* Center Inline Search Bar (Option 2) */}
-      {roomSetMedia && playlistAdd && (
-        <div className={styles.centerSection}>
-          <HeaderSearchBar
-            roomSetMedia={roomSetMedia}
-            playlistAdd={playlistAdd}
-            mediaPath={mediaPath}
-            disabled={!haveLock}
-          />
-        </div>
-      )}
+      <div className={styles.centerSection}>
+        {roomIdentity}
+        {roomSetMedia && playlistAdd && (
+          <div className={styles.searchSection}>
+            <HeaderSearchBar roomSetMedia={roomSetMedia} playlistAdd={playlistAdd} mediaPath={mediaPath} disabled={!haveLock} />
+          </div>
+        )}
+      </div>
 
       <div className={styles.rightSection}>
         {isOwner && waitingList && waitingList.length > 0 && (
-          <WaitingParticipantsPopover
-            waitingList={waitingList}
-            onAdmitUser={onAdmitUser}
-            onDeclineUser={onDeclineUser}
-            onAdmitAll={onAdmitAll}
-            position="bottom-end"
-          >
-            <button
-              type="button"
-              className={styles.waitingHeaderBtn}
-              title={`${waitingList.length} guest(s) waiting in lounge - Click to review`}
-            >
+          <WaitingParticipantsPopover waitingList={waitingList} onAdmitUser={onAdmitUser} onDeclineUser={onDeclineUser} onAdmitAll={onAdmitAll} position="bottom-end">
+            <button type="button" className={styles.waitingHeaderBtn} title={`${waitingList.length} guest(s) waiting in lounge - Click to review`}>
               <div className={styles.waitingHeaderDot} />
               <IconUsers size={15} stroke={2} />
               <span className={styles.waitingHeaderCount}>{waitingList.length}</span>
@@ -225,24 +125,27 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
           </WaitingParticipantsPopover>
         )}
 
-        <button
-          type="button"
-          className={styles.iconOnlyBtn}
-          onClick={onOpenSettings}
-          title="Open Settings"
-        >
-          <IconSettings size={16} stroke={1.5} />
-        </button>
-
-        <button
-          type="button"
-          className={styles.exitBtn}
-          onClick={onExit}
-          title="Leave room"
-        >
-          <IconX size={15} stroke={2} />
-          <span className={styles.exitText}>Exit</span>
-        </button>
+        <Menu shadow="xl" width={220} position="bottom-end" offset={8}>
+          <Menu.Target>
+            <button type="button" className={styles.iconOnlyBtn} onClick={onOpenSettings} aria-label="Room settings" title="Room settings">
+              <IconSettings size={17} stroke={1.6} />
+            </button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Label>Room</Menu.Label>
+            <Menu.Item leftSection={<IconSettings size={16} />} onClick={onOpenSettings}>Room settings</Menu.Item>
+            <Menu.Item leftSection={copied ? <IconCheck size={16} color="var(--color-live)" /> : <IconCopy size={16} />} onClick={handleCopyLink}>
+              {copied ? "Link Copied!" : "Copy room link"}
+            </Menu.Item>
+            {onToggleLock && (
+              <Menu.Item disabled={!haveLock} leftSection={isLocked ? <IconLock size={16} color="var(--color-warning)" /> : <IconLockOpen size={16} />} onClick={onToggleLock}>
+                {isLocked ? "Unlock room controls" : "Lock room controls"}
+              </Menu.Item>
+            )}
+            <Menu.Divider />
+            <Menu.Item color="red" leftSection={<IconX size={16} />} onClick={onExit}>Leave room</Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
 
         <SignInButton />
       </div>
