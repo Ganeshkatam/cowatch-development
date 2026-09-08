@@ -1,6 +1,7 @@
 import React from "react";
-import { TextInput, Select, SegmentedControl, Center } from "@mantine/core";
-import { IconSearch, IconLayoutGrid, IconList } from "@tabler/icons-react";
+import { TextInput, Select, SegmentedControl, Center, Button } from "@mantine/core";
+import { IconSearch, IconLayoutGrid, IconList, IconCalendarEvent } from "@tabler/icons-react";
+import { useHistory } from "react-router-dom";
 import styles from "./MyRooms.module.css";
 
 export const RoomsToolbar = ({
@@ -18,6 +19,8 @@ export const RoomsToolbar = ({
   viewMode: 'grid' | 'stack';
   setViewMode: (val: 'grid' | 'stack') => void;
 }) => {
+  const history = useHistory();
+
   return (
     <div className={styles.toolbar}>
       <div className={styles.search}>
@@ -41,6 +44,16 @@ export const RoomsToolbar = ({
       </div>
       
       <div className={styles.toolbarActions}>
+        <Button
+          size="sm"
+          variant="default"
+          leftSection={<IconCalendarEvent size={15} />}
+          onClick={() => history.push("/rooms/schedule")}
+          style={{ fontWeight: 600, borderRadius: "8px", height: "38px" }}
+        >
+          Schedule Room
+        </Button>
+
         <div className={styles.viewToggle}>
           <SegmentedControl
             value={viewMode}

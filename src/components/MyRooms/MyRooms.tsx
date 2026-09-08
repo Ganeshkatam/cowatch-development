@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useContext, useRef } from "react";
 import { useHistory } from "react-router-dom";
-import { Title, Text, Button, Loader, Center } from "@mantine/core";
+import { Title, Text, Button, Loader, Center, Group } from "@mantine/core";
 import { serverPath, serverCandidates, setServerPath, addAndSavePasscode } from "../../utils/utils";
 import { getAccessToken, supabase } from "../../utils/supabaseClient";
 import { MetadataContext } from "../../MetadataContext";
@@ -10,7 +10,7 @@ import { RoomStats } from "./RoomStats";
 import { RoomsToolbar } from "./RoomsToolbar";
 import { RoomCard } from "./RoomCard";
 import { RoomPagination } from "./RoomPagination";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowLeft, IconCalendarEvent, IconCirclePlusFilled } from "@tabler/icons-react";
 
 export interface RoomSummary {
   roomId: string;
@@ -316,6 +316,15 @@ export const MyRooms = () => {
             <IconArrowLeft size={16} />
             <span>Back to Home</span>
           </button>
+          <Button
+            size="sm"
+            variant="default"
+            leftSection={<IconCalendarEvent size={15} />}
+            onClick={() => history.push("/rooms/schedule")}
+            style={{ fontWeight: 600, borderRadius: "10px" }}
+          >
+            Schedule Room
+          </Button>
         </div>
 
         <Hero>
@@ -329,10 +338,28 @@ export const MyRooms = () => {
         ) : rooms.length === 0 ? (
           <div style={{ textAlign: "center", padding: "64px 0", background: "var(--bg-surface)", borderRadius: "16px", border: "1px solid var(--border-subtle)", marginTop: "32px" }}>
             <Title order={3} mb="sm" style={{ color: "var(--text-primary)" }}>No rooms yet</Title>
-            <Text c="dimmed" mb="lg">Create a room to start watching together.</Text>
-            <Button size="md" variant="gradient" onClick={() => history.push("/room/new")}>
-              Create your first room
-            </Button>
+            <Text c="dimmed" mb="lg">Create a room now or schedule a watch party for later.</Text>
+            <Group justify="center" gap="md">
+              <Button
+                size="md"
+                variant="gradient"
+                gradient={{ from: "#8B5CF6", to: "#EC4899", deg: 135 }}
+                leftSection={<IconCirclePlusFilled size={18} />}
+                onClick={() => history.push("/room/new")}
+                style={{ fontWeight: 600, borderRadius: "10px" }}
+              >
+                Create your first room
+              </Button>
+              <Button
+                size="md"
+                variant="default"
+                leftSection={<IconCalendarEvent size={18} />}
+                onClick={() => history.push("/rooms/schedule")}
+                style={{ fontWeight: 600, borderRadius: "10px" }}
+              >
+                Schedule a room
+              </Button>
+            </Group>
           </div>
         ) : (
           <>
