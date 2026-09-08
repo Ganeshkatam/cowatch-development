@@ -83,32 +83,26 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
       <div className={styles.roomTitleRow}>
         {renderStatusBadge()}
         {isOwner && (
-          <span style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "4px",
-            fontSize: "11px",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-            background: "rgba(139, 92, 246, 0.2)",
-            color: "var(--color-violet, #a78bfa)",
-            border: "1px solid rgba(139, 92, 246, 0.35)",
-            padding: "2px 6px",
-            borderRadius: "4px",
-          }}>
+          <span className={styles.hostBadge}>
             <IconCrown size={12} stroke={2.5} />
             <span>Host</span>
           </span>
         )}
-        <span className={styles.roomTitle}>{roomTitle || "Watch Party Room"}</span>
+        <span className={styles.roomTitle} title={roomTitle || "Watch Party Room"}>
+          {roomTitle || "Watch Party Room"}
+        </span>
       </div>
       <Tooltip
         label={currentMedia ? `Now Playing: ${mediaDisplayName || currentMedia} (Click to change)` : "Nothing playing (Click to add media)"}
         position="bottom"
         openDelay={300}
       >
-        <button type="button" className={styles.nowPlayingSubtitle} onClick={onOpenQuickAdd} title={currentMedia ? `Playing: ${mediaDisplayName || currentMedia}` : "Add something to play"}>
+        <button
+          type="button"
+          className={styles.nowPlayingSubtitle}
+          onClick={onOpenQuickAdd}
+          title={currentMedia ? `Playing: ${mediaDisplayName || currentMedia}` : "Add something to play"}
+        >
           <span className={currentMedia ? styles.playingDot : styles.idleDot} />
           <span className={styles.nowPlayingSubtitleLabel}>{currentMedia ? "Playing" : "Nothing playing"}</span>
           {currentMedia && <span className={styles.nowPlayingSubtitleTitle}>{mediaDisplayName || currentMedia}</span>}
@@ -121,20 +115,23 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
     <header className={styles.header}>
       <div className={styles.leftSection}>
         {onLogoClick ? (
-          <button type="button" className={styles.logoLink} onClick={onLogoClick} title="Go to home">
+          <button type="button" className={styles.logoLink} onClick={onLogoClick} title="Exit to Home">
             <img src="/logo192.png" alt="CoWatch" className={styles.logoImg} />
             <span className={styles.logoText}>CoWatch</span>
           </button>
         ) : (
-          <Link to="/" className={styles.logoLink} title="Go to home">
+          <Link to="/" className={styles.logoLink} title="Exit to Home">
             <img src="/logo192.png" alt="CoWatch" className={styles.logoImg} />
             <span className={styles.logoText}>CoWatch</span>
           </Link>
         )}
+
+        <div className={styles.divider} aria-hidden="true" />
+
+        {roomIdentity}
       </div>
 
       <div className={styles.centerSection}>
-        {roomIdentity}
         {roomSetMedia && playlistAdd && (
           <div className={styles.searchSection}>
             <HeaderSearchBar roomSetMedia={roomSetMedia} playlistAdd={playlistAdd} mediaPath={mediaPath} disabled={!haveLock} />
@@ -143,6 +140,17 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
       </div>
 
       <div className={styles.rightSection}>
+        <button
+          type="button"
+          className={`${styles.actionBtn} ${copied ? styles.actionBtnCopied : ""}`}
+          onClick={handleCopyLink}
+          title={copied ? "Invite link copied to clipboard!" : "Copy room invite link"}
+          aria-label="Copy room invite link"
+        >
+          {copied ? <IconCheck size={15} stroke={2.5} /> : <IconCopy size={15} stroke={1.8} />}
+          <span className={styles.actionBtnLabel}>{copied ? "Copied" : "Invite"}</span>
+        </button>
+
         {isOwner && waitingList && waitingList.length > 0 && (
           <WaitingParticipantsPopover waitingList={waitingList} onAdmitUser={onAdmitUser} onDeclineUser={onDeclineUser} onAdmitAll={onAdmitAll} position="bottom-end">
             <button type="button" className={styles.waitingHeaderBtn} title={`${waitingList.length} guest(s) waiting in lounge - Click to review`}>
