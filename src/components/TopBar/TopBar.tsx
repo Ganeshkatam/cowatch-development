@@ -22,7 +22,7 @@ export const ThemeMenuItems = () => {
   );
 };
 
-export async function createRoom(user: User | null | undefined, openNewTab: boolean | undefined, video: string = "", options: { roomTitle: string; roomDescription?: string; passcode?: string; isPermanent?: boolean; durationMinutes?: number; isChatDisabled?: boolean; isWaitingLoungeEnabled?: boolean; lock?: boolean; noRedirect?: boolean }) {
+export async function createRoom(user: User | null | undefined, openNewTab: boolean | undefined, video: string = "", options: { roomTitle: string; roomDescription?: string; passcode?: string; isPermanent?: boolean; durationMinutes?: number; isChatDisabled?: boolean; isWaitingLoungeEnabled?: boolean; lock?: boolean; scheduledStartsAt?: string; noRedirect?: boolean }) {
   const uid = user?.id;
   const token = await getAccessToken();
   const response = await fetch(serverPath + "/createRoom", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ uid, token, video, ...options }) });

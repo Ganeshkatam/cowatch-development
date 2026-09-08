@@ -44,7 +44,7 @@ import { getAccessToken, supabase } from "../../utils/supabaseClient";
 import styles from "./RoomDetails.module.css";
 import { EditRoomModal } from "./RoomCard";
 
-interface LifecycleEvent {
+export interface LifecycleEvent {
   id: string;
   actor: string;
   event: string;
@@ -56,7 +56,7 @@ interface LifecycleEvent {
   timestamp: string;
 }
 
-interface RoomDetailsData {
+export interface RoomDetailsData {
   roomId: string;
   isPasscodeProtected: boolean;
   currentPasscode?: string | null;
@@ -312,6 +312,35 @@ export const RoomDetails = () => {
     }
   };
 
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelConfirm, setCancelConfirm] = useState(false);
+
+  const confirmCancelRoom = async () => {
+    if (!room) return;
+    setIsCancelling(true);
+    try {
+      const token = await getAccessToken();
+      const user = await supabase.auth.getUser();
+      const response = await fetch(`${serverPath}/cancelRoom`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: user.data.user?.id, token, roomId: room.roomId }),
+      });
+      if (response.ok) {
+        setCancelConfirm(false);
+        await fetchRoomDetails();
+      } else {
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.error?.message || errData?.error || "Failed to cancel room");
+      }
+    } catch (e: any) {
+      console.error(e);
+      setActionError(e.message || "Failed to cancel room");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   useEffect(() => {
     const timer = setInterval(() => {
       setNowTime(Date.now());
@@ -366,8 +395,10 @@ export const RoomDetails = () => {
     );
   }
 
-  const isClosed = room.status === "expired" || room.status === "ended";
+  const statusStr = room.status as string;
+  const isClosed = statusStr === "expired" || statusStr === "ended" || statusStr === "cancelled";
   const isWaiting = room.status === "waiting";
+  const isScheduled = room.status === "scheduled";
   const isOpenable = !isClosed && (room.status === "active" || room.status === "expiring" || room.status === "scheduled" || room.status === "inactive");
   const urlPath = `/watch/${room.roomId.replace(/^\//, "")}`;
   const statusConfig = getStatusConfig(room.status);
@@ -485,6 +516,35 @@ export const RoomDetails = () => {
                     leftSection={<IconPlayerPlay size={16} />}
                   >
                     Enter Waiting Room
+                  </Button>
+                </>
+              )}
+              {isScheduled && (
+                <>
+                  <Button
+                    size="md"
+                    className={styles.primaryOpenBtn}
+                    onClick={() => history.push(urlPath)}
+                    leftSection={<IconPlayerPlay size={16} />}
+                  >
+                    Join Waiting Room
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="subtle"
+                    color="violet"
+                    onClick={handleStartRoom}
+                    loading={isStarting}
+                  >
+                    Start Early
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="subtle"
+                    color="red"
+                    onClick={() => setCancelConfirm(true)}
+                  >
+                    Cancel
                   </Button>
                 </>
               )}
@@ -1113,6 +1173,17 @@ export const RoomDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* CANCEL CONFIRMATION MODAL */}
+      <Modal opened={cancelConfirm} onClose={() => setCancelConfirm(false)} title="Cancel Watch Party" centered>
+        <Text size="sm" mb="lg">
+          Are you sure you want to cancel this scheduled room? This cannot be undone, and the room will become inaccessible.
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="default" onClick={() => setCancelConfirm(false)}>Keep Room</Button>
+          <Button color="red" onClick={confirmCancelRoom} loading={isCancelling}>Cancel Room</Button>
+        </Group>
+      </Modal>
 
       {/* DELETE CONFIRMATION MODAL */}
       <Modal opened={deleteConfirm} onClose={() => setDeleteConfirm(false)} title="Delete Room" centered>

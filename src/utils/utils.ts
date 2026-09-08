@@ -27,6 +27,29 @@ export function formatTimestamp(input: any, zeroTime?: number): string {
   return `${Number(input) < 0 ? "-" : ""}${hours ? `${hours}:` : ""}${minutes}:${seconds}`;
 }
 
+export function calculateRoomDuration(startedAt?: string | null, endedAt?: string | null, expiresAt?: string | null): string {
+  if (!startedAt) return "Duration unavailable";
+  
+  const start = new Date(startedAt).getTime();
+  const actualEndTimestamp = endedAt ? new Date(endedAt).getTime() : (expiresAt ? new Date(expiresAt).getTime() : null);
+  
+  if (!actualEndTimestamp) return "Duration unavailable";
+  if (actualEndTimestamp < start) return "Duration unavailable"; // Defensive handling
+
+  const durationMs = actualEndTimestamp - start;
+  const minutes = Math.floor(durationMs / 60000);
+  
+  if (minutes < 1) return "< 1m";
+  
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  
+  if (h > 0) {
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  return `${m}m`;
+}
+
 export function formatSpeed(input: number) {
   if (input >= 1000000) {
     return (input / 1000000).toFixed(2) + " MB/s";

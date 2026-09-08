@@ -530,34 +530,6 @@ export class App extends React.Component<AppProps, AppState> {
     });
   };
 
-  checkRoomAccess = async (roomId: string) => {
-    try {
-      const sessionData = await safeGetSession(1200);
-      const user = sessionData?.data?.session?.user;
-
-      const roomPromise = supabase
-        .from("rooms")
-        .select("passcode, owner_id")
-        .eq("roomId", roomId)
-        .maybeSingle();
-
-      const timeoutPromise = new Promise<{ data: null }>((resolve) =>
-        setTimeout(() => resolve({ data: null }), 1200)
-      );
-
-      const { data } = await Promise.race([roomPromise, timeoutPromise]);
-      if (!data) return { isOwner: false, requiresPasscode: false, owner_id: null as string | null };
-
-      const isOwner = Boolean(user && data.owner_id === user.id);
-      const requiresPasscode = Boolean(data.passcode);
-
-      return { isOwner, requiresPasscode, owner_id: data.owner_id as string | null };
-    } catch (e) {
-      console.warn("checkRoomAccess error:", e);
-      return { isOwner: false, requiresPasscode: false, owner_id: null as string | null };
-    }
-  };
-
   join = async (roomId: string) => {
     const cleanRoomId = (roomId || "").trim();
     if (!cleanRoomId) {
@@ -577,13 +549,7 @@ export class App extends React.Component<AppProps, AppState> {
 
     try {
       const urlParams = new URLSearchParams(window.location.search);
-      const urlPass = urlParams.get("pass") || urlParams.get("passcode") || urlParams.get("password");
-      if (urlPass) {
-        addAndSavePasscode(cleanRoomId, urlPass);
-      }
-      let passcode = getSavedPasscodes()[cleanRoomId] ?? "";
-
-      // Check for ?invite= token
+      // Check for ?invite= token and preserve it in sessionStorage if provided
       const urlInvite = urlParams.get("invite");
       const sessionInviteKey = `cowatch-invite-${cleanRoomId}`;
       let inviteCredential = "";
@@ -610,44 +576,15 @@ export class App extends React.Component<AppProps, AppState> {
                 // ignore
               }
             }
-          } else {
-            const errData = await redeemRes.json().catch(() => null);
-            console.warn("Invite redemption failed:", errData?.error || "Invalid invite");
           }
         } catch (inviteErr) {
           console.warn("Error redeeming invite:", inviteErr);
         } finally {
-          // Immediately strip ?invite= from address bar so token does not linger in browser history
           urlParams.delete("invite");
           const remainingQuery = urlParams.toString();
           const cleanUrl = window.location.pathname + (remainingQuery ? `?${remainingQuery}` : "");
           window.history.replaceState({}, "", cleanUrl);
         }
-      }
-
-      if (inviteCredential) {
-        passcode = "";
-      }
-
-      try {
-        const access = await this.checkRoomAccess(cleanRoomId);
-
-        if (access.requiresPasscode && !passcode && !inviteCredential && !access.isOwner) {
-          // Double-check: wait for auth to settle in case session was still loading
-          const retrySession = await safeGetSession(1000);
-          const retryUser = retrySession?.data?.session?.user;
-          const retryIsOwner = Boolean(retryUser && access.owner_id && access.owner_id === retryUser.id);
-          if (!retryIsOwner) {
-            if (this.startingTimer) {
-              window.clearTimeout(this.startingTimer);
-              this.startingTimer = null;
-            }
-            this.setState({ isErrorAuth: true, state: "connected" });
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn("Room access verification error:", e);
       }
 
       let shard = "";
@@ -670,13 +607,14 @@ export class App extends React.Component<AppProps, AppState> {
         console.warn("Session retrieval error:", e);
       }
 
+      const admissionToken = window.sessionStorage?.getItem(`admissionToken_${cleanRoomId}`) || "";
+
       // Connect to room namespace (URL-encoded to prevent invalid character/space errors)
       const safeNamespace = encodeURIComponent(cleanRoomId);
       const socket = io(serverPath + "/" + safeNamespace, {
         transports: ["websocket", "polling"],
         query: {
           clientId,
-          passcode: inviteCredential ? "" : passcode,
           shard,
           roomId: cleanRoomId,
         },
@@ -685,6 +623,7 @@ export class App extends React.Component<AppProps, AppState> {
           uid,
           token,
           inviteCredential,
+          admissionToken,
         },
       });
       this.socket = socket;
@@ -720,11 +659,24 @@ export class App extends React.Component<AppProps, AppState> {
           window.clearTimeout(this.startingTimer);
           this.startingTimer = null;
         }
+
+        const authErrors = [
+          "UNAUTHORIZED",
+          "ADMISSION_EXPIRED",
+          "ROOM_NOT_JOINABLE",
+          "ROOM_NOT_FOUND",
+          "passcode",
+          "password"
+        ];
+        if (authErrors.includes(err.message)) {
+          // Route all admission failures back to the UX boundary for proper state display
+          window.location.assign(`/join/${cleanRoomId}`);
+          return;
+        }
+
         this.setState({ state: "connected" });
         if (err.message === "Invalid namespace") {
           this.setState({ overlayMsg: "Couldn't load this room." });
-        } else if (err.message === "passcode" || err.message === "password") {
-          this.setState({ isErrorAuth: true });
         } else {
           this.setState({ overlayMsg: err?.message ?? "An error occurred connecting to room." });
         }
@@ -2624,14 +2576,6 @@ export class App extends React.Component<AppProps, AppState> {
   };
 
   render() {
-    if (this.state.isErrorAuth) {
-      return (
-        <div style={{ height: "100vh", backgroundColor: "var(--bg-app)" }}>
-          <PasscodeModal roomId={this.state.roomId} />
-        </div>
-      );
-    }
-
     if (this.state.waitingLoungeState?.inLounge) {
       return (
         <WaitingLounge

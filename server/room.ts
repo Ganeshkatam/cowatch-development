@@ -6,9 +6,12 @@ import { redis, redisCount, redisCountDistinct } from "./utils/redis.ts";
 import { type AssignedVM } from "./vm/base.ts";
 import { getStartOfDay } from "./utils/time.ts";
 import { postgres, updateObject, upsertObject } from "./utils/postgres.ts";
-import { hashRoomPasscode, verifyRoomPasscode, isBcryptHash } from "./utils/roomPasscode.ts";
+import { hashRoomPasscode } from "./utils/roomPasscode.ts";
 import { validateRoomInviteCredential } from "./utils/roomInvites.ts";
-import { startRoomLifecycle } from "./roomLifecycle.ts";
+import {
+  startRoomLifecycle,
+} from "./roomLifecycle.ts";
+import { getAdmissionRecord } from "./utils/roomAdmission.ts";
 import {
   fetchYoutubeVideo,
   getYoutubeVideoID,
@@ -78,7 +81,7 @@ export async function loadRoomMessages(roomId: string, limit: number = 50, befor
       WHERE rm.room_id = $1
     `;
     const params: any[] = [roomId];
-    
+
     if (beforeCursor) {
       if (typeof beforeCursor === 'string') {
         query += ` AND rm.created_at < $2`;
@@ -89,10 +92,10 @@ export async function loadRoomMessages(roomId: string, limit: number = 50, befor
         params.push(beforeCursor.id);
       }
     }
-    
+
     query += ` ORDER BY rm.created_at DESC, rm.id DESC LIMIT $${params.length + 1}`;
     params.push(limit);
-    
+
     const result = await postgres.query(query, params);
     return result.rows.reverse(); // Return in chronological order
   } catch (e) {
@@ -151,7 +154,8 @@ export class Room {
   private tsInterval: NodeJS.Timeout | undefined = undefined;
   private inactivityTimeout: NodeJS.Timeout | undefined = undefined;
   public isChatDisabled: boolean | undefined = undefined;
-  public status: 'waiting' | 'scheduled' | 'active' | 'inactive' | 'ended' | 'expired' = 'waiting';
+  public status: 'waiting' | 'scheduled' | 'active' | 'inactive' | 'ended' | 'expired' | 'cancelled' = 'waiting';
+  public scheduledStartsAt: Date | null = null;
   public startedAt: Date | undefined = undefined;
   public expiresAt: Date | undefined = undefined;
   public owner_id: string = '';
@@ -199,24 +203,58 @@ export class Room {
       }
     }, 500);
 
+    const cleanRoomId = this.roomId.startsWith("/") ? this.roomId.substring(1) : this.roomId;
+
     io.of(roomId).use(async (socket, next) => {
+      const admissionToken = (socket.handshake.auth?.admissionToken || socket.handshake.query?.admissionToken) as string;
+
+      // Ensure admission token is present
+      if (!admissionToken) {
+        next(new Error("UNAUTHORIZED"));
+        return;
+      }
+
+      const admission = await getAdmissionRecord(cleanRoomId, admissionToken);
+      if (!admission) {
+        next(new Error("ADMISSION_EXPIRED"));
+        return;
+      }
+
       if (postgres) {
         const result = await postgres.query(
-          `SELECT passcode, owner_id, "isSubRoom" FROM rooms where "roomId" = $1`,
-          [this.roomId],
+          `SELECT passcode, owner_id, "isSubRoom", status, "expiresAt" FROM rooms where "roomId" = $1`,
+          [cleanRoomId],
         );
-        const passcode = (socket.handshake.query?.passcode as string) || "";
-        const roomPasscode = result.rows[0]?.passcode;
         const owner_id = result.rows[0]?.owner_id;
+        const status = result.rows[0]?.status;
+        const expiresAt = result.rows[0]?.expiresAt;
+        const isSubRoom = result.rows[0]?.isSubRoom;
+
+        if (!result.rows[0]) {
+          next(new Error("ROOM_NOT_FOUND"));
+          return;
+        }
+
         if (owner_id) {
           this.owner_id = owner_id;
+        }
+
+        // Validate lifecycle
+        const now = Date.now();
+        if (status === 'ended' || status === 'cancelled') {
+          next(new Error("ROOM_NOT_JOINABLE"));
+          return;
+        }
+        if (expiresAt && new Date(expiresAt).getTime() <= now) {
+          next(new Error("ROOM_NOT_JOINABLE"));
+          return;
         }
 
         const uid = socket.handshake.auth?.uid;
         const token = socket.handshake.auth?.token;
         let isOwner = false;
 
-        // Authenticate the user first, then check ownership
+        // Authenticate the user
         if (uid && token) {
           try {
             const decoded = await validateUserToken(uid, token);
@@ -229,10 +267,15 @@ export class Room {
           }
         }
 
+        // Validate admission user mapping
+        if (admission.userId && admission.userId !== socket.uid) {
+          next(new Error("UNAUTHORIZED"));
+          return;
+        }
+
         const inviteCredential = socket.handshake.auth?.inviteCredential;
         let isInviteValid = false;
         if (typeof inviteCredential === "string" && inviteCredential.length > 0) {
-          const cleanRoomId = this.roomId.startsWith("/") ? this.roomId.substring(1) : this.roomId;
           const validation =
             (await validateRoomInviteCredential(cleanRoomId, inviteCredential)) ||
             (await validateRoomInviteCredential(this.roomId, inviteCredential));
@@ -243,35 +286,7 @@ export class Room {
           }
         }
 
-        if (roomPasscode && !isOwner && !isInviteValid) {
-          if (isBcryptHash(roomPasscode)) {
-            const valid = await verifyRoomPasscode(passcode, roomPasscode);
-            if (!valid) {
-              next(new Error("passcode"));
-              return;
-            }
-          } else {
-            // Lazy migration
-            if (passcode !== roomPasscode) {
-              next(new Error("passcode"));
-              return;
-            }
-            // Best-effort hash upgrade
-            try {
-              const newHash = await hashRoomPasscode(passcode);
-              if (newHash) {
-                await postgres.query(
-                  `UPDATE rooms SET passcode = $1 WHERE "roomId" = $2 AND passcode = $3`,
-                  [newHash, this.roomId, roomPasscode]
-                );
-              }
-            } catch (e) {
-              console.error("Failed lazy passcode migration", e);
-            }
-          }
-        }
         // Check if room is at capacity
-        const isSubRoom = result.rows[0]?.isSubRoom;
         const roomCapacity = isSubRoom
           ? config.ROOM_CAPACITY_SUB
           : config.ROOM_CAPACITY;
@@ -1037,7 +1052,7 @@ export class Room {
       name: socket?.clientId ? this.nameMap[socket.clientId] : undefined,
       picture: socket?.clientId ? this.pictureMap[socket.clientId] : undefined,
     };
-    
+
     // Determine persistence rules
     const isCmd = Boolean(chatMsg.cmd);
     const messageType = isCmd ? 'system' : 'user';
@@ -1057,7 +1072,7 @@ export class Room {
       this.emitToRoom("ROOM_MESSAGE", chatWithTime);
       return;
     }
-    
+
     const shouldPersist = !isCmd || (isCmd && ['room.inactive', 'room.reactivated', 'room.expired'].includes(chatMsg.cmd!));
 
     let dbId: string | undefined = undefined;
@@ -1903,7 +1918,7 @@ export class Room {
       if (normalizedTitle !== undefined) roomObj.roomTitle = normalizedTitle;
       if (roomDescription !== undefined) roomObj.roomDescription = roomDescription;
     }
-    
+
     // Remove undefined fields so they aren't part of the Postgres UPDATE query
     Object.keys(roomObj).forEach(key => roomObj[key] === undefined && delete roomObj[key]);
     try {

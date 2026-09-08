@@ -22,19 +22,27 @@ import { makeRoomName, makeUserName } from "./utils/moniker.ts";
 import { getStats } from "./utils/getStats.ts";
 import {
   hashRoomPasscode,
+  verifyRoomPasscode,
   encryptPasscodeForOwner,
   decryptPasscodeForOwner,
 } from "./utils/roomPasscode.ts";
 import {
-  initRoomLifecycle,
-  startRoomLifecycle,
   validateTemporaryDuration,
+  startRoomLifecycle,
+  cancelRoomLifecycle,
+  rescheduleRoomLifecycle,
+  activateDueScheduledRooms,
+  initRoomLifecycle,
 } from "./roomLifecycle.ts";
 import {
   createRoomInvite,
   redeemRoomInvite,
   revokeRoomInvite,
 } from "./utils/roomInvites.ts";
+import {
+  checkRateLimit,
+  createAdmissionToken,
+} from "./utils/roomAdmission.ts";
 
 process.on("uncaughtException", (err) => {
   console.error("Uncaught exception in server process:", err);
@@ -486,9 +494,27 @@ app.post("/createRoom", async (req, res) => {
       return;
     }
   }
-  // CREATE != START: Room begins in 'waiting' status.
+  let scheduledStartsAt: Date | null = null;
+  let initialStatus: 'waiting' | 'scheduled' = 'waiting';
+
+  if (req.body?.scheduledStartsAt) {
+    const parsedDate = new Date(req.body.scheduledStartsAt);
+    if (isNaN(parsedDate.getTime())) {
+      res.status(400).json({ error: "Invalid scheduledStartsAt timestamp" });
+      return;
+    }
+    if (parsedDate.getTime() <= now.getTime()) {
+      res.status(400).json({ error: "Scheduled start must be in the future" });
+      return;
+    }
+    scheduledStartsAt = parsedDate;
+    initialStatus = 'scheduled';
+  }
+
+  // CREATE != START: Room begins in 'waiting' or 'scheduled' status.
   // startedAt and expiresAt are null until the host starts the room.
-  newRoom.status = 'waiting';
+  newRoom.status = initialStatus;
+  newRoom.scheduledStartsAt = scheduledStartsAt;
   newRoom.startedAt = undefined;
   newRoom.expiresAt = undefined;
   newRoom.owner_id = decoded.uid;
@@ -497,7 +523,7 @@ app.post("/createRoom", async (req, res) => {
 
   if (postgres) {
     const rawPasscode = req.body?.passcode;
-    const roomObj = {
+    const roomObj: any = {
       roomId: newRoom.roomId,
       lastUpdateTime: now,
       creationTime: now,
@@ -509,20 +535,22 @@ app.post("/createRoom", async (req, res) => {
       roomDescription: req.body?.roomDescription || null,
       owner_id: decoded.uid,
       isSubRoom: isPermanent,
-      status: 'waiting',
+      status: initialStatus,
       startedAt: null,
       expiresAt: null,
+      scheduledStartsAt: scheduledStartsAt,
       isPermanent: isPermanent,
       durationMinutes: durationMinutes,
       isWaitingLoungeEnabled: Boolean(req.body?.isWaitingLoungeEnabled),
     };
+
     try {
       await insertObject(postgres, "rooms", roomObj);
       await postgres.query(`
         INSERT INTO room_lifecycle_events 
         ("roomId", actor, event, "newStatus", "newExpiresAt", reason)
         VALUES ($1, $2, $3, $4, $5, $6)
-      `, [newRoom.roomId, decoded.uid, 'room.created', 'waiting', null, isPermanent ? 'permanent room creation' : `temporary room creation (${durationMinutes}min)`]);
+      `, [newRoom.roomId, decoded.uid, 'room.created', initialStatus, null, isPermanent ? 'permanent room creation' : `temporary room creation (${durationMinutes}min)`]);
     } catch (e) {
       redisCount("createRoomError");
       throw e;
@@ -563,6 +591,47 @@ app.post("/startRoom", async (req, res) => {
   } catch (e: any) {
     console.error("startRoom error:", e);
     res.status(400).json({ error: e.message || "Failed to start room." });
+  }
+});
+
+app.post("/cancelRoom", async (req, res) => {
+  const decoded = await validateUserToken(req.body?.uid, req.body?.token, false);
+  if (!decoded || decoded === "EMAIL_NOT_VERIFIED") {
+    res.status(401).json({ error: "Authentication required." });
+    return;
+  }
+  const roomId = req.body?.roomId;
+  if (!roomId) {
+    res.status(400).json({ error: "Missing roomId parameter." });
+    return;
+  }
+  try {
+    const result = await cancelRoomLifecycle(roomId, decoded.uid);
+    res.json(result);
+  } catch (e: any) {
+    console.error("cancelRoom error:", e);
+    res.status(400).json({ error: e.message || "Failed to cancel room." });
+  }
+});
+
+app.patch("/api/room/:roomId/schedule", async (req, res) => {
+  const decoded = await validateUserToken(req.body?.uid, req.body?.token, false);
+  if (!decoded || decoded === "EMAIL_NOT_VERIFIED") {
+    res.status(401).json({ error: "Authentication required." });
+    return;
+  }
+  const roomId = req.params.roomId;
+  const scheduledStartsAt = req.body?.scheduledStartsAt;
+  if (!roomId || !scheduledStartsAt) {
+    res.status(400).json({ error: "Missing roomId or scheduledStartsAt." });
+    return;
+  }
+  try {
+    const result = await rescheduleRoomLifecycle(roomId, decoded.uid, scheduledStartsAt);
+    res.json(result);
+  } catch (e: any) {
+    console.error("rescheduleRoom error:", e);
+    res.status(400).json({ error: e.message || "Failed to reschedule room." });
   }
 });
 
@@ -849,6 +918,236 @@ app.get("/metadata", async (req, res) => {
     streamPath,
     convertPath,
   });
+});
+
+app.get("/api/room/metadata/:roomId", async (req, res) => {
+  const roomId = req.params.roomId;
+  if (!roomId) {
+    res.status(400).json({ error: "Missing roomId" });
+    return;
+  }
+
+  try {
+    const result = await postgres?.query(
+      `SELECT "roomId", "roomTitle", "roomDescription", status, "startedAt", "scheduledStartsAt", "expiresAt", "endedAt", 
+              "isPermanent", "isSubRoom", owner_id,
+              (passcode IS NOT NULL AND passcode <> '') AS "isPasscodeProtected"
+       FROM rooms WHERE "roomId" = $1`,
+      [roomId]
+    );
+
+    const room = result?.rows?.[0];
+    if (!room) {
+      res.status(404).json({ error: "ROOM_NOT_FOUND" });
+      return;
+    }
+
+    // Attempt to fetch the host's details
+    const ownerResult = await postgres?.query(
+      `SELECT "displayName", username, "avatarUrl" FROM users WHERE id = $1`,
+      [room.owner_id]
+    );
+    const host = ownerResult?.rows?.[0] || {};
+
+    const now = Date.now();
+    let derivedStatus = room.status;
+    if (!room.isPermanent && room.expiresAt && room.status !== 'ended') {
+      const expiresAt = new Date(room.expiresAt).getTime();
+      if (expiresAt <= now) {
+        derivedStatus = 'expired';
+      }
+    }
+
+    res.json({
+      room: {
+        id: room.roomId,
+        title: room.roomTitle,
+        description: room.roomDescription,
+        status: derivedStatus,
+        startsAt: derivedStatus === 'scheduled' ? room.scheduledStartsAt : room.startedAt,
+        scheduledStartsAt: room.scheduledStartsAt,
+        expiresAt: room.expiresAt,
+        endedAt: room.endedAt,
+        host: {
+          id: room.owner_id,
+          displayName: host.displayName || null,
+          username: host.username || null,
+          avatarUrl: host.avatarUrl || null,
+        },
+        access: {
+          requiresAuthentication: false, // Defaulting for now until explicit auth field exists
+          requiresPasscode: room.isPasscodeProtected,
+          isOwner: false, // We'll compute this securely in verifyPasscode or a separate authenticated flow if needed
+        }
+      }
+    });
+  } catch (err) {
+    console.error("Error fetching room metadata:", err);
+    res.status(500).json({ error: "INTERNAL_SERVER_ERROR" });
+  }
+});
+
+app.post("/api/room/verifyPasscode", bodyParser.json(), async (req, res) => {
+  const { roomId, passcode, uid, token } = req.body;
+
+  if (!roomId) {
+    res.status(400).json({ success: false, error: "INVALID_REQUEST" });
+    return;
+  }
+
+  // Validate user token if provided to associate admission with user
+  let authenticatedUserId: string | null = null;
+  if (uid && token) {
+    const decoded = await validateUserToken(String(uid), String(token));
+    if (decoded && typeof decoded !== "string") {
+      authenticatedUserId = decoded.uid;
+    }
+  }
+
+  // Extract client IP (trust proxy if behind load balancer like nginx)
+  const clientIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || "unknown") as string;
+  const ipStr = Array.isArray(clientIp) ? clientIp[0] : clientIp.split(',')[0];
+
+  const isAllowed = await checkRateLimit(roomId, ipStr, authenticatedUserId);
+  if (!isAllowed) {
+    res.status(429).json({ success: false, error: "RATE_LIMIT_EXCEEDED" });
+    return;
+  }
+
+  try {
+    const result = await postgres?.query(
+      `SELECT passcode, owner_id, status FROM rooms WHERE "roomId" = $1`,
+      [roomId]
+    );
+
+    const room = result?.rows?.[0];
+    if (!room) {
+      res.status(404).json({ success: false, error: "ROOM_NOT_FOUND" });
+      return;
+    }
+
+    if (room.status === "scheduled") {
+      res.status(403).json({ success: false, error: "ROOM_SCHEDULED" });
+      return;
+    }
+
+    if (room.status === "ended" || room.status === "expired" || room.status === "cancelled") {
+      res.status(403).json({ success: false, error: "ROOM_ENDED" });
+      return;
+    }
+
+    let isAuthorized = false;
+
+    // Check if user is the host
+    if (authenticatedUserId && room.owner_id === authenticatedUserId) {
+      isAuthorized = true; // Host bypasses passcode
+    } else if (room.passcode) {
+      if (!passcode) {
+        res.status(403).json({ success: false, error: "PASSCODE_REQUIRED" });
+        return;
+      }
+      isAuthorized = await verifyRoomPasscode(passcode, room.passcode);
+    } else {
+      isAuthorized = true; // No passcode required
+    }
+
+    if (!isAuthorized) {
+      res.status(403).json({ success: false, error: "INVALID_PASSCODE" });
+      return;
+    }
+
+    const admissionToken = await createAdmissionToken(roomId, authenticatedUserId);
+    res.status(200).json({ success: true, admissionToken });
+  } catch (err) {
+    console.error("Error verifying passcode:", err);
+    res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });
+  }
+});
+
+app.post("/api/room/duplicate", bodyParser.json(), async (req, res) => {
+  const { sourceRoomId, uid, token } = req.body;
+  if (!sourceRoomId || !uid || !token) {
+    res.status(400).json({ error: "INVALID_REQUEST" });
+    return;
+  }
+
+  const decoded = await validateUserToken(uid, token);
+  if (!decoded || decoded === "EMAIL_NOT_VERIFIED") {
+    res.status(401).json({ error: "UNAUTHORIZED" });
+    return;
+  }
+
+  if (!postgres) {
+    res.status(500).json({ error: "DATABASE_NOT_CONFIGURED" });
+    return;
+  }
+
+  try {
+    const result = await postgres.query(`SELECT * FROM rooms WHERE "roomId" = $1`, [sourceRoomId]);
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "ROOM_NOT_FOUND" });
+      return;
+    }
+
+    const sourceRoom = result.rows[0];
+    if (sourceRoom.owner_id !== decoded.uid) {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+
+    if (sourceRoom.status !== "ended" && sourceRoom.status !== "expired" && sourceRoom.status !== "cancelled") {
+      res.status(400).json({ error: "ROOM_NOT_ENDED" });
+      return;
+    }
+
+    const genName = () => makeRoomName(config.SHARD);
+    let newRoomId = genName();
+
+    // We instantiate the new room structure in memory
+    const newRoom = new Room(io, newRoomId);
+    newRoom.isChatDisabled = sourceRoom.isChatDisabled;
+    newRoom.creator = decoded.email || "";
+    newRoom.isWaitingLoungeEnabled = sourceRoom.isWaitingLoungeEnabled;
+    newRoom.status = 'waiting';
+    newRoom.owner_id = decoded.uid;
+    newRoom.isPermanent = sourceRoom.isPermanent;
+    newRoom.durationMinutes = sourceRoom.durationMinutes;
+
+    const now = new Date();
+
+    // We explicitly only clone certain fields, ignoring timestamps, chat, and participants.
+    const roomObj = {
+      roomId: newRoomId,
+      lastUpdateTime: now,
+      creationTime: now,
+      passcode: null, // Deliberately clearing the passcode to prevent silent credential reuse
+      owner_passcode: null,
+      isChatDisabled: sourceRoom.isChatDisabled,
+      roomTitle: sourceRoom.roomTitle,
+      roomDescription: sourceRoom.roomDescription,
+      owner_id: decoded.uid,
+      isSubRoom: sourceRoom.isSubRoom,
+      status: 'waiting',
+      startedAt: null,
+      expiresAt: null,
+      isPermanent: sourceRoom.isPermanent,
+      durationMinutes: sourceRoom.durationMinutes,
+      isWaitingLoungeEnabled: sourceRoom.isWaitingLoungeEnabled,
+    };
+
+    await insertObject(postgres, "rooms", roomObj);
+    await postgres.query(`
+      INSERT INTO room_lifecycle_events 
+      ("roomId", actor, event, "newStatus", "newExpiresAt", reason)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `, [newRoomId, decoded.uid, 'room.created', 'waiting', null, `Duplicated from ${sourceRoomId}`]);
+
+    rooms.set(newRoomId, newRoom);
+    res.json({ roomId: newRoomId });
+  } catch (e) {
+    console.error("Room duplication failed", e);
+    res.status(500).json({ error: "INTERNAL_SERVER_ERROR" });
+  }
 });
 
 app.get("/roomData/:roomId", async (req, res) => {
@@ -1424,3 +1723,19 @@ function computeOpenSubtitlesHash(first: Buffer, last: Buffer, size: number) {
     }
   }
 }
+
+// ---------------------------------------------------------
+// Startup-Safe Scheduled Room Worker
+// Note: This in-process polling scheduler is optimized for a single
+// PM2 application instance. If WatchParty scales horizontally (e.g. cluster mode),
+// this should be replaced with a distributed task queue or external cron to avoid
+// redundant polling, although the SQL query is atomic and safe.
+// ---------------------------------------------------------
+const SCHEDULER_INTERVAL_MS = 10_000;
+setInterval(async () => {
+  try {
+    await activateDueScheduledRooms();
+  } catch (error) {
+    console.error('[RoomScheduler] Failed to process scheduled rooms', error);
+  }
+}, SCHEDULER_INTERVAL_MS);

@@ -142,8 +142,7 @@
 
 .pulseDot.active {
   background-color: #10B981;
-  box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
-  animation: pulseAnimation 2s infinite;
+  animation: livePulse 2.2s ease-in-out infinite;
 }
 
 .pulseDot.inactive {
@@ -152,7 +151,7 @@
 
 .pulseDot.expiring {
   background-color: #F97316;
-  animation: pulseAnimation 1.5s infinite;
+  animation: livePulse 2.2s ease-in-out infinite;
 }
 
 .pulseDot.scheduled {
@@ -167,15 +166,14 @@
   background-color: #EF4444;
 }
 
-@keyframes pulseAnimation {
-  0% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+@keyframes livePulse {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(0.92);
   }
-  70% {
-    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  50% {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -247,6 +245,18 @@
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+  .heroActions {
+    width: 100%;
+  }
+  .heroActions > button {
+    width: 100%;
+  }
+  .heroTopRow {
+    justify-content: flex-start;
+  }
 }
 
 .primaryOpenBtn {
@@ -382,33 +392,35 @@
 
 /* Elevated Bento Card */
 .card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 18px;
-  padding: 24px;
-  box-shadow: var(--shadow-sm);
+  background: rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 32px;
   margin-bottom: 24px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 :global([data-color-scheme="light"]) .card {
-  background: #ffffff;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  background: rgba(255, 255, 255, 0.6);
   border: 1px solid #e2e8f0;
 }
 
-.card:hover {
-  border-color: rgba(139, 92, 246, 0.35);
-  box-shadow: 0 10px 28px -4px rgba(15, 23, 42, 0.1), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+@media (hover: hover) {
+  .card:hover {
+    border-color: rgba(139, 92, 246, 0.25);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+  }
 }
 
 .cardHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 16px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 :global([data-color-scheme="light"]) .cardHeader {

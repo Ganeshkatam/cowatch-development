@@ -75,6 +75,14 @@ html[data-color-scheme="light"] {
   --surface-active: rgba(112, 72, 232, 0.12);
   --focus-ring: rgba(112, 72, 232, 0.35);
 
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  
+  --lifecycle-ended: #8b93b8;
+  --lifecycle-ended-muted: #626a91;
+  --lifecycle-ended-glow: rgba(100, 112, 180, 0.18);
+  --lifecycle-ended-surface: rgba(28, 31, 52, 0.72);
+  --lifecycle-ended-border: rgba(139, 147, 184, 0.16);
+
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(112, 72, 232, 0.12);
   --glass-shadow: rgba(0, 0, 0, 0.08);

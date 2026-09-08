@@ -15,8 +15,8 @@ import {
   Stack,
   Box,
   Divider,
-  NumberInput,
   Select,
+  SegmentedControl,
 } from "@mantine/core";
 import { supabase, getAccessToken } from "../../utils/supabaseClient";
 import { serverPath, addAndSavePasscode } from "../../utils/utils";
@@ -35,6 +35,7 @@ import {
   IconInfinity,
   IconInfoCircle,
   IconArmchair,
+  IconCalendarEvent,
 } from "@tabler/icons-react";
 import styles from "./Create.module.css";
 
@@ -56,6 +57,10 @@ export const Create = () => {
   const [durationMinutes, setDurationMinutes] = useState<string>("180");
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+
+  const [scheduleMode, setScheduleMode] = useState<"now" | "later">("now");
+  const [scheduleDate, setScheduleDate] = useState<string>("");
+  const [scheduleTime, setScheduleTime] = useState<string>("20:00");
 
   const handleCoverChange = (file: File | null) => {
     if (file) {
@@ -80,6 +85,24 @@ export const Create = () => {
       setError("Room title is required.");
       return;
     }
+    let scheduledStartsAt: string | undefined = undefined;
+    if (scheduleMode === "later") {
+      if (!scheduleDate || !scheduleTime) {
+        setError("Please select both a date and time for the scheduled room.");
+        return;
+      }
+      const combined = new Date(`${scheduleDate}T${scheduleTime}`);
+      if (isNaN(combined.getTime())) {
+        setError("Invalid date or time selected.");
+        return;
+      }
+      if (combined.getTime() <= Date.now()) {
+        setError("Scheduled start must be in the future.");
+        return;
+      }
+      scheduledStartsAt = combined.toISOString();
+    }
+
     setLoading(true);
     setError("");
 
@@ -98,6 +121,7 @@ export const Create = () => {
           isWaitingLoungeEnabled,
           lock,
           noRedirect: true,
+          scheduledStartsAt,
         }
       );
 
@@ -180,6 +204,58 @@ export const Create = () => {
 
             <form id="create-room-form" onSubmit={handleSubmit}>
               <Stack gap="xl">
+                {/* Section 0: When */}
+                <Box>
+                  <div className={styles.sectionHeader}>When</div>
+                  <Stack gap="md">
+                    <SegmentedControl
+                      value={scheduleMode}
+                      onChange={(val) => setScheduleMode(val as "now" | "later")}
+                      data={[
+                        { label: 'Start Now', value: 'now' },
+                        { label: 'Schedule for later', value: 'later' },
+                      ]}
+                      size="md"
+                      color="violet"
+                    />
+
+                    {scheduleMode === "later" && (
+                      <div className={styles.switchCard}>
+                        <Group align="center" gap="md" wrap="nowrap">
+                          <div className={styles.switchIconWrap}>
+                            <IconCalendarEvent size={18} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <Text fw={600} size="sm" c="var(--text-primary)">
+                              Schedule Date & Time
+                            </Text>
+                            <Group gap="sm" mt="xs">
+                              <TextInput
+                                type="date"
+                                value={scheduleDate}
+                                onChange={(e) => setScheduleDate(e.target.value)}
+                                min={new Date().toISOString().split("T")[0]}
+                                flex={1}
+                              />
+                              <TextInput
+                                type="time"
+                                value={scheduleTime}
+                                onChange={(e) => setScheduleTime(e.target.value)}
+                                flex={1}
+                              />
+                            </Group>
+                            <Text size="xs" c="dimmed" mt="xs">
+                              The room will remain scheduled and open automatically at this time.
+                            </Text>
+                          </div>
+                        </Group>
+                      </div>
+                    )}
+                  </Stack>
+                </Box>
+
+                <Divider />
+
                 {/* Section 1: Room Identity */}
                 <Box>
                   <div className={styles.sectionHeader}>Room Identity</div>

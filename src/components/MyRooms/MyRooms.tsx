@@ -23,7 +23,7 @@ export interface RoomSummary {
   isChatDisabled: boolean;
   isSubRoom: boolean;
   isWaitingLoungeEnabled?: boolean;
-  status: "waiting" | "scheduled" | "active" | "inactive" | "expiring" | "expired" | "ended";
+  status: "waiting" | "scheduled" | "active" | "inactive" | "expiring" | "expired" | "ended" | "cancelled";
   startedAt: string | null;
   expiresAt: string | null;
   endedAt: string | null;
@@ -273,14 +273,17 @@ export const MyRooms = () => {
       }
       return 0;
     });
-
     return result;
   }, [rooms, searchQuery, sortOption]);
 
-  const paginatedRooms = useMemo(() => {
+  const activeRooms = useMemo(() => filteredAndSortedRooms.filter(r => r.status === 'active' || r.status === 'expiring'), [filteredAndSortedRooms]);
+  const upcomingRooms = useMemo(() => filteredAndSortedRooms.filter(r => r.status === 'waiting' || r.status === 'scheduled'), [filteredAndSortedRooms]);
+  const historyRooms = useMemo(() => filteredAndSortedRooms.filter(r => r.status === 'ended' || r.status === 'expired' || r.status === 'cancelled'), [filteredAndSortedRooms]);
+
+  const paginatedHistory = useMemo(() => {
     const startIndex = (currentPage - 1) * PAGE_SIZE;
-    return filteredAndSortedRooms.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [filteredAndSortedRooms, currentPage]);
+    return historyRooms.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [historyRooms, currentPage]);
 
   if (!user && !loading) {
     return (
@@ -340,31 +343,50 @@ export const MyRooms = () => {
             />
 
             <div className={styles.roomSection}>
-              <div className={viewMode === 'grid' ? styles.roomGrid : styles.roomList}>
-                {paginatedRooms.map(room => (
-                  <RoomCard
-                    key={room.roomId}
-                    room={room}
-                    onDelete={deleteRoom}
-                    onRefresh={refresh}
-                    onUpdateCover={updateRoomCover}
-                    viewMode={viewMode}
+              {activeRooms.length > 0 && (
+                <div style={{ marginBottom: "40px" }}>
+                  <Title order={4} mb="md" style={{ color: "var(--text-primary)" }}>Active Rooms</Title>
+                  <div className={viewMode === 'grid' ? styles.roomGrid : styles.roomList}>
+                    {activeRooms.map(room => (
+                      <RoomCard key={room.roomId} room={room} onDelete={deleteRoom} onRefresh={refresh} onUpdateCover={updateRoomCover} viewMode={viewMode} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {upcomingRooms.length > 0 && (
+                <div style={{ marginBottom: "40px" }}>
+                  <Title order={4} mb="md" style={{ color: "var(--text-primary)" }}>Upcoming Rooms</Title>
+                  <div className={viewMode === 'grid' ? styles.roomGrid : styles.roomList}>
+                    {upcomingRooms.map(room => (
+                      <RoomCard key={room.roomId} room={room} onDelete={deleteRoom} onRefresh={refresh} onUpdateCover={updateRoomCover} viewMode={viewMode} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {historyRooms.length > 0 && (
+                <div style={{ marginBottom: "40px" }}>
+                  <Title order={4} mb="md" style={{ color: "var(--text-primary)" }}>History</Title>
+                  <div className={viewMode === 'grid' ? styles.roomGrid : styles.roomList}>
+                    {paginatedHistory.map(room => (
+                      <RoomCard key={room.roomId} room={room} onDelete={deleteRoom} onRefresh={refresh} onUpdateCover={updateRoomCover} viewMode={viewMode} />
+                    ))}
+                  </div>
+                  <RoomPagination
+                    currentPage={currentPage}
+                    pageSize={PAGE_SIZE}
+                    totalItems={historyRooms.length}
+                    onPageChange={setCurrentPage}
                   />
-                ))}
-              </div>
+                </div>
+              )}
 
               {filteredAndSortedRooms.length === 0 && (
                 <Center style={{ minHeight: "200px" }}>
                   <Text c="dimmed">No rooms match your search.</Text>
                 </Center>
               )}
-
-              <RoomPagination
-                currentPage={currentPage}
-                pageSize={PAGE_SIZE}
-                totalItems={filteredAndSortedRooms.length}
-                onPageChange={setCurrentPage}
-              />
             </div>
           </>
         )}
