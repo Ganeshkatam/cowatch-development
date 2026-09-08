@@ -40,6 +40,7 @@ const defaults = {
   PORT: 8080, // Port to use for server
   HOST: "0.0.0.0", // Host interface to bind server to
   STATS_KEY: "", // Secret string to validate viewing stats
+  INVITE_CREDENTIAL_SECRET: "", // Secret used to sign short-lived room invite credentials
   BETA_USER_EMAILS: "", // Comma-delimited list of user emails to include in the beta
   CUSTOM_SETTINGS_HOSTNAME: "", // Hostname to send different config settings to client
   STREAM_PATH: "", // Path of server that supports additional video streams
