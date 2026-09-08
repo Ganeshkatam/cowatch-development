@@ -1,0 +1,113 @@
+.whenCard {
+  background: rgba(139, 92, 246, 0.06);
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  border-radius: 18px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+:global([data-color-scheme="light"]) .whenCard {
+  background: rgba(112, 72, 232, 0.04);
+  border-color: rgba(112, 72, 232, 0.2);
+  box-shadow: 0 8px 24px rgba(112, 72, 232, 0.06);
+}
+
+.whenHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.whenIconWrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(139, 92, 246, 0.16);
+  color: var(--color-violet);
+}
+
+.whenTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-violet);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+}
+
+.dateTimeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.timezoneNote {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.presetsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.presetsLabel {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin-right: 4px;
+}
+
+.presetChip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.presetChip:hover {
+  background: rgba(139, 92, 246, 0.18);
+  border-color: var(--color-violet);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.presetChipActive {
+  background: var(--color-violet);
+  border-color: var(--color-violet);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.35);
+}
+
+@media (max-width: 640px) {
+  .dateTimeGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .whenCard {
+    padding: 18px 14px;
+  }
+}

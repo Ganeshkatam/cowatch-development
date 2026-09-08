@@ -29,6 +29,7 @@ const Home = lazy(() => import("./components/Home/Home").then((m) => ({ default:
 const App = lazy(() => import("./components/App/App").then((m) => ({ default: m.App })));
 const AuthLayout = lazy(() => import("./components/Auth/AuthLayout").then((m) => ({ default: m.AuthLayout })));
 const Create = lazy(() => import("./components/Create/Create").then((m) => ({ default: m.Create })));
+const ScheduleRoom = lazy(() => import("./components/Schedule/ScheduleRoom").then((m) => ({ default: m.ScheduleRoom })));
 const Profile = lazy(() => import("./components/Profile/Profile").then((m) => ({ default: m.Profile })));
 const MyRooms = lazy(() => import("./components/MyRooms/MyRooms").then((m) => ({ default: m.MyRooms })));
 const RoomDetails = lazy(() => import("./components/MyRooms/RoomDetails").then((m) => ({ default: m.RoomDetails })));
@@ -442,104 +443,118 @@ class CoWatch extends React.Component {
                   <Suspense fallback={<RouteFallback />}>
                     <Switch>
                       <Route
-                      path="/"
-                      exact
-                      render={(_props: any) => {
-                        return (
-                          <React.Fragment>
-                            <TopBar hideNewRoom />
-                            <Home />
-                            <Footer />
-                          </React.Fragment>
-                        );
-                      }}
-                    />
-                    <Route path={["/login", "/signup", "/forgot-password", "/reset-password"]}>
-                      <RequireGuest>
-                        <AuthLayout>
-                          <Route path="/login" exact component={Login} />
-                          <Route path="/signup" exact component={Signup} />
-                          <Route path="/forgot-password" exact component={ForgotPassword} />
-                          <Route path="/reset-password" exact component={ResetPassword} />
-                        </AuthLayout>
-                      </RequireGuest>
-                    </Route>
-                    <Route path="/verify-email" exact component={VerifyEmail} />
-                    <Route
-                      path="/room/new"
-                      exact
-                      render={() => {
-                        return <RequireVerifiedEmail><Create /></RequireVerifiedEmail>;
-                      }}
-                    />
-                    <Route
-                      path="/create"
-                      exact
-                      render={({ location }: { location: any }) => (
-                        <Redirect to={{ pathname: "/room/new", search: location.search }} />
-                      )}
-                    />
-                    <Route path="/join" exact>
-                      <JoinRoomInput />
-                    </Route>
-                    <Route path="/join/:roomId" exact>
-                      <JoinRoom />
-                    </Route>
-                    <Route
-                      path="/watch/:roomId"
-                      exact
-                      render={(props: any) => {
-                        return <RequireVerifiedEmail><App urlRoomId={props.match.params.roomId} /></RequireVerifiedEmail>;
-                      }}
-                    />
+                        path="/"
+                        exact
+                        render={(_props: any) => {
+                          return (
+                            <React.Fragment>
+                              <TopBar hideNewRoom />
+                              <Home />
+                              <Footer />
+                            </React.Fragment>
+                          );
+                        }}
+                      />
+                      <Route path={["/login", "/signup", "/forgot-password", "/reset-password"]}>
+                        <RequireGuest>
+                          <AuthLayout>
+                            <Route path="/login" exact component={Login} />
+                            <Route path="/signup" exact component={Signup} />
+                            <Route path="/forgot-password" exact component={ForgotPassword} />
+                            <Route path="/reset-password" exact component={ResetPassword} />
+                          </AuthLayout>
+                        </RequireGuest>
+                      </Route>
+                      <Route path="/verify-email" exact component={VerifyEmail} />
+                      <Route
+                        path="/room/new"
+                        exact
+                        render={() => {
+                          return <RequireVerifiedEmail><Create /></RequireVerifiedEmail>;
+                        }}
+                      />
+                      <Route
+                        path="/create"
+                        exact
+                        render={({ location }: { location: any }) => (
+                          <Redirect to={{ pathname: "/room/new", search: location.search }} />
+                        )}
+                      />
+                      <Route
+                        path="/rooms/schedule"
+                        exact
+                        render={() => {
+                          return <RequireVerifiedEmail><ScheduleRoom /></RequireVerifiedEmail>;
+                        }}
+                      />
+                      <Route
+                        path="/room/schedule"
+                        exact
+                        render={({ location }: { location: any }) => (
+                          <Redirect to={{ pathname: "/rooms/schedule", search: location.search }} />
+                        )}
+                      />
+                      <Route path="/join" exact>
+                        <JoinRoomInput />
+                      </Route>
+                      <Route path="/join/:roomId" exact>
+                        <JoinRoom />
+                      </Route>
+                      <Route
+                        path="/watch/:roomId"
+                        exact
+                        render={(props: any) => {
+                          return <RequireVerifiedEmail><App urlRoomId={props.match.params.roomId} /></RequireVerifiedEmail>;
+                        }}
+                      />
 
-                    <Route path="/terms">
-                      <>
+                      <Route path="/terms">
+                        <>
+                          <TopBar />
+                          <Terms />
+                        </>
+                      </Route>
+                      <Route path="/privacy">
+                        <>
+                          <TopBar />
+                          <Privacy />
+                        </>
+                      </Route>
+                      <Route path="/faq">
+                        <>
+                          <TopBar />
+                          <FAQ />
+                        </>
+                      </Route>
+                      <Route path="/account/:section?">
+                        <RequireVerifiedEmail>
+                          <TopBar hideNewRoom />
+                          <Profile />
+                        </RequireVerifiedEmail>
+                      </Route>
+                      <Route path="/myrooms" exact>
+                        <RequireVerifiedEmail>
+                          <TopBar hideMyRooms />
+                          <MyRooms />
+                        </RequireVerifiedEmail>
+                      </Route>
+                      <Route path="/myrooms/:roomId">
+                        <RequireVerifiedEmail>
+                          <TopBar />
+                          <RoomDetails />
+                        </RequireVerifiedEmail>
+                      </Route>
+                      <Route path="/debug">
+                        <>
+                          <TopBar />
+                          <Debug />
+                        </>
+                      </Route>
+                      <Route>
                         <TopBar />
-                        <Terms />
-                      </>
-                    </Route>
-                    <Route path="/privacy">
-                      <>
-                        <TopBar />
-                        <Privacy />
-                      </>
-                    </Route>
-                    <Route path="/faq">
-                      <>
-                        <TopBar />
-                        <FAQ />
-                      </>
-                    </Route>
-                    <Route path="/account/:section?">
-                      <RequireVerifiedEmail>
-                        <TopBar hideNewRoom />
-                        <Profile />
-                      </RequireVerifiedEmail>
-                    </Route>
-                    <Route path="/myrooms" exact>
-                      <RequireVerifiedEmail>
-                        <TopBar hideMyRooms />
-                        <MyRooms />
-                      </RequireVerifiedEmail>
-                    </Route>
-                    <Route path="/myrooms/:roomId">
-                      <RequireVerifiedEmail>
-                        <TopBar />
-                        <RoomDetails />
-                      </RequireVerifiedEmail>
-                    </Route>
-                    <Route path="/debug">
-                      <>
-                        <TopBar />
-                        <Debug />
-                      </>
-                    </Route>
-                    <Route>
-                      <TopBar />
-                      <NotFound />
-                      <Footer />
-                    </Route>
+                        <NotFound />
+                        <Footer />
+                      </Route>
                     </Switch>
                   </Suspense>
                 </BrowserRouter>

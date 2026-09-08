@@ -1,0 +1,265 @@
+import { useState } from "react";
+import { createRoom } from "../TopBar/TopBar";
+import { supabase, getAccessToken } from "../../utils/supabaseClient";
+import { serverPath, addAndSavePasscode } from "../../utils/utils";
+
+export interface RoomFormState {
+  roomTitle: string;
+  setRoomTitle: (v: string) => void;
+  roomDescription: string;
+  setRoomDescription: (v: string) => void;
+  passcode: string;
+  setPasscode: (v: string) => void;
+  isChatDisabled: boolean;
+  setIsChatDisabled: (v: boolean) => void;
+  lock: boolean;
+  setLock: (v: boolean) => void;
+  isPermanent: boolean;
+  setIsPermanent: (v: boolean) => void;
+  isWaitingLoungeEnabled: boolean;
+  setIsWaitingLoungeEnabled: (v: boolean) => void;
+  durationMinutes: string;
+  setDurationMinutes: (v: string) => void;
+  coverPhotoFile: File | null;
+  coverPreview: string | null;
+  handleCoverChange: (file: File | null) => void;
+  handleRemoveCover: () => void;
+  error: string;
+  setError: (v: string) => void;
+}
+
+export function useRoomFormState(): RoomFormState {
+  const [roomTitle, setRoomTitle] = useState("");
+  const [roomDescription, setRoomDescription] = useState("");
+  const [passcode, setPasscode] = useState("");
+
+  const [isChatDisabled, setIsChatDisabled] = useState(false);
+  const [lock, setLock] = useState(false);
+  const [isPermanent, setIsPermanent] = useState(false);
+  const [isWaitingLoungeEnabled, setIsWaitingLoungeEnabled] = useState(false);
+  const [durationMinutes, setDurationMinutes] = useState<string>("180");
+  const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  const handleCoverChange = (file: File | null) => {
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Cover photo too large (max 5MB).");
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        setError("Selected file must be an image.");
+        return;
+      }
+      setError("");
+      setCoverPhotoFile(file);
+      setCoverPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleRemoveCover = () => {
+    setCoverPhotoFile(null);
+    setCoverPreview(null);
+  };
+
+  return {
+    roomTitle,
+    setRoomTitle,
+    roomDescription,
+    setRoomDescription,
+    passcode,
+    setPasscode,
+    isChatDisabled,
+    setIsChatDisabled,
+    lock,
+    setLock,
+    isPermanent,
+    setIsPermanent,
+    isWaitingLoungeEnabled,
+    setIsWaitingLoungeEnabled,
+    durationMinutes,
+    setDurationMinutes,
+    coverPhotoFile,
+    coverPreview,
+    handleCoverChange,
+    handleRemoveCover,
+    error,
+    setError,
+  };
+}
+
+export interface SubmitRoomOptions {
+  user: any;
+  formState: RoomFormState;
+  scheduledStartsAt?: string;
+  video?: string;
+}
+
+export async function submitRoomCreation({
+  user,
+  formState,
+  scheduledStartsAt,
+  video = "",
+}: SubmitRoomOptions): Promise<{ finalRoomId: string }> {
+  const trimmedTitle = formState.roomTitle.trim();
+  if (!trimmedTitle) {
+    throw new Error("Room title is required.");
+  }
+  if (trimmedTitle.length > 50) {
+    throw new Error("Room title cannot exceed 50 characters.");
+  }
+
+  if (scheduledStartsAt) {
+    const scheduledDate = new Date(scheduledStartsAt);
+    if (isNaN(scheduledDate.getTime())) {
+      throw new Error("Invalid scheduled start time.");
+    }
+    if (scheduledDate.getTime() <= Date.now()) {
+      throw new Error("Scheduled start time must be in the future.");
+    }
+  }
+
+  const roomName = await createRoom(
+    user,
+    false,
+    video,
+    {
+      roomTitle: trimmedTitle,
+      roomDescription: formState.roomDescription.trim() || undefined,
+      passcode: formState.passcode || undefined,
+      isPermanent: formState.isPermanent,
+      durationMinutes: formState.isPermanent ? undefined : Number(formState.durationMinutes),
+      isChatDisabled: formState.isChatDisabled,
+      isWaitingLoungeEnabled: formState.isWaitingLoungeEnabled,
+      lock: formState.lock,
+      noRedirect: true,
+      scheduledStartsAt,
+    }
+  );
+
+  if (formState.passcode) {
+    addAndSavePasscode(roomName, formState.passcode);
+  }
+
+  if (formState.coverPhotoFile && user) {
+    try {
+      const fileExt = formState.coverPhotoFile.name.split('.').pop() || "jpg";
+      const safeRoomId = roomName.startsWith("/") ? roomName.substring(1) : roomName;
+      const filePath = `${user.id}/${safeRoomId}/cover.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('room_covers')
+        .upload(filePath, formState.coverPhotoFile);
+
+      if (!uploadError) {
+        const { data: publicUrlData } = supabase.storage.from('room_covers').getPublicUrl(filePath);
+        await fetch(`${serverPath}/updateRoomCover`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uid: user.id,
+            token: await getAccessToken(),
+            roomId: roomName,
+            coverPhoto: publicUrlData.publicUrl
+          })
+        }).catch(e => console.error("Failed to update room cover", e));
+      } else {
+        console.error("Cover upload failed:", uploadError);
+      }
+    } catch (coverErr) {
+      console.error("Cover storage error:", coverErr);
+    }
+  }
+
+  const finalRoomId = roomName.startsWith("/") ? roomName.substring(1) : roomName;
+  return { finalRoomId };
+}
+
+export function getLocalTimezoneDisplay(): string {
+  try {
+    const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone || "Local Time";
+    const offsetMinutes = -new Date().getTimezoneOffset();
+    const sign = offsetMinutes >= 0 ? "+" : "-";
+    const absMinutes = Math.abs(offsetMinutes);
+    const hours = Math.floor(absMinutes / 60).toString().padStart(2, "0");
+    const minutes = (absMinutes % 60).toString().padStart(2, "0");
+    return `${tzName} (UTC${sign}${hours}:${minutes})`;
+  } catch (e) {
+    return "Local Time";
+  }
+}
+
+export interface SchedulePreset {
+  label: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+}
+
+function formatDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = (d.getMonth() + 1).toString().padStart(2, "0");
+  const day = d.getDate().toString().padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function formatTime(d: Date): string {
+  const h = d.getHours().toString().padStart(2, "0");
+  const m = d.getMinutes().toString().padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+export function getSchedulePresets(): SchedulePreset[] {
+  const now = new Date();
+  const presets: SchedulePreset[] = [];
+
+  // Preset 1: Tonight at 8:00 PM (or 9:00 PM if already past 7:45 PM)
+  const tonight = new Date();
+  if (now.getHours() < 19 || (now.getHours() === 19 && now.getMinutes() < 45)) {
+    tonight.setHours(20, 0, 0, 0);
+    presets.push({
+      label: "Tonight 8:00 PM",
+      date: formatDate(tonight),
+      time: "20:00",
+    });
+  } else if (now.getHours() < 21) {
+    tonight.setHours(22, 0, 0, 0);
+    presets.push({
+      label: "Tonight 10:00 PM",
+      date: formatDate(tonight),
+      time: "22:00",
+    });
+  } else {
+    // Tomorrow morning/afternoon
+    const tomorrowNoon = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    tomorrowNoon.setHours(14, 0, 0, 0);
+    presets.push({
+      label: "Tomorrow 2:00 PM",
+      date: formatDate(tomorrowNoon),
+      time: "14:00",
+    });
+  }
+
+  // Preset 2: Tomorrow at 8:00 PM
+  const tomorrowNight = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  tomorrowNight.setHours(20, 0, 0, 0);
+  presets.push({
+    label: "Tomorrow 8:00 PM",
+    date: formatDate(tomorrowNight),
+    time: "20:00",
+  });
+
+  // Preset 3: In 2 Hours (rounded to nearest 5 minutes)
+  const inTwoHours = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+  const remainderMins = inTwoHours.getMinutes() % 5;
+  if (remainderMins !== 0) {
+    inTwoHours.setMinutes(inTwoHours.getMinutes() + (5 - remainderMins));
+  }
+  inTwoHours.setSeconds(0, 0);
+  presets.push({
+    label: "In 2 Hours",
+    date: formatDate(inTwoHours),
+    time: formatTime(inTwoHours),
+  });
+
+  return presets;
+}

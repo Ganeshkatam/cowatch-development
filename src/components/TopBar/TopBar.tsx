@@ -7,7 +7,7 @@ import type { User } from "@supabase/supabase-js";
 import Announce from "../Announce/Announce";
 import styles from "./TopBar.module.css";
 import { MetadataContext } from "../../MetadataContext";
-import { IconCirclePlusFilled, IconDatabase, IconLogin, IconLogout, IconX, IconSettings, IconCheck, IconDeviceDesktop, IconSun, IconMoon } from "@tabler/icons-react";
+import { IconCirclePlusFilled, IconDatabase, IconLogin, IconLogout, IconX, IconSettings, IconCheck, IconDeviceDesktop, IconSun, IconMoon, IconCalendarEvent } from "@tabler/icons-react";
 import { useAppearance } from "../../theme/ThemeProvider";
 
 export const ThemeMenuItems = () => {
@@ -74,6 +74,7 @@ export class SignInButton extends React.Component<SignInButtonProps> {
             <Menu.Label>Account</Menu.Label>
             <Menu.Item component={Link} to="/account/profile" leftSection={<IconSettings size={16} stroke={1.5} />}>Account settings</Menu.Item>
             <Menu.Item component={Link} to="/myrooms" leftSection={<IconDatabase size={16} stroke={1.5} />}>My rooms</Menu.Item>
+            <Menu.Item component={Link} to="/rooms/schedule" leftSection={<IconCalendarEvent size={16} stroke={1.5} />}>Schedule room</Menu.Item>
             <Menu.Divider />
             <ThemeMenuItems />
             <Menu.Divider />
