@@ -1,6 +1,6 @@
 import type MediasoupClient from "mediasoup-client";
 import React from "react";
-import { Alert, Loader, Menu, Overlay, Select, Title, Tabs, Text } from "@mantine/core";
+import { Alert, Loader, Overlay, Select, Title, Tabs, Text } from "@mantine/core";
 import io, { Socket } from "socket.io-client";
 import {
   formatSpeed,
@@ -31,13 +31,10 @@ import {
 import { examples } from "../../utils/examples";
 import { generateName } from "../../utils/generateName";
 import { Chat, ChatComponent } from "../Chat/Chat";
-import { TopBar } from "../TopBar/TopBar";
 import { VBrowser } from "../VBrowser/VBrowser";
 import { VideoChat, VideoChatErrorBoundary } from "../VideoChat/VideoChat";
 import { getCurrentSettings } from "../Settings/LocalSettings";
 import { MultiStreamModal } from "../Modal/MultiStreamModal";
-import { ComboBox } from "../ComboBox/ComboBox";
-import { SearchComponent } from "../SearchComponent/SearchComponent";
 import { Controls } from "../Controls/Controls";
 import { VBrowserModal } from "../Modal/VBrowserModal";
 import { SettingsModal } from "../Settings/SettingsModal";
@@ -48,7 +45,7 @@ import { FileShareModal } from "../Modal/FileShareModal";
 import type { User } from "@supabase/supabase-js";
 import { supabase, safeGetSession } from "../../utils/supabaseClient";
 import { SubtitleModal } from "../Modal/SubtitleModal";
-import { ActiveRoomLeavePopover } from "../Modal/ActiveRoomLeavePopover";
+import { MiniLiveRoomPopover } from "../Modal/MiniLiveRoomPopover";
 import { WaitingLounge } from "../WaitingLounge/WaitingLounge";
 import { WaitingLoungeBanner } from "../WaitingLounge/WaitingLoungeBanner";
 import { HTML } from "./HTML";
@@ -59,29 +56,21 @@ import { RoomHeader } from "../TopBar/RoomHeader";
 import { MediaDock } from "./MediaDock";
 import config from "../../config";
 import { MetadataContext } from "../../MetadataContext";
-import ChatVideoCard from "../ChatVideoCard/ChatVideoCard";
-import { ActionIcon, Badge, TextInput, Button } from "@mantine/core";
+import { ActionIcon, Badge, Button } from "@mantine/core";
 import {
   IconAntennaBars5,
-  IconBrowser,
   IconCheck,
   IconChevronLeft,
   IconChevronRight,
   IconCopy,
-  IconFile,
   IconKeyboardFilled,
   IconLink,
-  IconList,
   IconMessage,
-  IconScreenShare,
-  IconSettings,
-  IconUser,
   IconUserScreen,
   IconUsersGroup,
   IconVolume,
   IconX,
 } from "@tabler/icons-react";
-import { InviteButton } from "../InviteButton/InviteButton";
 import type WebTorrent from "webtorrent";
 import type Hls from "hls.js";
 import { type MediaPlayerClass } from "dashjs";
@@ -191,7 +180,7 @@ interface AppState {
   waitingLoungeState: WaitingLoungeState | null;
   waitingList: WaitingGuest[];
   isWaitingLoungeEnabled: boolean;
-  showLeavePopover: boolean;
+  isRoomMinimized: boolean;
 }
 
 export class App extends React.Component<AppProps, AppState> {
@@ -277,12 +266,13 @@ export class App extends React.Component<AppProps, AppState> {
     waitingLoungeState: null,
     waitingList: [],
     isWaitingLoungeEnabled: false,
-    showLeavePopover: false,
+    isRoomMinimized: false,
   };
   private hasLostFocus = false;
-  private leaveGraceUntil = 0;
   private exitIntentCooldownUntil = 0;
+  private focusRestoreTimeout: number | null = null;
   private isLeaving = false;
+  private videoChatRef = React.createRef<VideoChat>();
   socket: Socket = null!;
   mediasoupPubSocket: Socket | null = null;
   mediasoupSubSocket: Socket | null = null;
@@ -315,22 +305,37 @@ export class App extends React.Component<AppProps, AppState> {
   };
 
   requestLeave = () => {
-    if (this.isActiveRoom()) {
-      this.setState({ showLeavePopover: true });
-    } else {
-      this.confirmLeave();
-    }
+    this.confirmLeave();
   };
 
-  handleStayInRoom = () => {
+  handleReturnToRoom = () => {
     this.hasLostFocus = false;
-    this.leaveGraceUntil = Date.now() + 10_000;
-    this.setState({ showLeavePopover: false });
+    if (this.focusRestoreTimeout) {
+      window.clearTimeout(this.focusRestoreTimeout);
+      this.focusRestoreTimeout = null;
+    }
+    this.setState({ isRoomMinimized: false });
+  };
+
+  debounceRestore = () => {
+    if (this.focusRestoreTimeout) {
+      window.clearTimeout(this.focusRestoreTimeout);
+    }
+    this.focusRestoreTimeout = window.setTimeout(() => {
+      this.focusRestoreTimeout = null;
+      if (!this.isLeaving && this.isActiveRoom() && this.state.isRoomMinimized) {
+        this.setState({ isRoomMinimized: false });
+      }
+    }, 100);
   };
 
   confirmLeave = () => {
     this.isLeaving = true;
-    this.setState({ showLeavePopover: false });
+    if (this.focusRestoreTimeout) {
+      window.clearTimeout(this.focusRestoreTimeout);
+      this.focusRestoreTimeout = null;
+    }
+    this.setState({ isRoomMinimized: false });
     try {
       if (window.cowatch?.ourStream) {
         window.cowatch.ourStream.getTracks().forEach((t) => t.stop());
@@ -351,12 +356,17 @@ export class App extends React.Component<AppProps, AppState> {
 
     if (document.hidden) {
       this.hasLostFocus = true;
+      if (this.focusRestoreTimeout) {
+        window.clearTimeout(this.focusRestoreTimeout);
+        this.focusRestoreTimeout = null;
+      }
+      if (!this.state.isRoomMinimized) {
+        this.setState({ isRoomMinimized: true });
+      }
     } else {
-      if (this.hasLostFocus) {
+      if (this.hasLostFocus || this.state.isRoomMinimized) {
         this.hasLostFocus = false;
-        if (Date.now() >= this.leaveGraceUntil && !this.state.showLeavePopover) {
-          this.setState({ showLeavePopover: true });
-        }
+        this.debounceRestore();
       }
     }
   };
@@ -364,15 +374,20 @@ export class App extends React.Component<AppProps, AppState> {
   handleWindowBlur = () => {
     if (this.isLeaving || !this.isActiveRoom()) return;
     this.hasLostFocus = true;
+    if (this.focusRestoreTimeout) {
+      window.clearTimeout(this.focusRestoreTimeout);
+      this.focusRestoreTimeout = null;
+    }
+    if (!this.state.isRoomMinimized) {
+      this.setState({ isRoomMinimized: true });
+    }
   };
 
   handleWindowFocus = () => {
     if (this.isLeaving || !this.isActiveRoom()) return;
-    if (this.hasLostFocus) {
+    if (this.hasLostFocus || this.state.isRoomMinimized) {
       this.hasLostFocus = false;
-      if (Date.now() >= this.leaveGraceUntil && !this.state.showLeavePopover) {
-        this.setState({ showLeavePopover: true });
-      }
+      this.debounceRestore();
     }
   };
 
@@ -380,15 +395,65 @@ export class App extends React.Component<AppProps, AppState> {
     if (this.isLeaving || !this.isActiveRoom()) return;
     if (e.clientY <= 0) {
       const now = Date.now();
-      if (
-        now >= this.leaveGraceUntil &&
-        now >= this.exitIntentCooldownUntil &&
-        !this.state.showLeavePopover
-      ) {
+      if (now >= this.exitIntentCooldownUntil && !this.state.isRoomMinimized) {
         this.exitIntentCooldownUntil = now + 5000;
-        this.setState({ showLeavePopover: true });
+        this.setState({ isRoomMinimized: true });
       }
     }
+  };
+
+  isMicEnabled = (): boolean => {
+    if (this.videoChatRef.current) {
+      return this.videoChatRef.current.getAudioWebRTC();
+    }
+    const ourStream = (window as any).cowatch?.ourStream;
+    return Boolean(
+      ourStream &&
+      ourStream.getAudioTracks()[0] &&
+      ourStream.getAudioTracks()[0].enabled
+    );
+  };
+
+  isVideoEnabled = (): boolean => {
+    if (this.videoChatRef.current) {
+      return this.videoChatRef.current.getVideoWebRTC();
+    }
+    const ourStream = (window as any).cowatch?.ourStream;
+    return Boolean(
+      ourStream &&
+      ourStream.getVideoTracks()[0] &&
+      ourStream.getVideoTracks()[0].enabled
+    );
+  };
+
+  handleToggleMic = async () => {
+    if (this.videoChatRef.current) {
+      await this.videoChatRef.current.toggleAudioWebRTC();
+    } else {
+      const ourStream = (window as any).cowatch?.ourStream;
+      if (ourStream) {
+        const audioTrack = ourStream.getAudioTracks()[0];
+        if (audioTrack) {
+          audioTrack.enabled = !audioTrack.enabled;
+        }
+      }
+    }
+    this.forceUpdate();
+  };
+
+  handleToggleVideo = async () => {
+    if (this.videoChatRef.current) {
+      await this.videoChatRef.current.toggleVideoWebRTC();
+    } else {
+      const ourStream = (window as any).cowatch?.ourStream;
+      if (ourStream) {
+        const videoTrack = ourStream.getVideoTracks()[0];
+        if (videoTrack) {
+          videoTrack.enabled = !videoTrack.enabled;
+        }
+      }
+    }
+    this.forceUpdate();
   };
 
   chatRef = React.createRef<ChatComponent>();
@@ -432,6 +497,10 @@ export class App extends React.Component<AppProps, AppState> {
     window.removeEventListener("focus", this.handleWindowFocus);
     document.removeEventListener("mouseleave", this.handleMouseLeave);
     window.clearInterval(this.heartbeat);
+    if (this.focusRestoreTimeout) {
+      window.clearTimeout(this.focusRestoreTimeout);
+      this.focusRestoreTimeout = null;
+    }
     if (this.startingTimer) {
       window.clearTimeout(this.startingTimer);
       this.startingTimer = null;
@@ -598,608 +667,608 @@ export class App extends React.Component<AppProps, AppState> {
           this.setState({ overlayMsg: err?.message ?? "An error occurred connecting to room." });
         }
       });
-    socket.on("disconnect", (reason) => {
-      if (reason === "io server disconnect") {
-        // the disconnection was initiated by the server, you need to reconnect manually
-        this.setState({ overlayMsg: "Disconnected from server." });
-      } else {
-        // else the socket will automatically try to reconnect
-        // Use the alert pill since it's less disruptive
-        this.setState({ warningMessage: "Reconnecting..." });
-      }
-    });
-    socket.on("errorMessage", (err: string) => {
-      this.setState({ errorMessage: err });
-      setTimeout(() => {
-        this.setState({ errorMessage: "" });
-      }, 3000);
-    });
-    socket.on("successMessage", (success: string) => {
-      this.setState({ successMessage: success });
-      setTimeout(() => {
-        this.setState({ successMessage: "" });
-      }, 3000);
-    });
-    socket.on("kicked", () => {
-      window.location.assign("/");
-    });
-    socket.on("REC:play", (data?: any) => {
-      if (
-        data &&
-        typeof data === "object" &&
-        typeof data.ts === "number" &&
-        isFinite(data.ts) &&
-        data.ts >= 0
-      ) {
-        if (this.hasDuration() && !this.state.isLiveStream) {
-          const curr = this.Player().getCurrentTime();
-          if (typeof curr === "number" && Math.abs(curr - data.ts) > 0.25) {
+      socket.on("disconnect", (reason) => {
+        if (reason === "io server disconnect") {
+          // the disconnection was initiated by the server, you need to reconnect manually
+          this.setState({ overlayMsg: "Disconnected from server." });
+        } else {
+          // else the socket will automatically try to reconnect
+          // Use the alert pill since it's less disruptive
+          this.setState({ warningMessage: "Reconnecting..." });
+        }
+      });
+      socket.on("errorMessage", (err: string) => {
+        this.setState({ errorMessage: err });
+        setTimeout(() => {
+          this.setState({ errorMessage: "" });
+        }, 3000);
+      });
+      socket.on("successMessage", (success: string) => {
+        this.setState({ successMessage: success });
+        setTimeout(() => {
+          this.setState({ successMessage: "" });
+        }, 3000);
+      });
+      socket.on("kicked", () => {
+        window.location.assign("/");
+      });
+      socket.on("REC:play", (data?: any) => {
+        if (
+          data &&
+          typeof data === "object" &&
+          typeof data.ts === "number" &&
+          isFinite(data.ts) &&
+          data.ts >= 0
+        ) {
+          if (this.hasDuration() && !this.state.isLiveStream) {
+            const curr = this.Player().getCurrentTime();
+            if (typeof curr === "number" && Math.abs(curr - data.ts) > 0.25) {
+              this.Player().seekVideo(data.ts);
+            }
+          }
+        }
+        this.localPlay();
+      });
+      socket.on("REC:pause", (data?: any) => {
+        this.localPause();
+        if (
+          data &&
+          typeof data === "object" &&
+          typeof data.ts === "number" &&
+          isFinite(data.ts) &&
+          data.ts >= 0
+        ) {
+          if (this.hasDuration() && !this.state.isLiveStream) {
             this.Player().seekVideo(data.ts);
           }
         }
-      }
-      this.localPlay();
-    });
-    socket.on("REC:pause", (data?: any) => {
-      this.localPause();
-      if (
-        data &&
-        typeof data === "object" &&
-        typeof data.ts === "number" &&
-        isFinite(data.ts) &&
-        data.ts >= 0
-      ) {
-        if (this.hasDuration() && !this.state.isLiveStream) {
-          this.Player().seekVideo(data.ts);
-        }
-      }
-    });
-    socket.on("REC:seek", (data: number) => {
-      this.localSeek(data);
-    });
-    socket.on("REC:playbackRate", (data: number) => {
-      this.setState({ roomPlaybackRate: data });
-      if (data > 0) {
-        this.Player().setPlaybackRate(data);
-      }
-    });
-    socket.on("REC:subtitle", (data: string) => {
-      this.setState({ roomSubtitle: data }, () => {
-        this.Player().loadSubtitles(data);
       });
-    });
-    socket.on("REC:loop", (data: boolean) => {
-      this.setState({ roomLoop: data });
-    });
-    socket.on("REC:changeController", (data: string) => {
-      this.setState({ controller: data });
-    });
-    socket.on("REC:host", async (data: HostState) => {
-      let currentMedia = data.video || "";
-      if (this.playingScreenShare() && !isScreenShare(currentMedia)) {
-        this.stopPublishingLocalStream();
-      }
-      if (this.playingFileShare() && !isFileShare(currentMedia)) {
-        this.stopPublishingLocalStream();
-      }
-      if (this.playingVBrowser() && !isVBrowser(currentMedia)) {
-        this.stopVBrowser();
-      }
-      if (this.playingScreenShare() && isScreenShare(currentMedia)) {
-        // Ignore, it's probably a reconnection
-        return;
-      }
-      if (this.playingFileShare() && isFileShare(currentMedia)) {
-        // Ignore, it's probably a reconnection
-        return;
-      }
-      if (
-        this.playingVBrowser() &&
-        this.getVBrowserHost() &&
-        isVBrowser(currentMedia)
-      ) {
-        // Ignore, it's probably a reconnection
-        return;
-      }
-      this.setState(
-        {
-          roomMedia: currentMedia,
-          roomPaused: data.paused,
-          roomSubtitle: data.subtitle,
-          roomLoop: data.loop,
-          roomPlaybackRate: data.playbackRate,
-          loading: Boolean(data.video),
-          nonPlayableMedia: false,
-          isVBrowserLarge: data.isVBrowserLarge,
-          vBrowserResolution: "1280x720@30",
-          vBrowserQuality: "1",
-          controller: data.controller,
-          isLiveStream: false,
-        },
-        async () => {
-          const leftVideo = this.HTMLInterface.getVideoEl();
-
-          // Stop all players
-          // Unless the user is sharing a file, because we play it in leftVideo and capture stream
-          if (!this.isLocalStreamAFile) {
-            this.HTMLInterface.pauseVideo();
-          }
-          this.YouTubeInterface.stopVideo();
-
-          if (!this.isLocalStreamAFile) {
-            this.Player().clearState();
-          }
-          if (data.subtitle) {
-            this.Player().loadSubtitles(data.subtitle);
-          }
-          if (data.playbackRate) {
-            this.Player().setPlaybackRate(data.playbackRate);
-          }
-
-          if (
-            this.playingScreenShare() ||
-            this.playingFileShare() ||
-            this.playingVBrowser()
-          ) {
-            console.log(
-              "exiting REC:host since we are using webRTC (fileshare, screenshare, or vbrowser). Check setupRTCConnections()",
-            );
-            if (!(this.playingVBrowser() && !this.getVBrowserHost())) {
-              // Remove the loader unless we're waiting for a vbrowser
-              this.setLoadingFalse();
-            }
-            return;
-          }
-          if (this.usingYoutube() && !this.YouTubeInterface.isReady()) {
-            console.log(
-              "YT player not ready, initializing and retrying via ensureYouTubePlayerReady",
-            );
-            this.ensureYouTubePlayerReady(() => {
-              if (this.usingYoutube()) {
-                this.socket?.emit("CMD:askHost");
-              }
-            });
-            setTimeout(() => {
-              if (this.usingYoutube() && !this.YouTubeInterface.isReady()) {
-                this.ensureYouTubePlayerReady();
-              }
-            }, 1000);
-            return;
-          }
-          const src = data.video;
-          const time = data.videoTS;
-          if (isMagnet(src)) {
-            // WebTorrent
-            if (!window.cowatch.webtorrent) {
-              const WebTorrent = //@ts-expect-error
-                (await import("webtorrent/dist/webtorrent.min.js")).default;
-              window.cowatch.webtorrent = new WebTorrent();
-              const reg = await navigator.serviceWorker?.register("/sw.min.js");
-              const worker = reg.active || reg.waiting || reg.installing;
-              const checkState = (worker: ServiceWorker | null) => {
-                if (worker?.state === "activated") {
-                  return window.cowatch.webtorrent?.createServer({
-                    controller: reg,
-                  });
-                }
-                return null;
-              };
-              if (!checkState(worker)) {
-                worker?.addEventListener("statechange", ({ target }) =>
-                  checkState(target as ServiceWorker),
-                );
-              }
-            }
-            await new Promise(async (resolve) => {
-              const finish = (torrent: Torrent) => {
-                // Got torrent metadata!
-                console.log("Client is downloading:", torrent.infoHash);
-
-                // Torrents can contain many files.
-                const files = torrent.files;
-                const fileIndex = new URLSearchParams(src).get("fileIndex");
-                // Try to find a single large file to play
-                let target;
-                if (fileIndex != null && fileIndex !== "") {
-                  target = files[Number(fileIndex)];
-                }
-                if (!target) {
-                  // Open the selector
-                  // Selecting a file sets a new URL with the fileIndex set so we go through again
-                  this.setMultiSelectModal(true);
-                  this.setFileSelection(
-                    files.map((f: WebTorrent.TorrentFile, i: number) => ({
-                      name: f.name,
-                      url: src + `&fileIndex=${i}`,
-                      length: f.length,
-                    })),
-                  );
-                } else {
-                  //@ts-expect-error
-                  target.streamTo(leftVideo);
-                }
-                resolve(undefined);
-              };
-              let target = await window.cowatch.webtorrent?.get(src);
-              if (!target) {
-                target = window.cowatch.webtorrent?.add(src, {
-                  announce: [
-                    "wss://tracker.btorrent.xyz",
-                    "wss://tracker.openwebtorrent.com",
-                  ],
-                  destroyStoreOnDestroy: true,
-                  maxWebConns: 4,
-                  path: "/tmp/webtorrent/",
-                  storeCacheSlots: 20,
-                  strategy: "sequential",
-                  // noPeersIntervalTime: 30,
-                });
-              }
-              if (target?.ready) {
-                finish(target);
-              } else {
-                target?.on("ready", () => {
-                  finish(target);
-                });
-              }
-            });
-          } else if (isDash(src)) {
-            if (!window.cowatch.dash) {
-              const Dash = await import("dashjs");
-              window.cowatch.dash = Dash.MediaPlayer().create();
-              window.cowatch.dash.on("streamInitialized", (_e: any) => {
-                // for a live stream:
-                // html.currenttime is time since stream start
-                // html.duration is infinite
-                // player.duration is the seekable range
-                const isLiveStream = this.Player().getDuration() >= Infinity;
-                console.log("DASH stream initialized: isLive %s", isLiveStream);
-                this.setState({
-                  isLiveStream,
-                });
-              });
-            }
-            window.cowatch.dash.initialize(leftVideo, src);
-          } else if (isHls(src) && window.MediaSource) {
-            // Prefer using hls.js if MediaSource Extensions are supported
-            // otherwise fallback to native HLS support using video tag (i.e. iPhones)
-            if (!window.cowatch.hls) {
-              const Hls = (await import("hls.js")).default;
-              window.cowatch.hls = new Hls();
-              window.cowatch.hls.on(Hls.Events.LEVEL_LOADED, (_, data) => {
-                const isLiveStream = data.details.live;
-                this.setState({ isLiveStream });
-                console.log("HLS level loaded: isLive %s", isLiveStream);
-              });
-            }
-            window.cowatch.hls.loadSource(src);
-            window.cowatch.hls.attachMedia(leftVideo);
-          }
-          // else if (isMpegTs(src)) {
-          //   const mpegts = (await import('mpegts.js')).default;
-          //   let player = mpegts.createPlayer({
-          //     type: 'mse', // could also be mpegts, m2ts, flv
-          //     // isLive: true,
-          //     url: src,
-          //   });
-          //   player.attachMediaElement(leftVideo);
-          //   player.load();
-          //   player.play();
-          // }
-          else {
-            await this.Player().setSrcAndTime(src, time);
-          }
-          // Start this video
-          if (!data.paused) {
-            this.localPlay();
-          }
-          // Do right before playing
-          leftVideo?.addEventListener(
-            "canplay",
-            () => {
-              this.setLoadingFalse();
-              let ts = undefined;
-              // WebTorrent and Hls and Dash reset position back to 0 so set it back here
-              if (
-                isMagnet(src) ||
-                isHls(src) ||
-                isDash(src) ||
-                this.state.isLiveStream
-              ) {
-                ts = time;
-              }
-              // Resync to leader since the loading might have taken some time
-              this.localSeek(ts);
-              if (this.state.uploadController) {
-                // Jump back to the start of the video
-                this.roomSeek(0);
-              }
-              if (data.playbackRate) {
-                // Set playback rate again since it might have been lost
-                console.log("setting playback rate again", data.playbackRate);
-                this.Player().setPlaybackRate(data.playbackRate);
-              }
-            },
-            { once: true },
-          );
-
-          // Progress updater
-          window.clearInterval(this.progressUpdater);
-          this.setState({ downloaded: 0, total: 0, speed: 0 });
-          if (currentMedia.includes("/stream?torrent=magnet")) {
-            this.progressUpdater = window.setInterval(async () => {
-              const response = await fetch(
-                currentMedia.replace("/stream", "/progress"),
-              );
-              const data = await response.json();
-              this.setState({
-                downloaded: data.downloaded,
-                total: data.total,
-                speed: data.speed,
-                connections: data.connections,
-              });
-            }, 1000);
-          }
-          if (isMagnet(currentMedia)) {
-            this.progressUpdater = window.setInterval(async () => {
-              const client = window.cowatch.webtorrent;
-              if (client) {
-                this.setState({
-                  downloaded: client.torrents[0]?.downloaded,
-                  total: client.torrents[0]?.length,
-                  speed: client.torrents[0]?.downloadSpeed,
-                  connections: client.torrents[0]?.numPeers,
-                });
-              }
-            }, 1000);
-          }
-        },
-      );
-    });
-    socket.on("REC:chat", (data: ChatMessage) => {
-      if (
-        !getCurrentSettings().disableChatSound &&
-        !data.system &&
-        ((document.visibilityState && document.visibilityState !== "visible") ||
-          this.state.currentTab !== "chat")
-      ) {
-        new Audio("/clearly.mp3").play();
-      }
-      this.state.chat.push(data);
-      if (this.state.chat.length > 100) {
-        this.state.chat.shift();
-      }
-      this.setState({
-        chat: this.state.chat,
-        scrollTimestamp: Date.now(),
-        unreadCount:
-          this.state.currentTab === "chat"
-            ? this.state.unreadCount
-            : this.state.unreadCount + 1,
+      socket.on("REC:seek", (data: number) => {
+        this.localSeek(data);
       });
-    });
-    socket.on("REC:editMessage", (data: ChatMessage) => {
-      const { chat } = this.state;
-      const msgIndex = chat.findIndex((m) => m.dbId === data.dbId);
-      if (msgIndex === -1) {
-        return;
-      }
-      chat[msgIndex] = { ...chat[msgIndex], ...data };
-      this.setState({ chat });
-    });
-    socket.on("REC:addReaction", (data: Reaction) => {
-      const { chat } = this.state;
-      const msgIndex = chat.findIndex(
-        (m) => m.id === data.msgId && m.timestamp === data.msgTimestamp,
-      );
-      if (msgIndex === -1) {
-        return;
-      }
-      const msg = chat[msgIndex];
-      msg.reactions = msg.reactions || {};
-      msg.reactions[data.value] = msg.reactions[data.value] || [];
-      msg.reactions[data.value].push(data.user);
-      this.setState({ chat }, () => {
-        // if we add a reaction to the last message we need to scroll down
-        // or else the reaction icon might be hidden
-        if (
-          msgIndex === chat.length - 1 &&
-          this.chatRef.current?.state.isNearBottom
-        ) {
-          this.chatRef.current?.scrollToBottom();
+      socket.on("REC:playbackRate", (data: number) => {
+        this.setState({ roomPlaybackRate: data });
+        if (data > 0) {
+          this.Player().setPlaybackRate(data);
         }
       });
-    });
-    socket.on("REC:removeReaction", (data: Reaction) => {
-      const { chat } = this.state;
-      const msg = chat.find(
-        (m) => m.id === data.msgId && m.timestamp === data.msgTimestamp,
-      );
-      if (!msg || !msg.reactions?.[data.value]) {
-        return;
-      }
-      msg.reactions[data.value] = msg.reactions[data.value].filter(
-        (id) => id !== data.user,
-      );
-      this.setState({ chat });
-    });
-    socket.on("REC:tsMap", (data: NumberDict) => {
-      this.setState({ tsMap: data }, () => {
-        // Dual-tier zero-latency synchronization engine
-        // Keeps viewers locked frame-accurately to the room leader
+      socket.on("REC:subtitle", (data: string) => {
+        this.setState({ roomSubtitle: data }, () => {
+          this.Player().loadSubtitles(data);
+        });
+      });
+      socket.on("REC:loop", (data: boolean) => {
+        this.setState({ roomLoop: data });
+      });
+      socket.on("REC:changeController", (data: string) => {
+        this.setState({ controller: data });
+      });
+      socket.on("REC:host", async (data: HostState) => {
+        let currentMedia = data.video || "";
+        if (this.playingScreenShare() && !isScreenShare(currentMedia)) {
+          this.stopPublishingLocalStream();
+        }
+        if (this.playingFileShare() && !isFileShare(currentMedia)) {
+          this.stopPublishingLocalStream();
+        }
+        if (this.playingVBrowser() && !isVBrowser(currentMedia)) {
+          this.stopVBrowser();
+        }
+        if (this.playingScreenShare() && isScreenShare(currentMedia)) {
+          // Ignore, it's probably a reconnection
+          return;
+        }
+        if (this.playingFileShare() && isFileShare(currentMedia)) {
+          // Ignore, it's probably a reconnection
+          return;
+        }
         if (
-          !this.state.isLiveStream &&
-          this.hasDuration() &&
-          this.state.roomPlaybackRate === 0 &&
-          !this.playingScreenShare() &&
-          !this.playingFileShare() &&
-          !this.playingVBrowser()
+          this.playingVBrowser() &&
+          this.getVBrowserHost() &&
+          isVBrowser(currentMedia)
         ) {
-          const isHost = Boolean(this.state.owner && clientId === this.state.owner);
-          if (!isHost) {
-            const leader = this.getLeaderTime();
-            const myTs =
-              typeof data[clientId] === "number" && isFinite(data[clientId])
-                ? data[clientId]
-                : this.Player().getCurrentTime();
+          // Ignore, it's probably a reconnection
+          return;
+        }
+        this.setState(
+          {
+            roomMedia: currentMedia,
+            roomPaused: data.paused,
+            roomSubtitle: data.subtitle,
+            roomLoop: data.loop,
+            roomPlaybackRate: data.playbackRate,
+            loading: Boolean(data.video),
+            nonPlayableMedia: false,
+            isVBrowserLarge: data.isVBrowserLarge,
+            vBrowserResolution: "1280x720@30",
+            vBrowserQuality: "1",
+            controller: data.controller,
+            isLiveStream: false,
+          },
+          async () => {
+            const leftVideo = this.HTMLInterface.getVideoEl();
+
+            // Stop all players
+            // Unless the user is sharing a file, because we play it in leftVideo and capture stream
+            if (!this.isLocalStreamAFile) {
+              this.HTMLInterface.pauseVideo();
+            }
+            this.YouTubeInterface.stopVideo();
+
+            if (!this.isLocalStreamAFile) {
+              this.Player().clearState();
+            }
+            if (data.subtitle) {
+              this.Player().loadSubtitles(data.subtitle);
+            }
+            if (data.playbackRate) {
+              this.Player().setPlaybackRate(data.playbackRate);
+            }
 
             if (
-              typeof leader === "number" &&
-              isFinite(leader) &&
-              leader >= 0 &&
-              typeof myTs === "number" &&
-              isFinite(myTs)
+              this.playingScreenShare() ||
+              this.playingFileShare() ||
+              this.playingVBrowser()
             ) {
-              const delta = leader - myTs; // Positive = we are behind leader; Negative = ahead
-
-              if (this.state.roomPaused) {
-                // If paused, ensure exact frame alignment if drift exceeds 200ms
-                if (Math.abs(delta) > 0.2) {
-                  this.Player().seekVideo(leader);
+              console.log(
+                "exiting REC:host since we are using webRTC (fileshare, screenshare, or vbrowser). Check setupRTCConnections()",
+              );
+              if (!(this.playingVBrowser() && !this.getVBrowserHost())) {
+                // Remove the loader unless we're waiting for a vbrowser
+                this.setLoadingFalse();
+              }
+              return;
+            }
+            if (this.usingYoutube() && !this.YouTubeInterface.isReady()) {
+              console.log(
+                "YT player not ready, initializing and retrying via ensureYouTubePlayerReady",
+              );
+              this.ensureYouTubePlayerReady(() => {
+                if (this.usingYoutube()) {
+                  this.socket?.emit("CMD:askHost");
                 }
-              } else {
-                // Active playback synchronization
-                // Tier 1: Hard snap if desync exceeds 0.85s
-                if (Math.abs(delta) > 0.85) {
-                  this.Player().seekVideo(leader);
-                  this.Player().setPlaybackRate(1.0);
-                  if (this.Player().shouldPlay()) {
-                    this.localPlay();
+              });
+              setTimeout(() => {
+                if (this.usingYoutube() && !this.YouTubeInterface.isReady()) {
+                  this.ensureYouTubePlayerReady();
+                }
+              }, 1000);
+              return;
+            }
+            const src = data.video;
+            const time = data.videoTS;
+            if (isMagnet(src)) {
+              // WebTorrent
+              if (!window.cowatch.webtorrent) {
+                const WebTorrent = //@ts-expect-error
+                  (await import("webtorrent/dist/webtorrent.min.js")).default;
+                window.cowatch.webtorrent = new WebTorrent();
+                const reg = await navigator.serviceWorker?.register("/sw.min.js");
+                const worker = reg.active || reg.waiting || reg.installing;
+                const checkState = (worker: ServiceWorker | null) => {
+                  if (worker?.state === "activated") {
+                    return window.cowatch.webtorrent?.createServer({
+                      controller: reg,
+                    });
                   }
-                } else if (Math.abs(delta) >= 0.08) {
-                  // Tier 2: Sub-second continuous pacing between 80ms and 850ms
-                  let targetRate = 1.0;
-                  if (delta > 0) {
-                    // Behind: accelerate up to 1.25x to quickly close gap
-                    targetRate = Math.min(1.0 + delta * 0.35, 1.25);
+                  return null;
+                };
+                if (!checkState(worker)) {
+                  worker?.addEventListener("statechange", ({ target }) =>
+                    checkState(target as ServiceWorker),
+                  );
+                }
+              }
+              await new Promise(async (resolve) => {
+                const finish = (torrent: Torrent) => {
+                  // Got torrent metadata!
+                  console.log("Client is downloading:", torrent.infoHash);
+
+                  // Torrents can contain many files.
+                  const files = torrent.files;
+                  const fileIndex = new URLSearchParams(src).get("fileIndex");
+                  // Try to find a single large file to play
+                  let target;
+                  if (fileIndex != null && fileIndex !== "") {
+                    target = files[Number(fileIndex)];
+                  }
+                  if (!target) {
+                    // Open the selector
+                    // Selecting a file sets a new URL with the fileIndex set so we go through again
+                    this.setMultiSelectModal(true);
+                    this.setFileSelection(
+                      files.map((f: WebTorrent.TorrentFile, i: number) => ({
+                        name: f.name,
+                        url: src + `&fileIndex=${i}`,
+                        length: f.length,
+                      })),
+                    );
                   } else {
-                    // Ahead: decelerate down to 0.85x to let leader catch up
-                    targetRate = Math.max(1.0 + delta * 0.35, 0.85);
+                    //@ts-expect-error
+                    target.streamTo(leftVideo);
                   }
-                  targetRate = Number(targetRate.toFixed(2));
-                  if (Math.abs(this.Player().getPlaybackRate() - targetRate) >= 0.02) {
-                    this.Player().setPlaybackRate(targetRate);
+                  resolve(undefined);
+                };
+                let target = await window.cowatch.webtorrent?.get(src);
+                if (!target) {
+                  target = window.cowatch.webtorrent?.add(src, {
+                    announce: [
+                      "wss://tracker.btorrent.xyz",
+                      "wss://tracker.openwebtorrent.com",
+                    ],
+                    destroyStoreOnDestroy: true,
+                    maxWebConns: 4,
+                    path: "/tmp/webtorrent/",
+                    storeCacheSlots: 20,
+                    strategy: "sequential",
+                    // noPeersIntervalTime: 30,
+                  });
+                }
+                if (target?.ready) {
+                  finish(target);
+                } else {
+                  target?.on("ready", () => {
+                    finish(target);
+                  });
+                }
+              });
+            } else if (isDash(src)) {
+              if (!window.cowatch.dash) {
+                const Dash = await import("dashjs");
+                window.cowatch.dash = Dash.MediaPlayer().create();
+                window.cowatch.dash.on("streamInitialized", (_e: any) => {
+                  // for a live stream:
+                  // html.currenttime is time since stream start
+                  // html.duration is infinite
+                  // player.duration is the seekable range
+                  const isLiveStream = this.Player().getDuration() >= Infinity;
+                  console.log("DASH stream initialized: isLive %s", isLiveStream);
+                  this.setState({
+                    isLiveStream,
+                  });
+                });
+              }
+              window.cowatch.dash.initialize(leftVideo, src);
+            } else if (isHls(src) && window.MediaSource) {
+              // Prefer using hls.js if MediaSource Extensions are supported
+              // otherwise fallback to native HLS support using video tag (i.e. iPhones)
+              if (!window.cowatch.hls) {
+                const Hls = (await import("hls.js")).default;
+                window.cowatch.hls = new Hls();
+                window.cowatch.hls.on(Hls.Events.LEVEL_LOADED, (_, data) => {
+                  const isLiveStream = data.details.live;
+                  this.setState({ isLiveStream });
+                  console.log("HLS level loaded: isLive %s", isLiveStream);
+                });
+              }
+              window.cowatch.hls.loadSource(src);
+              window.cowatch.hls.attachMedia(leftVideo);
+            }
+            // else if (isMpegTs(src)) {
+            //   const mpegts = (await import('mpegts.js')).default;
+            //   let player = mpegts.createPlayer({
+            //     type: 'mse', // could also be mpegts, m2ts, flv
+            //     // isLive: true,
+            //     url: src,
+            //   });
+            //   player.attachMediaElement(leftVideo);
+            //   player.load();
+            //   player.play();
+            // }
+            else {
+              await this.Player().setSrcAndTime(src, time);
+            }
+            // Start this video
+            if (!data.paused) {
+              this.localPlay();
+            }
+            // Do right before playing
+            leftVideo?.addEventListener(
+              "canplay",
+              () => {
+                this.setLoadingFalse();
+                let ts = undefined;
+                // WebTorrent and Hls and Dash reset position back to 0 so set it back here
+                if (
+                  isMagnet(src) ||
+                  isHls(src) ||
+                  isDash(src) ||
+                  this.state.isLiveStream
+                ) {
+                  ts = time;
+                }
+                // Resync to leader since the loading might have taken some time
+                this.localSeek(ts);
+                if (this.state.uploadController) {
+                  // Jump back to the start of the video
+                  this.roomSeek(0);
+                }
+                if (data.playbackRate) {
+                  // Set playback rate again since it might have been lost
+                  console.log("setting playback rate again", data.playbackRate);
+                  this.Player().setPlaybackRate(data.playbackRate);
+                }
+              },
+              { once: true },
+            );
+
+            // Progress updater
+            window.clearInterval(this.progressUpdater);
+            this.setState({ downloaded: 0, total: 0, speed: 0 });
+            if (currentMedia.includes("/stream?torrent=magnet")) {
+              this.progressUpdater = window.setInterval(async () => {
+                const response = await fetch(
+                  currentMedia.replace("/stream", "/progress"),
+                );
+                const data = await response.json();
+                this.setState({
+                  downloaded: data.downloaded,
+                  total: data.total,
+                  speed: data.speed,
+                  connections: data.connections,
+                });
+              }, 1000);
+            }
+            if (isMagnet(currentMedia)) {
+              this.progressUpdater = window.setInterval(async () => {
+                const client = window.cowatch.webtorrent;
+                if (client) {
+                  this.setState({
+                    downloaded: client.torrents[0]?.downloaded,
+                    total: client.torrents[0]?.length,
+                    speed: client.torrents[0]?.downloadSpeed,
+                    connections: client.torrents[0]?.numPeers,
+                  });
+                }
+              }, 1000);
+            }
+          },
+        );
+      });
+      socket.on("REC:chat", (data: ChatMessage) => {
+        if (
+          !getCurrentSettings().disableChatSound &&
+          !data.system &&
+          ((document.visibilityState && document.visibilityState !== "visible") ||
+            this.state.currentTab !== "chat")
+        ) {
+          new Audio("/clearly.mp3").play();
+        }
+        this.state.chat.push(data);
+        if (this.state.chat.length > 100) {
+          this.state.chat.shift();
+        }
+        this.setState({
+          chat: this.state.chat,
+          scrollTimestamp: Date.now(),
+          unreadCount:
+            this.state.currentTab === "chat"
+              ? this.state.unreadCount
+              : this.state.unreadCount + 1,
+        });
+      });
+      socket.on("REC:editMessage", (data: ChatMessage) => {
+        const { chat } = this.state;
+        const msgIndex = chat.findIndex((m) => m.dbId === data.dbId);
+        if (msgIndex === -1) {
+          return;
+        }
+        chat[msgIndex] = { ...chat[msgIndex], ...data };
+        this.setState({ chat });
+      });
+      socket.on("REC:addReaction", (data: Reaction) => {
+        const { chat } = this.state;
+        const msgIndex = chat.findIndex(
+          (m) => m.id === data.msgId && m.timestamp === data.msgTimestamp,
+        );
+        if (msgIndex === -1) {
+          return;
+        }
+        const msg = chat[msgIndex];
+        msg.reactions = msg.reactions || {};
+        msg.reactions[data.value] = msg.reactions[data.value] || [];
+        msg.reactions[data.value].push(data.user);
+        this.setState({ chat }, () => {
+          // if we add a reaction to the last message we need to scroll down
+          // or else the reaction icon might be hidden
+          if (
+            msgIndex === chat.length - 1 &&
+            this.chatRef.current?.state.isNearBottom
+          ) {
+            this.chatRef.current?.scrollToBottom();
+          }
+        });
+      });
+      socket.on("REC:removeReaction", (data: Reaction) => {
+        const { chat } = this.state;
+        const msg = chat.find(
+          (m) => m.id === data.msgId && m.timestamp === data.msgTimestamp,
+        );
+        if (!msg || !msg.reactions?.[data.value]) {
+          return;
+        }
+        msg.reactions[data.value] = msg.reactions[data.value].filter(
+          (id) => id !== data.user,
+        );
+        this.setState({ chat });
+      });
+      socket.on("REC:tsMap", (data: NumberDict) => {
+        this.setState({ tsMap: data }, () => {
+          // Dual-tier zero-latency synchronization engine
+          // Keeps viewers locked frame-accurately to the room leader
+          if (
+            !this.state.isLiveStream &&
+            this.hasDuration() &&
+            this.state.roomPlaybackRate === 0 &&
+            !this.playingScreenShare() &&
+            !this.playingFileShare() &&
+            !this.playingVBrowser()
+          ) {
+            const isHost = Boolean(this.state.owner && clientId === this.state.owner);
+            if (!isHost) {
+              const leader = this.getLeaderTime();
+              const myTs =
+                typeof data[clientId] === "number" && isFinite(data[clientId])
+                  ? data[clientId]
+                  : this.Player().getCurrentTime();
+
+              if (
+                typeof leader === "number" &&
+                isFinite(leader) &&
+                leader >= 0 &&
+                typeof myTs === "number" &&
+                isFinite(myTs)
+              ) {
+                const delta = leader - myTs; // Positive = we are behind leader; Negative = ahead
+
+                if (this.state.roomPaused) {
+                  // If paused, ensure exact frame alignment if drift exceeds 200ms
+                  if (Math.abs(delta) > 0.2) {
+                    this.Player().seekVideo(leader);
                   }
                 } else {
-                  // Within 80ms deadband: synchronized, restore standard rate
-                  if (this.Player().getPlaybackRate() !== 1.0) {
+                  // Active playback synchronization
+                  // Tier 1: Hard snap if desync exceeds 0.85s
+                  if (Math.abs(delta) > 0.85) {
+                    this.Player().seekVideo(leader);
                     this.Player().setPlaybackRate(1.0);
+                    if (this.Player().shouldPlay()) {
+                      this.localPlay();
+                    }
+                  } else if (Math.abs(delta) >= 0.08) {
+                    // Tier 2: Sub-second continuous pacing between 80ms and 850ms
+                    let targetRate = 1.0;
+                    if (delta > 0) {
+                      // Behind: accelerate up to 1.25x to quickly close gap
+                      targetRate = Math.min(1.0 + delta * 0.35, 1.25);
+                    } else {
+                      // Ahead: decelerate down to 0.85x to let leader catch up
+                      targetRate = Math.max(1.0 + delta * 0.35, 0.85);
+                    }
+                    targetRate = Number(targetRate.toFixed(2));
+                    if (Math.abs(this.Player().getPlaybackRate() - targetRate) >= 0.02) {
+                      this.Player().setPlaybackRate(targetRate);
+                    }
+                  } else {
+                    // Within 80ms deadband: synchronized, restore standard rate
+                    if (this.Player().getPlaybackRate() !== 1.0) {
+                      this.Player().setPlaybackRate(1.0);
+                    }
                   }
                 }
               }
             }
           }
-        }
-        if (this.state.roomSubtitle) {
-          const sharer = this.state.participants.find((p) => p.isScreenShare);
-          if (sharer && sharer.id !== clientId) {
-            // Sync only if someone is sharing and it's not us
-            const sharerTime = this.state.tsMap[sharer.id];
-            this.Player().syncSubtitles(sharerTime);
+          if (this.state.roomSubtitle) {
+            const sharer = this.state.participants.find((p) => p.isScreenShare);
+            if (sharer && sharer.id !== clientId) {
+              // Sync only if someone is sharing and it's not us
+              const sharerTime = this.state.tsMap[sharer.id];
+              this.Player().syncSubtitles(sharerTime);
+            }
+          }
+        });
+      });
+      socket.on("REC:nameMap", (data: StringDict) => {
+        this.setState({ nameMap: data });
+      });
+      socket.on("REC:pictureMap", (data: StringDict) => {
+        this.setState({ pictureMap: data });
+      });
+      socket.on("REC:lock", (data: string) => {
+        this.setState({ roomLock: data });
+      });
+      socket.on("roster", (data: any[]) => {
+        this.setState({ participants: data, rosterUpdateTS: Date.now() }, () => {
+          this.setupRTCConnections();
+        });
+      });
+      socket.on("chatinit", (data: ChatMessage[]) => {
+        this.setState({ chat: data, scrollTimestamp: Date.now() });
+      });
+      socket.on("playlist", (data: PlaylistVideo[]) => {
+        this.setState({ playlist: data });
+      });
+      socket.on(
+        "signalSS",
+        async (data: {
+          msg: { ice: any; sdp: any };
+          from: string;
+          sharer: boolean;
+        }) => {
+          config.NODE_ENV === "development" && console.log(data);
+          // Handle messages received from signaling server
+          const msg = data.msg;
+          const from = data.from;
+          // Determine whether the message came from the sharer or the sharee
+          const pc = (
+            data.sharer ? this.consumerConn : this.publisherConns[from]
+          ) as RTCPeerConnection;
+          if (msg.ice !== undefined) {
+            pc.addIceCandidate(new RTCIceCandidate(msg.ice));
+          } else if (msg.sdp && msg.sdp.type === "offer") {
+            // console.log('offer');
+            // TODO Currently ios/Safari cannot handle this property, so remove it from the offer
+            const _sdp = msg.sdp.sdp
+              .split("\n")
+              .filter((line: string) => {
+                return line.trim() !== "a=extmap-allow-mixed";
+              })
+              .join("\n");
+            msg.sdp.sdp = _sdp;
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            const answer = await pc.createAnswer();
+            // Allow stereo audio
+            answer.sdp = answer.sdp?.replace(
+              "useinbandfec=1",
+              "useinbandfec=1; stereo=1; maxaveragebitrate=510000",
+            );
+            // console.log(answer.sdp);
+            // Allow multichannel audio if Chromium
+            //@ts-expect-error
+            const isChromium = Boolean(window.chrome);
+            if (isChromium) {
+              answer.sdp = answer.sdp
+                ?.replace("opus/48000/2", "multiopus/48000/6")
+                .replace(
+                  "useinbandfec=1",
+                  "channel_mapping=0,4,1,2,3,5; num_streams=4; coupled_streams=2;maxaveragebitrate=510000;minptime=10;useinbandfec=1",
+                );
+            }
+            await pc.setLocalDescription(answer);
+            this.sendSignalSS(from, { sdp: pc.localDescription }, !data.sharer);
+          } else if (msg.sdp && msg.sdp.type === "answer") {
+            pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+          }
+        },
+      );
+      socket.on("REC:getRoomState", this.handleRoomState);
+      socket.on("REC:waitingLounge", (data: WaitingLoungeState) => {
+        const wasInLounge = this.state.waitingLoungeState?.inLounge;
+        this.setState({ waitingLoungeState: data }, () => {
+          if (wasInLounge && !data.inLounge) {
+            console.log("[App] REC:waitingLounge admitted user, initializing media");
+            this.ensureYouTubePlayerReady();
+            this.socket?.emit("CMD:askHost");
+            this.socket?.emit("CMD:getRoomState");
+          }
+        });
+      });
+      socket.on("REC:waitingList", (data: WaitingGuest[]) => {
+        this.setState({ waitingList: data || [] });
+      });
+      socket.on("REC:waitingLoungeEnabled", (data: { enabled: boolean }) => {
+        this.setState({ isWaitingLoungeEnabled: data.enabled });
+      });
+      window.setInterval(() => {
+        if (this.state.roomMedia) {
+          const curr = this.Player().getCurrentTime();
+          if (typeof curr === "number" && isFinite(curr) && curr >= 0) {
+            const toSend = this.getRoomTSToSet(curr);
+            this.socket.emit("CMD:ts", toSend);
           }
         }
-      });
-    });
-    socket.on("REC:nameMap", (data: StringDict) => {
-      this.setState({ nameMap: data });
-    });
-    socket.on("REC:pictureMap", (data: StringDict) => {
-      this.setState({ pictureMap: data });
-    });
-    socket.on("REC:lock", (data: string) => {
-      this.setState({ roomLock: data });
-    });
-    socket.on("roster", (data: any[]) => {
-      this.setState({ participants: data, rosterUpdateTS: Date.now() }, () => {
-        this.setupRTCConnections();
-      });
-    });
-    socket.on("chatinit", (data: ChatMessage[]) => {
-      this.setState({ chat: data, scrollTimestamp: Date.now() });
-    });
-    socket.on("playlist", (data: PlaylistVideo[]) => {
-      this.setState({ playlist: data });
-    });
-    socket.on(
-      "signalSS",
-      async (data: {
-        msg: { ice: any; sdp: any };
-        from: string;
-        sharer: boolean;
-      }) => {
-        config.NODE_ENV === "development" && console.log(data);
-        // Handle messages received from signaling server
-        const msg = data.msg;
-        const from = data.from;
-        // Determine whether the message came from the sharer or the sharee
-        const pc = (
-          data.sharer ? this.consumerConn : this.publisherConns[from]
-        ) as RTCPeerConnection;
-        if (msg.ice !== undefined) {
-          pc.addIceCandidate(new RTCIceCandidate(msg.ice));
-        } else if (msg.sdp && msg.sdp.type === "offer") {
-          // console.log('offer');
-          // TODO Currently ios/Safari cannot handle this property, so remove it from the offer
-          const _sdp = msg.sdp.sdp
-            .split("\n")
-            .filter((line: string) => {
-              return line.trim() !== "a=extmap-allow-mixed";
-            })
-            .join("\n");
-          msg.sdp.sdp = _sdp;
-          await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-          const answer = await pc.createAnswer();
-          // Allow stereo audio
-          answer.sdp = answer.sdp?.replace(
-            "useinbandfec=1",
-            "useinbandfec=1; stereo=1; maxaveragebitrate=510000",
-          );
-          // console.log(answer.sdp);
-          // Allow multichannel audio if Chromium
-          //@ts-expect-error
-          const isChromium = Boolean(window.chrome);
-          if (isChromium) {
-            answer.sdp = answer.sdp
-              ?.replace("opus/48000/2", "multiopus/48000/6")
-              .replace(
-                "useinbandfec=1",
-                "channel_mapping=0,4,1,2,3,5; num_streams=4; coupled_streams=2;maxaveragebitrate=510000;minptime=10;useinbandfec=1",
-              );
-          }
-          await pc.setLocalDescription(answer);
-          this.sendSignalSS(from, { sdp: pc.localDescription }, !data.sharer);
-        } else if (msg.sdp && msg.sdp.type === "answer") {
-          pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-        }
-      },
-    );
-    socket.on("REC:getRoomState", this.handleRoomState);
-    socket.on("REC:waitingLounge", (data: WaitingLoungeState) => {
-      const wasInLounge = this.state.waitingLoungeState?.inLounge;
-      this.setState({ waitingLoungeState: data }, () => {
-        if (wasInLounge && !data.inLounge) {
-          console.log("[App] REC:waitingLounge admitted user, initializing media");
-          this.ensureYouTubePlayerReady();
-          this.socket?.emit("CMD:askHost");
-          this.socket?.emit("CMD:getRoomState");
-        }
-      });
-    });
-    socket.on("REC:waitingList", (data: WaitingGuest[]) => {
-      this.setState({ waitingList: data || [] });
-    });
-    socket.on("REC:waitingLoungeEnabled", (data: { enabled: boolean }) => {
-      this.setState({ isWaitingLoungeEnabled: data.enabled });
-    });
-    window.setInterval(() => {
-      if (this.state.roomMedia) {
-        const curr = this.Player().getCurrentTime();
-        if (typeof curr === "number" && isFinite(curr) && curr >= 0) {
-          const toSend = this.getRoomTSToSet(curr);
-          this.socket.emit("CMD:ts", toSend);
-        }
-      }
-    }, 500);
+      }, 500);
     } catch (criticalErr) {
       console.error("Critical error in join:", criticalErr);
       if (this.startingTimer) {
@@ -2030,7 +2099,7 @@ export class App extends React.Component<AppProps, AppState> {
             if ("jitterBufferTarget" in event.receiver) {
               (event.receiver as any).jitterBufferTarget = 0;
             }
-          } catch (e) {}
+          } catch (e) { }
         }
         // Mount the stream from sharer
         // console.log(stream);
@@ -2389,7 +2458,7 @@ export class App extends React.Component<AppProps, AppState> {
           }
         }
       }
-    } catch {}
+    } catch { }
     return input;
   };
 
@@ -2580,14 +2649,18 @@ export class App extends React.Component<AppProps, AppState> {
             getSubtitleMode={this.Player().getSubtitleMode}
           />
         )}
-        <ActiveRoomLeavePopover
-          opened={this.state.showLeavePopover}
+        <MiniLiveRoomPopover
+          visible={this.state.isRoomMinimized && this.isActiveRoom()}
           roomTitle={this.state.roomTitle}
           currentMedia={this.state.roomMedia}
           mediaDisplayName={this.getMediaDisplayName(this.state.roomMedia)}
           participantCount={this.state.participants.length}
-          onStay={this.handleStayInRoom}
-          onExit={this.confirmLeave}
+          isMicEnabled={this.isMicEnabled()}
+          isVideoEnabled={this.isVideoEnabled()}
+          onReturnToRoom={this.handleReturnToRoom}
+          onToggleMic={this.handleToggleMic}
+          onToggleVideo={this.handleToggleVideo}
+          onLeaveRoom={this.confirmLeave}
         />
 
         {this.state.state === "starting" && (
@@ -2707,8 +2780,8 @@ export class App extends React.Component<AppProps, AppState> {
               }
             }}
             onOpenSettings={() => this.setSettingsModalOpen(true)}
-            onExit={this.requestLeave}
-            onLogoClick={this.requestLeave}
+            onExit={this.confirmLeave}
+            onLogoClick={this.confirmLeave}
             isLocked={Boolean(this.state.roomLock)}
             onToggleLock={this.toggleLock}
             haveLock={this.haveLock()}
@@ -3083,8 +3156,8 @@ export class App extends React.Component<AppProps, AppState> {
                     leftSection={<IconUsersGroup size={16} />}
                     rightSection={
                       Boolean(this.state.owner && this.context.user?.id === this.state.owner) &&
-                      this.state.waitingList &&
-                      this.state.waitingList.length > 0 ? (
+                        this.state.waitingList &&
+                        this.state.waitingList.length > 0 ? (
                         <Badge size="xs" color="violet" variant="filled" circle>
                           {this.state.waitingList.length}
                         </Badge>
@@ -3121,6 +3194,7 @@ export class App extends React.Component<AppProps, AppState> {
                 >
                   <VideoChatErrorBoundary>
                     <VideoChat
+                      ref={this.videoChatRef}
                       socket={this.socket}
                       participants={this.state.participants}
                       nameMap={this.state.nameMap}
