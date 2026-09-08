@@ -4,7 +4,6 @@ import { IconCirclePlusFilled, IconArrowLeft } from "@tabler/icons-react";
 import { MetadataContext } from "../../MetadataContext";
 import { useHistory } from "react-router-dom";
 import { useRoomFormState, submitRoomCreation } from "./roomCreationDomain";
-import { RoomCreationModeSwitcher } from "./RoomCreationModeSwitcher";
 import { SharedRoomFields } from "./SharedRoomFields";
 import { SharedRoomPreview } from "./SharedRoomPreview";
 import styles from "./Create.module.css";
@@ -59,8 +58,6 @@ export const Create: React.FC = () => {
           </Badge>
         </div>
 
-        {/* Mode Switcher */}
-        <RoomCreationModeSwitcher activeMode="now" />
 
         {/* Responsive Grid Layout */}
         <div className={styles.layoutGrid}>

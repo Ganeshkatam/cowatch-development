@@ -14,7 +14,7 @@ import {
   getSchedulePresets,
   formatDate,
 } from "../Create/roomCreationDomain";
-import { RoomCreationModeSwitcher } from "../Create/RoomCreationModeSwitcher";
+
 import { SharedRoomFields } from "../Create/SharedRoomFields";
 import { SharedRoomPreview } from "../Create/SharedRoomPreview";
 import createStyles from "../Create/Create.module.css";
@@ -144,8 +144,6 @@ export const ScheduleRoom: React.FC = () => {
           </Badge>
         </div>
 
-        {/* Mode Switcher */}
-        <RoomCreationModeSwitcher activeMode="schedule" />
 
         {/* Responsive Grid Layout */}
         <div className={createStyles.layoutGrid}>
