@@ -993,7 +993,7 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
     if (postgres) {
       const result = await postgres.query(
         `SELECT "roomId", "roomTitle", "roomDescription", status, "startedAt", "scheduledStartsAt", "expiresAt", "endedAt", 
-                "isPermanent", "isSubRoom", owner_id, creator, "isWaitingLoungeEnabled",
+                "isPermanent", "isSubRoom", owner_id, "isWaitingLoungeEnabled",
                 (passcode IS NOT NULL AND passcode <> '') AS "isPasscodeProtected"
          FROM rooms WHERE "roomId" = $1`,
         [roomId]
