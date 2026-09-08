@@ -37,6 +37,7 @@ interface RoomHeaderProps {
   onAdmitUser?: (clientId: string) => void;
   onDeclineUser?: (clientId: string) => void;
   isOwner?: boolean;
+  onLogoClick?: () => void;
 }
 
 export const RoomHeader: React.FC<RoomHeaderProps> = ({
@@ -60,6 +61,7 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
   onAdmitUser,
   onDeclineUser,
   isOwner,
+  onLogoClick,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -72,14 +74,31 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
   return (
     <header className={styles.header}>
       <div className={styles.leftSection}>
-        <Link to="/" className={styles.logoLink} title="Go to home">
-          <img
-            src="/logo192.png"
-            alt="CoWatch"
-            className={styles.logoImg}
-          />
-          <span className={styles.logoText}>CoWatch</span>
-        </Link>
+        {onLogoClick ? (
+          <button
+            type="button"
+            className={styles.logoLink}
+            onClick={onLogoClick}
+            title="Go to home"
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          >
+            <img
+              src="/logo192.png"
+              alt="CoWatch"
+              className={styles.logoImg}
+            />
+            <span className={styles.logoText}>CoWatch</span>
+          </button>
+        ) : (
+          <Link to="/" className={styles.logoLink} title="Go to home">
+            <img
+              src="/logo192.png"
+              alt="CoWatch"
+              className={styles.logoImg}
+            />
+            <span className={styles.logoText}>CoWatch</span>
+          </Link>
+        )}
 
         <div className={styles.divider} />
 

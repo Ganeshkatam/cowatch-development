@@ -48,6 +48,7 @@ import { FileShareModal } from "../Modal/FileShareModal";
 import type { User } from "@supabase/supabase-js";
 import { supabase, safeGetSession } from "../../utils/supabaseClient";
 import { SubtitleModal } from "../Modal/SubtitleModal";
+import { ActiveRoomLeavePopover } from "../Modal/ActiveRoomLeavePopover";
 import { WaitingLounge } from "../WaitingLounge/WaitingLounge";
 import { WaitingLoungeBanner } from "../WaitingLounge/WaitingLoungeBanner";
 import { HTML } from "./HTML";
@@ -190,6 +191,7 @@ interface AppState {
   waitingLoungeState: WaitingLoungeState | null;
   waitingList: WaitingGuest[];
   isWaitingLoungeEnabled: boolean;
+  showLeavePopover: boolean;
 }
 
 export class App extends React.Component<AppProps, AppState> {
@@ -275,7 +277,12 @@ export class App extends React.Component<AppProps, AppState> {
     waitingLoungeState: null,
     waitingList: [],
     isWaitingLoungeEnabled: false,
+    showLeavePopover: false,
   };
+  private hasLostFocus = false;
+  private leaveGraceUntil = 0;
+  private exitIntentCooldownUntil = 0;
+  private isLeaving = false;
   socket: Socket = null!;
   mediasoupPubSocket: Socket | null = null;
   mediasoupSubSocket: Socket | null = null;
@@ -297,6 +304,93 @@ export class App extends React.Component<AppProps, AppState> {
     }
   };
 
+  isActiveRoom = (): boolean => {
+    return (
+      this.state.state === "connected" &&
+      !this.state.waitingLoungeState?.inLounge &&
+      !this.state.isErrorAuth &&
+      Boolean(this.state.roomId) &&
+      !this.isLeaving
+    );
+  };
+
+  requestLeave = () => {
+    if (this.isActiveRoom()) {
+      this.setState({ showLeavePopover: true });
+    } else {
+      this.confirmLeave();
+    }
+  };
+
+  handleStayInRoom = () => {
+    this.hasLostFocus = false;
+    this.leaveGraceUntil = Date.now() + 10_000;
+    this.setState({ showLeavePopover: false });
+  };
+
+  confirmLeave = () => {
+    this.isLeaving = true;
+    this.setState({ showLeavePopover: false });
+    try {
+      if (window.cowatch?.ourStream) {
+        window.cowatch.ourStream.getTracks().forEach((t) => t.stop());
+        window.cowatch.ourStream = undefined;
+      }
+      if (this.socket) {
+        this.socket.emit("CMD:leaveVideo");
+        this.socket.disconnect();
+      }
+    } catch (e) {
+      console.warn("[App] Error during leave cleanup:", e);
+    }
+    window.location.href = "/";
+  };
+
+  handleVisibilityChange = () => {
+    if (this.isLeaving || !this.isActiveRoom()) return;
+
+    if (document.hidden) {
+      this.hasLostFocus = true;
+    } else {
+      if (this.hasLostFocus) {
+        this.hasLostFocus = false;
+        if (Date.now() >= this.leaveGraceUntil && !this.state.showLeavePopover) {
+          this.setState({ showLeavePopover: true });
+        }
+      }
+    }
+  };
+
+  handleWindowBlur = () => {
+    if (this.isLeaving || !this.isActiveRoom()) return;
+    this.hasLostFocus = true;
+  };
+
+  handleWindowFocus = () => {
+    if (this.isLeaving || !this.isActiveRoom()) return;
+    if (this.hasLostFocus) {
+      this.hasLostFocus = false;
+      if (Date.now() >= this.leaveGraceUntil && !this.state.showLeavePopover) {
+        this.setState({ showLeavePopover: true });
+      }
+    }
+  };
+
+  handleMouseLeave = (e: MouseEvent) => {
+    if (this.isLeaving || !this.isActiveRoom()) return;
+    if (e.clientY <= 0) {
+      const now = Date.now();
+      if (
+        now >= this.leaveGraceUntil &&
+        now >= this.exitIntentCooldownUntil &&
+        !this.state.showLeavePopover
+      ) {
+        this.exitIntentCooldownUntil = now + 5000;
+        this.setState({ showLeavePopover: true });
+      }
+    }
+  };
+
   chatRef = React.createRef<ChatComponent>();
 
   async componentDidMount() {
@@ -309,6 +403,11 @@ export class App extends React.Component<AppProps, AppState> {
     }
     document.onfullscreenchange = this.onFullScreenChange;
     document.onkeydown = this.onKeydown;
+
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
+    window.addEventListener("blur", this.handleWindowBlur);
+    window.addEventListener("focus", this.handleWindowFocus);
+    document.addEventListener("mouseleave", this.handleMouseLeave);
 
     // Send heartbeat to the server
     this.heartbeat = window.setInterval(
@@ -328,6 +427,10 @@ export class App extends React.Component<AppProps, AppState> {
   componentWillUnmount() {
     document.removeEventListener("fullscreenchange", this.onFullScreenChange);
     document.removeEventListener("keydown", this.onKeydown);
+    document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+    window.removeEventListener("blur", this.handleWindowBlur);
+    window.removeEventListener("focus", this.handleWindowFocus);
+    document.removeEventListener("mouseleave", this.handleMouseLeave);
     window.clearInterval(this.heartbeat);
     if (this.startingTimer) {
       window.clearTimeout(this.startingTimer);
@@ -2477,6 +2580,15 @@ export class App extends React.Component<AppProps, AppState> {
             getSubtitleMode={this.Player().getSubtitleMode}
           />
         )}
+        <ActiveRoomLeavePopover
+          opened={this.state.showLeavePopover}
+          roomTitle={this.state.roomTitle}
+          currentMedia={this.state.roomMedia}
+          mediaDisplayName={this.getMediaDisplayName(this.state.roomMedia)}
+          participantCount={this.state.participants.length}
+          onStay={this.handleStayInRoom}
+          onExit={this.confirmLeave}
+        />
 
         {this.state.state === "starting" && (
           <Overlay
@@ -2595,9 +2707,8 @@ export class App extends React.Component<AppProps, AppState> {
               }
             }}
             onOpenSettings={() => this.setSettingsModalOpen(true)}
-            onExit={() => {
-              window.location.href = "/";
-            }}
+            onExit={this.requestLeave}
+            onLogoClick={this.requestLeave}
             isLocked={Boolean(this.state.roomLock)}
             onToggleLock={this.toggleLock}
             haveLock={this.haveLock()}
