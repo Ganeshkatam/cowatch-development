@@ -156,6 +156,7 @@ export const EditRoomModal = ({
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(room.coverPhoto || null);
+  const [removeCover, setRemoveCover] = useState(false);
 
   useEffect(() => {
     if (opened) {
@@ -178,6 +179,7 @@ export const EditRoomModal = ({
       setIsChatDisabled(room.isChatDisabled || false);
       setCoverPreview(room.coverPhoto || null);
       setCoverFile(null);
+      setRemoveCover(false);
     }
   }, [opened, room, cleanId]);
 
@@ -197,7 +199,15 @@ export const EditRoomModal = ({
       }
       setCoverFile(payload);
       setCoverPreview(URL.createObjectURL(payload));
+      setRemoveCover(false);
     }
+  };
+
+  const handleRemoveCover = () => {
+    if (isExpired) return;
+    setCoverFile(null);
+    setCoverPreview(null);
+    setRemoveCover(true);
   };
 
   const handleSave = async () => {
@@ -287,7 +297,13 @@ export const EditRoomModal = ({
         setCurrentPassword(password.trim());
       }
 
-      if (coverFile && finalCoverUrl && finalCoverUrl !== room.coverPhoto) {
+      if (removeCover && room.coverPhoto) {
+        await fetch(`${serverPath}/updateRoomCover`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: user.id, token, roomId: room.roomId, coverPhoto: null }),
+        });
+      } else if (coverFile && finalCoverUrl && finalCoverUrl !== room.coverPhoto) {
          await fetch(`${serverPath}/updateRoomCover`, {
            method: 'POST',
            headers: { 'Content-Type': 'application/json' },
@@ -305,69 +321,220 @@ export const EditRoomModal = ({
   };
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Edit Room" size="lg" radius="md">
-      <Stack gap="xl">
-        <Text size="sm" c="dimmed" mt="-md">Update how your room appears and behaves.</Text>
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      centered
+      title={
+        <Box>
+          <Text fw={700} size="lg" c="var(--text-primary)">
+            Edit Room
+          </Text>
+          <Text size="xs" c="dimmed" mt={2}>
+            Update how your room appears and behaves.
+          </Text>
+        </Box>
+      }
+      size={640}
+      radius="lg"
+      padding={0}
+      styles={{
+        content: {
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-subtle)",
+          color: "var(--text-primary)",
+          boxShadow: "var(--shadow-xl)",
+          overflow: "hidden",
+          maxHeight: "calc(90dvh)",
+          display: "flex",
+          flexDirection: "column",
+          width: "100%",
+        },
+        header: {
+          background: "var(--bg-surface)",
+          borderBottom: "1px solid var(--border-subtle)",
+          padding: "16px 20px",
+          color: "var(--text-primary)",
+        },
+        body: {
+          padding: 0,
+          display: "flex",
+          flexDirection: "column",
+          flex: "1 1 auto",
+          minHeight: 0,
+          overflow: "hidden",
+        },
+        close: {
+          color: "var(--text-secondary)",
+        },
+      }}
+    >
+      {/* SCROLLABLE FORM BODY */}
+      <Box
+        style={{
+          padding: "20px",
+          overflowY: "auto",
+          flex: "1 1 auto",
+          overscrollBehavior: "contain",
+          display: "flex",
+          flexDirection: "column",
+          gap: "24px",
+        }}
+      >
         {isExpired && (
           <Alert color="red" variant="light" title="Room Closed" icon={<IconAlertCircle size={16} />}>
             This room has expired or ended. Closed rooms can no longer be edited.
           </Alert>
         )}
-        {error && <Text color="red" size="sm">{error}</Text>}
-        
+        {error && (
+          <Alert color="red" variant="light" title="Error" icon={<IconAlertCircle size={16} />}>
+            {error}
+          </Alert>
+        )}
+
+        {/* ROOM IDENTITY */}
         <Box style={isExpired ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
-          <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} mb="md">Room Identity</Text>
+          <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} mb="md">
+            Room Identity
+          </Text>
           <Stack gap="md">
-            <TextInput label="Room Title" value={title} onChange={(e) => setTitle(e.currentTarget.value)} maxLength={50} required disabled={isExpired} />
-            <Textarea label="Description" value={description} onChange={(e) => setDescription(e.currentTarget.value)} maxLength={500} autosize minRows={2} disabled={isExpired} />
-            
+            <TextInput
+              label="Room Title"
+              value={title}
+              onChange={(e) => setTitle(e.currentTarget.value)}
+              maxLength={50}
+              required
+              disabled={isExpired}
+              placeholder="Enter room title..."
+            />
+            <Textarea
+              label="Description"
+              value={description}
+              onChange={(e) => setDescription(e.currentTarget.value)}
+              maxLength={500}
+              autosize
+              minRows={2}
+              maxRows={4}
+              disabled={isExpired}
+              placeholder="What is this watch party about? (optional)"
+            />
+
             <Box>
-              <Text size="sm" fw={500} mb={4}>Cover Photo</Text>
-              <Group align="flex-end" gap="md">
-                <Box style={{ width: 160, height: 90, borderRadius: 8, overflow: 'hidden', backgroundColor: 'var(--bg-base)', border: '1px solid var(--border-subtle)', position: 'relative' }}>
+              <Text size="sm" fw={500} mb={6}>Cover Photo</Text>
+              <Group align="flex-start" gap="md" wrap="wrap">
+                <Box
+                  style={{
+                    width: 160,
+                    height: 90,
+                    maxWidth: "100%",
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    backgroundColor: 'var(--bg-base)',
+                    border: '1px solid var(--border-subtle)',
+                    position: 'relative',
+                    flexShrink: 0,
+                  }}
+                >
                   {coverPreview ? (
-                    <img src={coverPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Cover Preview" />
+                    <img
+                      src={coverPreview}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      alt="Cover Preview"
+                    />
                   ) : (
-                    <Text size="xs" c="dimmed" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>No cover</Text>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                    >
+                      No cover
+                    </Text>
                   )}
                 </Box>
                 {!isExpired && (
-                  <FileButton onChange={handleFileChange} accept="image/png,image/jpeg,image/webp">
-                    {(props) => <Button variant="default" size="sm" {...props}>Change cover</Button>}
-                  </FileButton>
+                  <Stack gap="xs" justify="center" style={{ flex: "1 1 180px" }}>
+                    <Group gap="xs">
+                      <FileButton onChange={handleFileChange} accept="image/png,image/jpeg,image/webp">
+                        {(props) => (
+                          <Button variant="default" size="xs" {...props}>
+                            Change cover
+                          </Button>
+                        )}
+                      </FileButton>
+                      {coverPreview && (
+                        <Button
+                          variant="subtle"
+                          color="red"
+                          size="xs"
+                          onClick={handleRemoveCover}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </Group>
+                    <Text size="xs" c="dimmed">
+                      Recommended 16:9 ratio (PNG, JPG, WEBP, max 5MB).
+                    </Text>
+                  </Stack>
                 )}
               </Group>
             </Box>
           </Stack>
         </Box>
 
-        <Divider />
+        <Divider style={{ borderColor: "var(--border-subtle)" }} />
 
+        {/* ROOM BEHAVIOR */}
         <Box style={isExpired ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
-          <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} mb="md">Room Behavior</Text>
-          <Stack gap="md">
-            <Group justify="space-between" align="center">
-              <Box>
+          <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1} mb="md">
+            Room Behavior
+          </Text>
+          <Stack gap="lg">
+            <Group justify="space-between" align="center" wrap="nowrap" gap="md">
+              <Box style={{ flex: "1 1 auto", minWidth: 0 }}>
                 <Text fw={500}>Permanent Room</Text>
                 <Text size="sm" c="dimmed">No automatic expiration</Text>
               </Box>
-              <Switch checked={isPermanent} onChange={(e) => setIsPermanent(e.currentTarget.checked)} color="violet" size="lg" disabled={isExpired} />
+              <Switch
+                checked={isPermanent}
+                onChange={(e) => setIsPermanent(e.currentTarget.checked)}
+                color="violet"
+                size="md"
+                disabled={isExpired}
+                style={{ flexShrink: 0 }}
+              />
             </Group>
-            
-            <Group justify="space-between" align="center">
-              <Box>
+
+            <Group justify="space-between" align="center" wrap="nowrap" gap="md">
+              <Box style={{ flex: "1 1 auto", minWidth: 0 }}>
                 <Text fw={500}>Chat Enabled</Text>
+                <Text size="sm" c="dimmed">Allow participants to send messages in this room</Text>
               </Box>
-              <Switch checked={!isChatDisabled} onChange={(e) => setIsChatDisabled(!e.currentTarget.checked)} color="violet" size="lg" disabled={isExpired} />
+              <Switch
+                checked={!isChatDisabled}
+                onChange={(e) => setIsChatDisabled(!e.currentTarget.checked)}
+                color="violet"
+                size="md"
+                disabled={isExpired}
+                style={{ flexShrink: 0 }}
+              />
             </Group>
           </Stack>
         </Box>
 
-        <Divider />
+        <Divider style={{ borderColor: "var(--border-subtle)" }} />
 
+        {/* PASSWORD PROTECTION */}
         <Box style={isExpired ? { opacity: 0.6, pointerEvents: "none" } : undefined}>
-          <Group justify="space-between" align="center" mb="md">
-            <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1}>Password Protection</Text>
+          <Group justify="space-between" align="center" mb="md" wrap="wrap" gap="xs">
+            <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={1}>
+              Password Protection
+            </Text>
             {room.isPasscodeProtected && !removeProtection ? (
               <Badge color="violet" variant="light" leftSection={<IconLock size={12} />}>
                 Protected
@@ -390,12 +557,12 @@ export const EditRoomModal = ({
                   padding: "14px",
                   borderRadius: "8px",
                   border: "1px solid var(--border-subtle)",
-                  backgroundColor: "var(--bg-surface)",
+                  backgroundColor: "var(--bg-elevated)",
                 }}
               >
                 {currentPassword ? (
                   <Stack gap="xs">
-                    <Group justify="space-between" align="center">
+                    <Group justify="space-between" align="center" wrap="wrap" gap="xs">
                       <Text size="xs" fw={600} c="dimmed" tt="uppercase">Current Password</Text>
                       <Button
                         variant="subtle"
@@ -417,6 +584,7 @@ export const EditRoomModal = ({
                       readOnly
                       type={showCurrentPassword ? "text" : "password"}
                       value={currentPassword}
+                      rightSectionWidth={74}
                       rightSection={
                         <Group gap={4} pr={6}>
                           <Tooltip label={showCurrentPassword ? "Hide password" : "Show password"} withArrow>
@@ -453,7 +621,7 @@ export const EditRoomModal = ({
                   </Stack>
                 ) : (
                   <Stack gap="xs">
-                    <Group justify="space-between" align="center">
+                    <Group justify="space-between" align="center" wrap="wrap" gap="xs">
                       <Group gap={6}>
                         <IconLock size={16} color="var(--mantine-color-violet-6)" />
                         <Text size="sm" fw={500}>Room is password-protected</Text>
@@ -515,14 +683,33 @@ export const EditRoomModal = ({
             )}
           </Stack>
         </Box>
-        
-        <Group justify="flex-end" mt="md">
-          <Button variant="default" onClick={onClose} disabled={isSaving}>Cancel</Button>
-          <Button onClick={handleSave} loading={isSaving} disabled={isExpired} color="violet">
-            Save Changes
-          </Button>
-        </Group>
-      </Stack>
+      </Box>
+
+      {/* FIXED / STICKY FOOTER */}
+      <Box
+        style={{
+          padding: "14px 20px",
+          borderTop: "1px solid var(--border-subtle)",
+          background: "var(--bg-elevated)",
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          gap: "12px",
+          flexShrink: 0,
+        }}
+      >
+        <Button variant="default" onClick={onClose} disabled={isSaving}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSave}
+          loading={isSaving}
+          disabled={isExpired}
+          color="violet"
+        >
+          Save Changes
+        </Button>
+      </Box>
     </Modal>
   );
 };
