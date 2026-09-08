@@ -956,26 +956,57 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
   }
 
   try {
-    const result = await postgres?.query(
-      `SELECT "roomId", "roomTitle", "roomDescription", status, "startedAt", "scheduledStartsAt", "expiresAt", "endedAt", 
-              "isPermanent", "isSubRoom", owner_id,
-              (passcode IS NOT NULL AND passcode <> '') AS "isPasscodeProtected"
-       FROM rooms WHERE "roomId" = $1`,
-      [roomId]
-    );
+    let room: any = null;
+    if (postgres) {
+      const result = await postgres.query(
+        `SELECT "roomId", "roomTitle", "roomDescription", status, "startedAt", "scheduledStartsAt", "expiresAt", "endedAt", 
+                "isPermanent", "isSubRoom", owner_id,
+                (passcode IS NOT NULL AND passcode <> '') AS "isPasscodeProtected"
+         FROM rooms WHERE "roomId" = $1`,
+        [roomId]
+      );
+      room = result?.rows?.[0];
+    }
 
-    const room = result?.rows?.[0];
+    if (!room) {
+      const memoryRoom = rooms.get(roomId);
+      if (memoryRoom) {
+        const memAny = memoryRoom as any;
+        room = {
+          roomId: memoryRoom.roomId,
+          roomTitle: memAny.roomTitle || "Watch Party",
+          roomDescription: memAny.roomDescription || null,
+          status: memoryRoom.status || "waiting",
+          startedAt: memoryRoom.startedAt || null,
+          scheduledStartsAt: memoryRoom.scheduledStartsAt || null,
+          expiresAt: memoryRoom.expiresAt || null,
+          endedAt: memAny.endedAt || null,
+          isPermanent: memoryRoom.isPermanent || false,
+          isSubRoom: false,
+          owner_id: memoryRoom.owner_id || null,
+          isPasscodeProtected: Boolean(memAny.passcode),
+        };
+      }
+    }
+
     if (!room) {
       res.status(404).json({ error: "ROOM_NOT_FOUND" });
       return;
     }
 
-    // Attempt to fetch the host's details
-    const ownerResult = await postgres?.query(
-      `SELECT "displayName", username, "avatarUrl" FROM users WHERE id = $1`,
-      [room.owner_id]
-    );
-    const host = ownerResult?.rows?.[0] || {};
+    // Attempt to fetch the host's details safely from public.profiles
+    let host: any = {};
+    if (room.owner_id && postgres) {
+      try {
+        const ownerResult = await postgres.query(
+          `SELECT display_name AS "displayName", username, avatar_url AS "avatarUrl" FROM profiles WHERE id = $1`,
+          [room.owner_id]
+        );
+        host = ownerResult?.rows?.[0] || {};
+      } catch (profileErr) {
+        console.warn("Could not fetch owner profile for metadata:", profileErr);
+      }
+    }
 
     const now = Date.now();
     let derivedStatus = room.status;

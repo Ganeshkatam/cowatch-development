@@ -272,7 +272,7 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
         <div className={styles.settingRow}>
           <div>
             <Text fw={500} size="sm" c="var(--text-primary)">
-              Waiting Lounge
+              Waiting Room
             </Text>
             <Text size="xs" c="dimmed" mt={2}>
               Require host approval before entry
@@ -289,10 +289,10 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
         <div className={styles.settingRow}>
           <div>
             <Text fw={500} size="sm" c="var(--text-primary)">
-              Disable In-Room Chat
+              Disable Chat
             </Text>
             <Text size="xs" c="dimmed" mt={2}>
-              Turn off text chat during the watch party
+              Turn off text chat during the Room
             </Text>
           </div>
           <Switch

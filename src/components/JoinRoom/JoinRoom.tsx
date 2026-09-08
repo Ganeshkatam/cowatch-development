@@ -16,7 +16,7 @@ import {
   IconPlayerPlayFilled,
   IconVideoPlus,
 } from "@tabler/icons-react";
-import { serverPath, calculateRoomDuration } from "../../utils/utils";
+import { serverPath, setServerPath, serverCandidates, calculateRoomDuration } from "../../utils/utils";
 import { MetadataContext } from "../../MetadataContext";
 import styles from "./JoinRoom.module.css";
 import { TopBar } from "../TopBar/TopBar";
@@ -92,7 +92,36 @@ export default function JoinRoom() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${serverPath}/api/room/metadata/${roomId}`);
+      const candidatesToTry = [
+        serverPath,
+        ...serverCandidates.filter((c: string) => c !== serverPath),
+      ];
+      let res: Response | undefined;
+      for (let i = 0; i < candidatesToTry.length; i++) {
+        const candidate = candidatesToTry[i];
+        try {
+          const attempt = await fetch(`${candidate}/api/room/metadata/${roomId}`);
+          const contentType = attempt.headers.get("content-type") || "";
+          if (attempt.ok || attempt.status === 404 || contentType.includes("application/json")) {
+            res = attempt;
+            if (candidate !== serverPath) {
+              setServerPath(candidate);
+            }
+            break;
+          } else {
+            res = attempt;
+          }
+        } catch (fetchErr) {
+          if (i === candidatesToTry.length - 1 && !res) {
+            throw fetchErr;
+          }
+        }
+      }
+
+      if (!res) {
+        setError("Network error. Unable to reach server.");
+        return;
+      }
       if (!res.ok) {
         if (res.status === 404) {
           setError("Room not found");
@@ -108,7 +137,7 @@ export default function JoinRoom() {
         setError("Invalid room data");
       }
     } catch (e) {
-      console.error(e);
+      console.error("fetchMetadata error:", e);
       setError("Network error");
     } finally {
       setLoading(false);
@@ -199,9 +228,14 @@ export default function JoinRoom() {
           <div className={styles.card}>
             <div className={styles.title}>Unavailable</div>
             <div className={styles.subtitle}>{error}</div>
-            <Button onClick={() => history.push("/")} variant="light" color="gray">
-              Return Home
-            </Button>
+            <div style={{ display: "flex", gap: "10px", marginTop: "16px", justifyContent: "center" }}>
+              <Button onClick={fetchMetadata} variant="filled" color="violet">
+                Try Again
+              </Button>
+              <Button onClick={() => history.push(context.user ? "/myrooms" : "/")} variant="light" color="gray">
+                {context.user ? "Back to My Rooms" : "Return Home"}
+              </Button>
+            </div>
           </div>
         </div>
       </>
