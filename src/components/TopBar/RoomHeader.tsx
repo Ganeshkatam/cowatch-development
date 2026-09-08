@@ -9,6 +9,7 @@ import styles from "./RoomHeader.module.css";
 
 interface RoomHeaderProps {
   roomTitle: string;
+  roomStatus?: string;
   participantCount?: number;
   currentTab?: string;
   onSelectTab?: (tab: "people" | "chat") => void;
@@ -33,6 +34,7 @@ interface RoomHeaderProps {
 
 export const RoomHeader: React.FC<RoomHeaderProps> = ({
   roomTitle,
+  roomStatus,
   participantCount,
   currentTab,
   onSelectTab,
@@ -66,14 +68,21 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
     }
   };
 
+  const renderStatusBadge = () => {
+    if (!roomStatus) return null;
+    const status = roomStatus;
+    if (status === "active") return <div className={`${styles.roomStatusBadge} ${styles.statusLive}`}><div className={styles.dot} /> LIVE</div>;
+    if (status === "waiting" || status === "scheduled") return <div className={`${styles.roomStatusBadge} ${styles.statusWaiting}`}>WAITING</div>;
+    if (status === "ended" || status === "expired") return <div className={`${styles.roomStatusBadge} ${styles.statusEnded}`}>{status.toUpperCase()}</div>;
+    if (status === "cancelled") return <div className={`${styles.roomStatusBadge} ${styles.statusCancelled}`}>CANCELLED</div>;
+    return null;
+  };
+
   const roomIdentity = (
     <div className={styles.roomIdentity}>
       <div className={styles.roomTitleRow}>
+        {renderStatusBadge()}
         <span className={styles.roomTitle}>{roomTitle || "Watch Party Room"}</span>
-        <span className={styles.liveBadge}>
-          <span className={styles.liveDot} />
-          LIVE
-        </span>
       </div>
       <Tooltip
         label={currentMedia ? `Now Playing: ${mediaDisplayName || currentMedia} (Click to change)` : "Nothing playing (Click to add media)"}

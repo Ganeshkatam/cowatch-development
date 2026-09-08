@@ -59,7 +59,6 @@ export class SignInButton extends React.Component<SignInButtonProps> {
             <button type="button" className={styles.avatarBtn} aria-label="Open account menu" title="Account">
               <div className={styles.avatarWrap}>
                 <Avatar src={this.context.avatarUrl} size={32} radius="xl" />
-                <span className={styles.statusDot} />
               </div>
             </button>
           </Menu.Target>
@@ -93,10 +92,20 @@ export const ListRoomsButton = () => {
   return <Button component={Link} to="/myrooms" variant="subtle" color="gray">My rooms</Button>;
 };
 
-export const TopBar = (props: { hideNewRoom?: boolean; hideSignin?: boolean; hideMyRooms?: boolean; showExit?: boolean; onOpenSettings?: () => void; roomTitle?: string; roomDescription?: string }) => {
+export const TopBar = (props: { hideNewRoom?: boolean; hideSignin?: boolean; hideMyRooms?: boolean; showExit?: boolean; onOpenSettings?: () => void; roomTitle?: string; roomDescription?: string; roomStatus?: string }) => {
   const context = useContext(MetadataContext);
   const location = useLocation();
   const path = location.pathname;
+
+  const renderStatusBadge = () => {
+    if (!props.roomStatus) return null;
+    const status = props.roomStatus;
+    if (status === "active") return <div className={`${styles.roomStatusBadge} ${styles.statusLive}`}><div className={styles.dot} /> LIVE</div>;
+    if (status === "waiting" || status === "scheduled") return <div className={`${styles.roomStatusBadge} ${styles.statusWaiting}`}>WAITING</div>;
+    if (status === "ended" || status === "expired") return <div className={`${styles.roomStatusBadge} ${styles.statusEnded}`}>{status.toUpperCase()}</div>;
+    if (status === "cancelled") return <div className={`${styles.roomStatusBadge} ${styles.statusCancelled}`}>CANCELLED</div>;
+    return null;
+  };
 
   return (
     <div className={styles.topBar}>
@@ -105,19 +114,21 @@ export const TopBar = (props: { hideNewRoom?: boolean; hideSignin?: boolean; hid
         {!props.roomTitle && !props.roomDescription && <div className={styles.brandName}>CoWatch</div>}
       </Link>
       
-      {(props.roomTitle || props.roomDescription) && (
-        <div className={styles.roomContext}>
-          <div className={styles.roomContextTitle}>{props.roomTitle?.toUpperCase()}</div>
-          {props.roomDescription && <Text size="sm" c="dimmed">{props.roomDescription}</Text>}
-        </div>
-      )}
+      <div className={styles.centerRegion}>
+        {(props.roomTitle || props.roomDescription) && (
+          <div className={styles.roomContext}>
+            <div className={styles.roomContextHeader}>
+              {renderStatusBadge()}
+              <div className={styles.roomContextTitle}>{props.roomTitle}</div>
+            </div>
+          </div>
+        )}
+        <Announce />
+      </div>
 
-      <Announce />
       <div className={styles.actionsGroup}>
         {!props.hideMyRooms && context.user && <ListRoomsButton />}
         {!props.hideNewRoom && context.user && <NewRoomButton size="sm" />}
-        {props.showExit && <Button color="red" variant="subtle" onClick={() => window.location.assign("/")} leftSection={<IconX size={16} />}>Exit</Button>}
-        {props.onOpenSettings && <Button color="violet" variant="subtle" onClick={props.onOpenSettings} leftSection={<IconSettings size={16} />}>Settings</Button>}
         {!props.hideSignin && <SignInButton />}
       </div>
     </div>

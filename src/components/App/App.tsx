@@ -2810,6 +2810,7 @@ export class App extends React.Component<AppProps, AppState> {
         {!this.state.fullScreen && (
           <RoomHeader
             roomTitle={this.state.roomTitle}
+            roomStatus={this.state.roomStatus}
             participantCount={this.state.participants.length}
             currentTab={this.state.currentTab as "people" | "chat"}
             onSelectTab={(tab) => {
