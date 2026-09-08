@@ -961,7 +961,6 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
 
   // Detect optional authenticated requester
   let requesterUid: string | null = null;
-  let requesterEmail: string | null = null;
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : (req.query.token as string);
   const queryUid = typeof req.query.uid === "string" ? req.query.uid : undefined;
@@ -971,13 +970,11 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
         const decoded = await validateUserToken(queryUid, token, false);
         if (decoded && decoded !== "EMAIL_NOT_VERIFIED") {
           requesterUid = decoded.uid;
-          requesterEmail = decoded.email || null;
         }
       } else if (supabaseAdmin) {
         const { data } = await supabaseAdmin.auth.getUser(token);
         if (data?.user) {
           requesterUid = data.user.id;
-          requesterEmail = data.user.email || null;
         }
       }
     } catch (authErr) {
@@ -1017,7 +1014,6 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
           isPermanent: memoryRoom.isPermanent || false,
           isSubRoom: false,
           owner_id: memoryRoom.owner_id || null,
-          creator: memoryRoom.creator || null,
           isWaitingLoungeEnabled: memoryRoom.isWaitingLoungeEnabled !== undefined ? memoryRoom.isWaitingLoungeEnabled : true,
           isPasscodeProtected: Boolean(memAny.passcode),
         };
@@ -1053,8 +1049,7 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
     }
 
     const isOwner = Boolean(
-      (requesterUid && room.owner_id && String(room.owner_id).toLowerCase() === String(requesterUid).toLowerCase()) ||
-      (requesterEmail && room.creator && String(room.creator).toLowerCase() === String(requesterEmail).toLowerCase())
+      requesterUid && room.owner_id && String(room.owner_id).toLowerCase() === String(requesterUid).toLowerCase()
     );
 
     res.json({
