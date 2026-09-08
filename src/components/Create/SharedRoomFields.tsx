@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   TextInput,
   Textarea,
@@ -22,6 +22,7 @@ import {
   IconClock,
   IconInfinity,
   IconMessage,
+  IconPlus,
 } from "@tabler/icons-react";
 import type { RoomFormState } from "./roomCreationDomain";
 import styles from "./Create.module.css";
@@ -31,6 +32,13 @@ interface SharedRoomFieldsProps {
 }
 
 export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({ formState }) => {
+  const [isDescriptionOpen, setIsDescriptionOpen] = useState<boolean>(
+    Boolean(formState.roomDescription && formState.roomDescription.trim().length > 0)
+  );
+
+  const showDescription =
+    isDescriptionOpen || Boolean(formState.roomDescription && formState.roomDescription.trim().length > 0);
+
   return (
     <Stack gap="xl">
       {/* Section 1: Room Identity */}
@@ -61,27 +69,58 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({ formState })
             </div>
           </div>
 
-          <div>
-            <Textarea
-              label="Description (Optional)"
-              placeholder="What are we watching? Bring snacks!"
-              value={formState.roomDescription}
-              onChange={(e) => formState.setRoomDescription(e.target.value)}
-              maxLength={200}
-              rows={2}
-              styles={{
-                input: {
-                  backgroundColor: "var(--surface-secondary)",
-                  borderColor: "var(--border-subtle)",
-                  color: "var(--text-primary)",
-                },
-              }}
-            />
-            <div className={styles.inputHelp}>
-              <span>Visible to invited guests on the preview card</span>
-              <span>{formState.roomDescription.length}/200</span>
+          {!showDescription ? (
+            <div>
+              <Button
+                variant="light"
+                color="violet"
+                size="xs"
+                leftSection={<IconPlus size={16} />}
+                onClick={() => setIsDescriptionOpen(true)}
+              >
+                Add Description
+              </Button>
             </div>
-          </div>
+          ) : (
+            <div>
+              <Group justify="space-between" align="center" mb={6}>
+                <Text size="sm" fw={600} c="var(--text-primary)">
+                  Description (Optional)
+                </Text>
+                <Button
+                  variant="subtle"
+                  color="red"
+                  size="xs"
+                  onClick={() => {
+                    formState.setRoomDescription("");
+                    setIsDescriptionOpen(false);
+                  }}
+                  leftSection={<IconTrash size={14} />}
+                >
+                  Remove
+                </Button>
+              </Group>
+              <Textarea
+                placeholder="What are we watching? Bring snacks!"
+                value={formState.roomDescription}
+                onChange={(e) => formState.setRoomDescription(e.target.value)}
+                maxLength={200}
+                rows={2}
+                autoFocus
+                styles={{
+                  input: {
+                    backgroundColor: "var(--surface-secondary)",
+                    borderColor: "var(--border-subtle)",
+                    color: "var(--text-primary)",
+                  },
+                }}
+              />
+              <div className={styles.inputHelp}>
+                <span>Visible to invited guests on the preview card</span>
+                <span>{formState.roomDescription.length}/200</span>
+              </div>
+            </div>
+          )}
 
           <div>
             <Text size="sm" fw={600} c="var(--text-primary)" mb={6}>
