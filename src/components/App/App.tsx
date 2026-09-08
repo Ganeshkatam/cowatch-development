@@ -625,6 +625,10 @@ export class App extends React.Component<AppProps, AppState> {
         }
       }
 
+      if (inviteCredential) {
+        passcode = "";
+      }
+
       try {
         const access = await this.checkRoomAccess(cleanRoomId);
 
@@ -672,7 +676,7 @@ export class App extends React.Component<AppProps, AppState> {
         transports: ["websocket", "polling"],
         query: {
           clientId,
-          passcode,
+          passcode: inviteCredential ? "" : passcode,
           shard,
           roomId: cleanRoomId,
         },

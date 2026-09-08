@@ -7,7 +7,7 @@ import { type AssignedVM } from "./vm/base.ts";
 import { getStartOfDay } from "./utils/time.ts";
 import { postgres, updateObject, upsertObject } from "./utils/postgres.ts";
 import { hashRoomPasscode, verifyRoomPasscode, isBcryptHash } from "./utils/roomPasscode.ts";
-import { verifyRoomInviteCredential } from "./utils/roomInvites.ts";
+import { validateRoomInviteCredential, verifyRoomInviteCredential } from "./utils/roomInvites.ts";
 import { startRoomLifecycle } from "./roomLifecycle.ts";
 import {
   fetchYoutubeVideo,
@@ -234,8 +234,8 @@ export class Room {
         if (typeof inviteCredential === "string" && inviteCredential.length > 0) {
           const cleanRoomId = this.roomId.startsWith("/") ? this.roomId.substring(1) : this.roomId;
           isInviteValid =
-            verifyRoomInviteCredential(cleanRoomId, inviteCredential) ||
-            verifyRoomInviteCredential(this.roomId, inviteCredential);
+            (await validateRoomInviteCredential(cleanRoomId, inviteCredential)) ||
+            (await validateRoomInviteCredential(this.roomId, inviteCredential));
         }
 
         if (roomPasscode && !isOwner && !isInviteValid) {
