@@ -298,8 +298,14 @@ END $$;
 -- ==============================================================================
 -- 6. STORAGE BUCKETS & POLICIES
 -- ==============================================================================
-INSERT INTO storage.buckets (id, name, public, file_size_limit) VALUES ('avatars', 'avatars', true, 1048576), ('room_covers', 'room_covers', true, null)
-ON CONFLICT (id) DO UPDATE SET public = excluded.public, file_size_limit = excluded.file_size_limit;
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES 
+  ('avatars', 'avatars', true, 1048576, null), 
+  ('room_covers', 'room_covers', true, null, null),
+  ('app', 'app', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp'])
+ON CONFLICT (id) DO UPDATE SET 
+  public = excluded.public, 
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
 DROP POLICY IF EXISTS "Avatar images are publicly accessible." ON storage.objects;
 CREATE POLICY "Avatar images are publicly accessible." ON storage.objects FOR SELECT TO public USING (bucket_id = 'avatars');
@@ -318,6 +324,9 @@ DROP POLICY IF EXISTS "Users can update their own room covers" ON storage.object
 CREATE POLICY "Users can update their own room covers" ON storage.objects FOR UPDATE TO public USING ((bucket_id = 'room_covers') AND (auth.role() = 'authenticated') AND ((storage.foldername(name))[1] = (auth.uid())::text));
 DROP POLICY IF EXISTS "Users can delete their own room covers" ON storage.objects;
 CREATE POLICY "Users can delete their own room covers" ON storage.objects FOR DELETE TO public USING ((bucket_id = 'room_covers') AND (auth.role() = 'authenticated') AND ((storage.foldername(name))[1] = (auth.uid())::text));
+
+DROP POLICY IF EXISTS "Public Access to app bucket" ON storage.objects;
+CREATE POLICY "Public Access to app bucket" ON storage.objects FOR SELECT TO public USING (bucket_id = 'app');
 
 CREATE OR REPLACE FUNCTION public.cleanup_room_storage_on_delete()
 RETURNS TRIGGER AS $$

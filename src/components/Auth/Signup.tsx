@@ -10,13 +10,15 @@ import {
   Alert,
   Divider,
 } from "@mantine/core";
-import { IconBrandGoogleFilled } from "@tabler/icons-react";
+import { IconBrandGoogleFilled, IconCheck } from "@tabler/icons-react";
 import { supabase } from "../../utils/supabaseClient";
 import config from "../../config";
+import { DEFAULT_AVATARS } from "../../utils/defaultAvatars";
 import styles from "./AuthShell.module.css";
 
 export const Signup = () => {
   const [displayName, setDisplayName] = useState("");
+  const [selectedAvatar, setSelectedAvatar] = useState<string>(DEFAULT_AVATARS[0].url);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -84,6 +86,7 @@ export const Signup = () => {
           data: {
             display_name: finalDisplayName,
             username: derivedUsername,
+            avatar_url: selectedAvatar,
           },
         },
       });
@@ -202,6 +205,36 @@ export const Signup = () => {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                 />
+
+                <div className={styles.avatarSection}>
+                  <div className={styles.avatarSectionHeader}>
+                    <span className={styles.avatarSectionLabel}>Choose your avatar</span>
+                    <span className={styles.avatarSubtitle}>5 styles available</span>
+                  </div>
+                  <div className={styles.avatarGrid}>
+                    {DEFAULT_AVATARS.map((avatar) => {
+                      const isSelected = selectedAvatar === avatar.url;
+                      return (
+                        <button
+                          key={avatar.id}
+                          type="button"
+                          className={`${styles.avatarOption} ${isSelected ? styles.avatarOptionActive : ""}`}
+                          onClick={() => setSelectedAvatar(avatar.url)}
+                          title={avatar.name}
+                          aria-label={`Select ${avatar.name} avatar`}
+                        >
+                          <img src={avatar.url} alt={avatar.name} className={styles.avatarImg} />
+                          {isSelected && (
+                            <div className={styles.avatarCheckBadge}>
+                              <IconCheck size={11} stroke={3} />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <TextInput
                   label="Email"
                   placeholder="your@email.com"

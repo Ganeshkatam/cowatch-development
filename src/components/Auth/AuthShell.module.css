@@ -194,3 +194,82 @@
     display: none;
   }
 }
+
+.avatarSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.avatarSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.avatarSectionLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.avatarSubtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.avatarGrid {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 4px 2px;
+}
+
+.avatarOption {
+  position: relative;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  padding: 2px;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  outline: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatarOption:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+
+.avatarOptionActive {
+  border-color: var(--color-violet, #7d2ae8);
+  box-shadow: 0 0 12px rgba(125, 42, 232, 0.45);
+}
+
+.avatarImg {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatarCheckBadge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: var(--color-violet, #7d2ae8);
+  color: #ffffff;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-surface, #171b2a);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+

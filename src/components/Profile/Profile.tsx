@@ -21,6 +21,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { useAppearance } from "../../theme/ThemeProvider";
+import { DEFAULT_AVATARS } from "../../utils/defaultAvatars";
 import styles from "./Profile.module.css";
 
 const AppearanceSelector = () => {
@@ -197,6 +198,32 @@ export const Profile: React.FC = () => {
     } catch (e: any) {
       console.error("Avatar upload failed:", e);
       alert("Failed to upload avatar: " + (e.message || e));
+      setMetadata({ avatarUrl: prevAvatarUrl });
+    }
+  };
+
+  const selectDefaultAvatar = async (avatarUrl: string) => {
+    if (!user) return;
+    const prevAvatarUrl = ctxAvatarUrl;
+    try {
+      setMetadata({ avatarUrl });
+
+      const { error: dbError } = await supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (dbError) throw dbError;
+
+      await supabase.auth.updateUser({
+        data: { avatar_url: avatarUrl },
+      });
+    } catch (e: any) {
+      console.error("Avatar selection failed:", e);
+      alert("Failed to update avatar: " + (e.message || e));
       setMetadata({ avatarUrl: prevAvatarUrl });
     }
   };
@@ -467,6 +494,35 @@ export const Profile: React.FC = () => {
                       >
                         Change picture
                       </Button>
+                    </div>
+
+                    <div className={styles.defaultAvatarsSection}>
+                      <div className={styles.defaultAvatarsHeader}>
+                        <span className={styles.defaultAvatarsTitle}>Choose a cinema avatar</span>
+                        <span className={styles.defaultAvatarsSubtitle}>Select one of the 5 standard styles or upload your own</span>
+                      </div>
+                      <div className={styles.defaultAvatarsList}>
+                        {DEFAULT_AVATARS.map((avatar) => {
+                          const isSelected = ctxAvatarUrl === avatar.url;
+                          return (
+                            <button
+                              key={avatar.id}
+                              type="button"
+                              className={`${styles.defaultAvatarItem} ${isSelected ? styles.defaultAvatarItemActive : ""}`}
+                              onClick={() => selectDefaultAvatar(avatar.url)}
+                              title={avatar.name}
+                              aria-label={`Select ${avatar.name} avatar`}
+                            >
+                              <img src={avatar.url} alt={avatar.name} className={styles.defaultAvatarThumb} />
+                              {isSelected && (
+                                <div className={styles.defaultAvatarCheck}>
+                                  <IconCheck size={11} stroke={3} />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
