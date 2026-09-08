@@ -279,7 +279,7 @@ export const TopBar = (props: {
                 </Link>
                 <Link
                   to="/join"
-                  className={`${styles.navItem} ${path.startsWith("/join") ? styles.navItemActive : ""}`}
+                  className={`${styles.navItem} ${path === "/join" ? styles.navItemActive : ""}`}
                 >
                   <IconDeviceTv size={15} />
                   <span>Join</span>
@@ -289,7 +289,7 @@ export const TopBar = (props: {
               <>
                 <Link
                   to="/join"
-                  className={`${styles.navItem} ${path.startsWith("/join") ? styles.navItemActive : ""}`}
+                  className={`${styles.navItem} ${path === "/join" ? styles.navItemActive : ""}`}
                 >
                   <IconDeviceTv size={15} />
                   <span>Join Room</span>
