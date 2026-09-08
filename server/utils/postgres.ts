@@ -53,7 +53,7 @@ function createPool(rawConnectionString: string): Pool {
   }
 
   if (!strict && !ca) {
-    console.warn("[PostgreSQL] TLS certificate verification is disabled. Set DATABASE_SSL_STRICT=true for production.");
+    console.log("[PostgreSQL] TLS certificate verification is disabled. Set DATABASE_SSL_STRICT=true for production.");
   }
 
   const pool = new Pool({
