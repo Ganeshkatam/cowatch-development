@@ -66,27 +66,24 @@ function decodeAndVerifyCredential(
   }
 }
 
-function verifyRoomInviteCredential(roomId: string, credential: string): boolean {
+export function verifyRoomInviteCredential(roomId: string, credential: string): boolean {
   return decodeAndVerifyCredential(roomId, credential) !== null;
 }
 
-export async function validateRoomInviteCredential(
-  roomId: string,
-  credential: string,
-): Promise<{ valid: boolean; inviteId?: string }> {
+export async function validateRoomInviteCredential(roomId: string, credential: string): Promise<boolean> {
   const payload = decodeAndVerifyCredential(roomId, credential);
-  if (!payload || !postgres) return { valid: false };
+  if (!payload || !postgres) return false;
   try {
     const result = await postgres.query(
       `SELECT revoked_at, expires_at FROM room_invites WHERE id = $1 AND room_id = $2`,
       [payload.inviteId, roomId],
     );
     const invite = result.rows[0];
-    if (!invite || invite.revoked_at) return { valid: false };
-    if (new Date(invite.expires_at).getTime() <= Date.now()) return { valid: false };
-    return { valid: true, inviteId: payload.inviteId };
+    if (!invite || invite.revoked_at) return false;
+    if (new Date(invite.expires_at).getTime() <= Date.now()) return false;
+    return true;
   } catch {
-    return { valid: false };
+    return false;
   }
 }
 
