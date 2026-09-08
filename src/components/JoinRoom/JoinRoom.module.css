@@ -192,6 +192,10 @@
   align-items: center;
   gap: 10px;
   margin-bottom: 24px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .hostAvatar {
@@ -199,24 +203,27 @@
 }
 
 .hostLabel {
-  font-size: 14px;
+  font-size: 13.5px;
   color: #cbd5e1;
-  font-weight: 400;
+  font-weight: 450;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .hostName {
-  font-weight: 600;
+  font-weight: 650;
   color: #ffffff;
 }
 
 .hostPill {
-  margin-left: 8px;
-  font-size: 11px;
-  font-weight: 700;
+  margin-left: 6px;
+  font-size: 10.5px;
+  font-weight: 750;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 2px 7px;
-  border-radius: 6px;
+  letter-spacing: 0.6px;
+  padding: 2px 8px;
+  border-radius: 9999px;
   background: rgba(139, 92, 246, 0.2);
   border: 1px solid rgba(139, 92, 246, 0.35);
   color: #c4b5fd;
@@ -227,31 +234,122 @@
   position: relative;
   width: 100%;
   max-width: 560px;
-  height: 180px;
+  height: 240px;
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(20, 22, 33, 0.8) 0%, rgba(12, 14, 22, 0.9) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background-color: #0b0d14;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   margin-bottom: 24px;
+}
+
+.stageCoverImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cinemaStageBox:hover .stageCoverImage {
+  transform: scale(1.03);
+}
+
+.stageScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 11, 16, 0.65) 0%,
+    rgba(10, 11, 16, 0.25) 40%,
+    rgba(10, 11, 16, 0.85) 100%
+  );
+  z-index: 1;
+  pointer-events: none;
 }
 
 .cinemaScreenGlow {
   position: absolute;
-  top: -20%;
+  top: -15%;
   left: 10%;
   right: 10%;
-  height: 80px;
-  background: radial-gradient(ellipse at top, rgba(139, 92, 246, 0.2) 0%, transparent 70%);
+  height: 90px;
+  background: radial-gradient(ellipse at top, rgba(139, 92, 246, 0.35) 0%, transparent 70%);
   pointer-events: none;
+  z-index: 2;
 }
 
 .cinemaScreenInner {
-  position: relative;
-  z-index: 1;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px 20px;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.stageTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.stageCenterWatermark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.cinemaCurtainCue {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 20px rgba(139, 92, 246, 0.3);
+  transition: all 0.3s ease;
+}
+
+.cinemaStageBox:hover .cinemaCurtainCue {
+  transform: scale(1.08);
+  background: rgba(139, 92, 246, 0.55);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 30px rgba(139, 92, 246, 0.5);
+}
+
+.playCueIcon {
+  margin-left: 2px;
+}
+
+.stageBottomRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stageAmbianceLabel {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .screenActiveIndicator {
@@ -727,12 +825,28 @@
   color: var(--text-secondary);
 }
 
+:global([data-color-scheme="light"]) .hostRow {
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+:global([data-color-scheme="light"]) .hostAvatar {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
 :global([data-color-scheme="light"]) .hostLabel {
   color: var(--text-secondary);
 }
 
 :global([data-color-scheme="light"]) .hostName {
   color: var(--text-primary);
+  font-weight: 700;
+}
+
+:global([data-color-scheme="light"]) .hostPill {
+  color: #6d28d9;
+  background: rgba(109, 40, 217, 0.1);
+  border: 1px solid rgba(109, 40, 217, 0.25);
 }
 
 :global([data-color-scheme="light"]) .metaItem {
@@ -820,8 +934,23 @@
 }
 
 :global([data-color-scheme="light"]) .cinemaStageBox {
-  background: linear-gradient(135deg, #1e2235 0%, #111424 100%);
+  background-color: #0f172a;
   border: 1px solid rgba(139, 92, 246, 0.25);
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16), 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+:global([data-color-scheme="light"]) .stageScrim {
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.6) 0%,
+    rgba(15, 23, 42, 0.2) 40%,
+    rgba(15, 23, 42, 0.85) 100%
+  );
+}
+
+:global([data-color-scheme="light"]) .stageAmbianceLabel {
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(15, 23, 42, 0.55);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 

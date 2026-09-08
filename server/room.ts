@@ -162,6 +162,7 @@ export class Room {
   public owner_id: string = '';
   public isPermanent: boolean = false;
   public durationMinutes: number | null = null;
+  public coverPhoto: string | null = null;
   public lastUpdateTime: Date = new Date();
   private preventTSUpdate = false;
   // Not really a queue since there's no ordering, we just retry as long as this is set

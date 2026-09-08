@@ -1063,7 +1063,7 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
     if (postgres) {
       const result = await postgres.query(
         `SELECT "roomId", "roomTitle", "roomDescription", status, "startedAt", "scheduledStartsAt", "expiresAt", "endedAt", 
-                "isPermanent", "isSubRoom", owner_id, "isWaitingLoungeEnabled",
+                "isPermanent", "isSubRoom", owner_id, "isWaitingLoungeEnabled", "coverPhoto",
                 (passcode IS NOT NULL AND passcode <> '') AS "isPasscodeProtected"
          FROM rooms WHERE "roomId" = $1`,
         [roomId]
@@ -1079,6 +1079,7 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
           roomId: memoryRoom.roomId,
           roomTitle: memAny.roomTitle || "Watch Party",
           roomDescription: memAny.roomDescription || null,
+          coverPhoto: memAny.coverPhoto || memoryRoom.coverPhoto || null,
           status: memoryRoom.status || "waiting",
           startedAt: memoryRoom.startedAt || null,
           scheduledStartsAt: memoryRoom.scheduledStartsAt || null,
@@ -1131,6 +1132,7 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
         title: room.roomTitle,
         description: room.roomDescription,
         status: derivedStatus,
+        coverPhoto: room.coverPhoto || null,
         startsAt: derivedStatus === 'scheduled' ? room.scheduledStartsAt : room.startedAt,
         scheduledStartsAt: room.scheduledStartsAt,
         expiresAt: room.expiresAt,

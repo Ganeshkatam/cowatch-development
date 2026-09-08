@@ -70,13 +70,11 @@ export const SharedRoomPreview: React.FC<SharedRoomPreviewProps> = ({
         </div>
 
         <div className={styles.previewBanner}>
-          {formState.coverPreview ? (
-            <img
-              src={formState.coverPreview}
-              className={styles.previewCoverImg}
-              alt="Room Cover Preview"
-            />
-          ) : null}
+          <img
+            src={formState.coverPreview || "/cinema_theater_bg.jpg"}
+            className={styles.previewCoverImg}
+            alt="Room Cover Preview"
+          />
           <div className={styles.previewScrim} />
           <div className={styles.previewBannerInfo}>
             <h3 className={styles.previewRoomTitle}>
