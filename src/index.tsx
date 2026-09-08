@@ -3,7 +3,7 @@ import "./index.css";
 
 import React, { lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Redirect } from "react-router-dom";
+import { BrowserRouter, Route, Redirect, Switch } from "react-router-dom";
 
 import type { User } from "@supabase/supabase-js";
 import {
@@ -40,6 +40,7 @@ const Signup = lazy(() => import("./components/Auth/Signup").then((m) => ({ defa
 const ForgotPassword = lazy(() => import("./components/Auth/ForgotPassword").then((m) => ({ default: m.ForgotPassword })));
 const ResetPassword = lazy(() => import("./components/Auth/ResetPassword").then((m) => ({ default: m.ResetPassword })));
 const VerifyEmail = lazy(() => import("./components/Auth/VerifyEmail").then((m) => ({ default: m.VerifyEmail })));
+const NotFound = lazy(() => import("./components/NotFound/NotFound").then((m) => ({ default: m.NotFound })));
 
 const RouteFallback = () => (
   <Center style={{ minHeight: "60vh", width: "100%" }}>
@@ -437,7 +438,8 @@ class CoWatch extends React.Component {
                 <BrowserRouter>
                   <RouteSEO />
                   <Suspense fallback={<RouteFallback />}>
-                    <Route
+                    <Switch>
+                      <Route
                       path="/"
                       exact
                       render={(_props: any) => {
@@ -525,6 +527,12 @@ class CoWatch extends React.Component {
                         <Debug />
                       </>
                     </Route>
+                    <Route>
+                      <TopBar />
+                      <NotFound />
+                      <Footer />
+                    </Route>
+                    </Switch>
                   </Suspense>
                 </BrowserRouter>
               </MetadataContext.Provider>
