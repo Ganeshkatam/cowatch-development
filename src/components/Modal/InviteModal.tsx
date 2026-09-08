@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Modal, TextInput, ActionIcon, Button, Text, Group, Tooltip } from "@mantine/core";
+import React, { useState, useEffect } from "react";
+import { Modal, TextInput, ActionIcon, Button, Text, Group, Tooltip, Loader } from "@mantine/core";
 import {
   IconCopy,
   IconCheck,
@@ -10,7 +10,8 @@ import {
   IconQrcode,
   IconShare,
 } from "@tabler/icons-react";
-import { getSavedPasscodes } from "../../utils/utils";
+import { serverPath } from "../../utils/utils";
+import { getAccessToken, supabase } from "../../utils/supabaseClient";
 
 export const InviteModal = ({
   roomId,
@@ -22,16 +23,51 @@ export const InviteModal = ({
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
   const [roomIdCopied, setRoomIdCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [loadingInvite, setLoadingInvite] = useState<boolean>(true);
 
   const pathParts = window.location.pathname.split("/");
   const roomIdOrVanity = roomId || pathParts[pathParts.length - 1] || "";
-  const passcode =
-    (roomId && getSavedPasscodes()[roomId]) ||
-    getSavedPasscodes()[roomIdOrVanity];
+  const cleanRoomId = roomIdOrVanity.replace(/^\//, "");
+
+  useEffect(() => {
+    let isMounted = true;
+    const createInvite = async () => {
+      try {
+        const token = await getAccessToken();
+        const user = await supabase.auth.getUser();
+        const uid = user?.data?.user?.id;
+        if (!uid || !token) {
+          if (isMounted) setLoadingInvite(false);
+          return;
+        }
+        const res = await fetch(`${serverPath}/createInvite`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uid, token, roomId: cleanRoomId }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data?.inviteToken) {
+            setInviteToken(data.inviteToken);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not generate tokenized invite link:", err);
+      } finally {
+        if (isMounted) setLoadingInvite(false);
+      }
+    };
+    createInvite();
+    return () => {
+      isMounted = false;
+    };
+  }, [cleanRoomId]);
+
   const baseUrl = window.location.origin + window.location.pathname;
-  const fullUrl = passcode
-    ? `${baseUrl}?passcode=${encodeURIComponent(passcode)}`
-    : window.location.href;
+  const fullUrl = inviteToken
+    ? `${baseUrl}?invite=${encodeURIComponent(inviteToken)}`
+    : baseUrl;
 
   const handleCopyInviteLink = () => {
     navigator.clipboard.writeText(fullUrl);

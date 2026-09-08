@@ -30,6 +30,11 @@ import {
   startRoomLifecycle,
   validateTemporaryDuration,
 } from "./roomLifecycle.ts";
+import {
+  createRoomInvite,
+  redeemRoomInvite,
+  revokeRoomInvite,
+} from "./utils/roomInvites.ts";
 
 process.on("uncaughtException", (err) => {
   console.error("Uncaught exception in server process:", err);
@@ -558,6 +563,72 @@ app.post("/startRoom", async (req, res) => {
   } catch (e: any) {
     console.error("startRoom error:", e);
     res.status(400).json({ error: e.message || "Failed to start room." });
+  }
+});
+
+app.post("/createInvite", async (req, res) => {
+  const decoded = await validateUserToken(req.body?.uid, req.body?.token, false);
+  if (!decoded || decoded === "EMAIL_NOT_VERIFIED") {
+    res.status(401).json({ error: "Authentication required." });
+    return;
+  }
+  const rawRoomId = String(req.body?.roomId || "").trim();
+  if (!rawRoomId) {
+    res.status(400).json({ error: "Missing roomId parameter." });
+    return;
+  }
+  const cleanRoomId = rawRoomId.startsWith("/") ? rawRoomId.substring(1) : rawRoomId;
+  const expiresInHours = req.body?.expiresInHours !== undefined ? Number(req.body.expiresInHours) : 24;
+
+  try {
+    const invite = await createRoomInvite(cleanRoomId, decoded.uid, expiresInHours);
+    res.json(invite);
+  } catch (err: any) {
+    console.error("createInvite error:", err);
+    const status = err.message === "Forbidden" ? 403 : err.message === "Room not found" ? 404 : 400;
+    res.status(status).json({ error: err.message || "Failed to create invite." });
+  }
+});
+
+app.post("/redeemInvite", async (req, res) => {
+  const rawRoomId = String(req.body?.roomId || "").trim();
+  const token = String(req.body?.token || "").trim();
+  if (!rawRoomId || !token) {
+    res.status(400).json({ error: "Missing roomId or token parameter." });
+    return;
+  }
+  const cleanRoomId = rawRoomId.startsWith("/") ? rawRoomId.substring(1) : rawRoomId;
+
+  try {
+    const result = await redeemRoomInvite(cleanRoomId, token);
+    res.json(result);
+  } catch (err: any) {
+    console.error("redeemInvite error:", err);
+    res.status(400).json({ error: err.message || "Invalid or expired invite." });
+  }
+});
+
+app.post("/revokeInvite", async (req, res) => {
+  const decoded = await validateUserToken(req.body?.uid, req.body?.token, false);
+  if (!decoded || decoded === "EMAIL_NOT_VERIFIED") {
+    res.status(401).json({ error: "Authentication required." });
+    return;
+  }
+  const rawRoomId = String(req.body?.roomId || "").trim();
+  const inviteId = String(req.body?.inviteId || "").trim();
+  if (!rawRoomId || !inviteId) {
+    res.status(400).json({ error: "Missing roomId or inviteId parameter." });
+    return;
+  }
+  const cleanRoomId = rawRoomId.startsWith("/") ? rawRoomId.substring(1) : rawRoomId;
+
+  try {
+    await revokeRoomInvite(cleanRoomId, inviteId, decoded.uid);
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error("revokeInvite error:", err);
+    const status = err.message?.includes("forbidden") ? 403 : 400;
+    res.status(status).json({ error: err.message || "Failed to revoke invite." });
   }
 });
 

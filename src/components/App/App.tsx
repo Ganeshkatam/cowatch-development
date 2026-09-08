@@ -583,10 +583,52 @@ export class App extends React.Component<AppProps, AppState> {
       }
       let passcode = getSavedPasscodes()[cleanRoomId] ?? "";
 
+      // Check for ?invite= token
+      const urlInvite = urlParams.get("invite");
+      const sessionInviteKey = `cowatch-invite-${cleanRoomId}`;
+      let inviteCredential = "";
+      try {
+        inviteCredential = window.sessionStorage?.getItem(sessionInviteKey) || "";
+      } catch {
+        // sessionStorage may be blocked in some private contexts
+      }
+
+      if (urlInvite) {
+        try {
+          const redeemRes = await fetch(`${serverPath}/redeemInvite`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ roomId: cleanRoomId, token: urlInvite }),
+          });
+          if (redeemRes.ok) {
+            const redeemData = await redeemRes.json();
+            if (redeemData?.inviteCredential) {
+              inviteCredential = redeemData.inviteCredential;
+              try {
+                window.sessionStorage?.setItem(sessionInviteKey, inviteCredential);
+              } catch {
+                // ignore
+              }
+            }
+          } else {
+            const errData = await redeemRes.json().catch(() => null);
+            console.warn("Invite redemption failed:", errData?.error || "Invalid invite");
+          }
+        } catch (inviteErr) {
+          console.warn("Error redeeming invite:", inviteErr);
+        } finally {
+          // Immediately strip ?invite= from address bar so token does not linger in browser history
+          urlParams.delete("invite");
+          const remainingQuery = urlParams.toString();
+          const cleanUrl = window.location.pathname + (remainingQuery ? `?${remainingQuery}` : "");
+          window.history.replaceState({}, "", cleanUrl);
+        }
+      }
+
       try {
         const access = await this.checkRoomAccess(cleanRoomId);
 
-        if (access.requiresPasscode && !passcode && !access.isOwner) {
+        if (access.requiresPasscode && !passcode && !inviteCredential && !access.isOwner) {
           // Double-check: wait for auth to settle in case session was still loading
           const retrySession = await safeGetSession(1000);
           const retryUser = retrySession?.data?.session?.user;
@@ -638,6 +680,7 @@ export class App extends React.Component<AppProps, AppState> {
           sessionId: getOrCreateSessionId(),
           uid,
           token,
+          inviteCredential,
         },
       });
       this.socket = socket;

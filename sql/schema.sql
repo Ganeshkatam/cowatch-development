@@ -118,6 +118,33 @@ CREATE INDEX IF NOT EXISTS idx_room_lifecycle_events_timestamp
   ON public.room_lifecycle_events USING btree ("timestamp");
 
 -- ------------------------------------------------------------------------------
+-- Table: room_invites
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.room_invites (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id text NOT NULL REFERENCES public.rooms("roomId") ON DELETE CASCADE,
+  token_hash text UNIQUE NOT NULL,
+  created_by uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL,
+  revoked_at timestamptz NULL,
+  used_at timestamptz NULL,
+  max_uses integer NULL,
+  uses integer NOT NULL DEFAULT 0,
+  CONSTRAINT room_invites_max_uses_check CHECK (max_uses IS NULL OR max_uses > 0),
+  CONSTRAINT room_invites_uses_check CHECK (uses >= 0 AND (max_uses IS NULL OR uses <= max_uses))
+);
+
+CREATE INDEX IF NOT EXISTS room_invites_token_hash_idx
+  ON public.room_invites USING btree (token_hash);
+
+CREATE INDEX IF NOT EXISTS room_invites_room_revoked_idx
+  ON public.room_invites USING btree (room_id, revoked_at);
+
+CREATE INDEX IF NOT EXISTS room_invites_expires_at_idx
+  ON public.room_invites USING btree (expires_at);
+
+-- ------------------------------------------------------------------------------
 -- Table: room_messages
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.room_messages (
