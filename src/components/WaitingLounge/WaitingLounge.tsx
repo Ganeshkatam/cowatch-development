@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext } from "react";
 import {
   IconMovie,
   IconClock,
@@ -6,8 +6,12 @@ import {
   IconUserX,
   IconLogout,
   IconDoorExit,
+  IconCrown,
+  IconPlayerPlay,
+  IconSettings,
 } from "@tabler/icons-react";
 import { getDefaultPicture, getColorForStringHex } from "../../utils/utils";
+import { MetadataContext } from "../../MetadataContext";
 import styles from "./WaitingLounge.module.css";
 
 interface WaitingLoungeProps {
@@ -23,11 +27,21 @@ export const WaitingLounge: React.FC<WaitingLoungeProps> = ({
   roomTitle,
   onLeave,
 }) => {
+  const context = useContext(MetadataContext);
   const hostName = state.host?.name || "Host";
   const hostPicture =
     state.host?.picture ||
     getDefaultPicture(hostName, getColorForStringHex(hostName));
   const isHostOnline = Boolean(state.host?.online);
+
+  const isHost = Boolean(
+    context.user && (
+      ((state.host as any)?.id && String((state.host as any).id).toLowerCase() === String(context.user.id).toLowerCase()) ||
+      (hostName && context.displayName && hostName.toLowerCase() === context.displayName.toLowerCase()) ||
+      (context.profile?.display_name && hostName.toLowerCase() === context.profile.display_name.toLowerCase()) ||
+      (context.profile?.username && hostName.toLowerCase() === context.profile.username.toLowerCase())
+    )
+  );
 
   if (state.rejected) {
     return (
@@ -66,6 +80,85 @@ export const WaitingLounge: React.FC<WaitingLoungeProps> = ({
           >
             Return to Home
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isHost) {
+    return (
+      <div className={styles.loungeContainer}>
+        <div className={styles.loungeCard}>
+          <div className={styles.glowTopBar} />
+
+          <div className={styles.brandHeader}>
+            <img src="/logo192.png" alt="CoWatch" className={styles.brandLogo} />
+            <span className={styles.brandName}>CoWatch Host Control</span>
+          </div>
+
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "56px",
+            height: "56px",
+            borderRadius: "50%",
+            background: "rgba(139, 92, 246, 0.16)",
+            color: "#a78bfa",
+            border: "1px solid rgba(139, 92, 246, 0.3)",
+            marginBottom: "16px",
+          }}>
+            <IconCrown size={28} stroke={2} />
+          </div>
+
+          <h1 className={styles.title}>You are the Room Host</h1>
+
+          {roomTitle ? (
+            <div className={styles.roomTag}>
+              <IconMovie size={14} color="#A78BFA" />
+              <span>{roomTitle}</span>
+            </div>
+          ) : (
+            <div className={styles.roomTag}>
+              <span>Room: {roomId}</span>
+            </div>
+          )}
+
+          <p className={styles.subtitle}>
+            You are the organizer of this watch party. Click below to enter your room and manage your waiting lounge.
+          </p>
+
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "10px", marginTop: "16px" }}>
+            <button
+              type="button"
+              className={styles.returnHomeButton}
+              style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+              onClick={() => {
+                window.location.reload();
+              }}
+            >
+              <IconPlayerPlay size={18} />
+              <span>Enter Room as Host</span>
+            </button>
+            <button
+              type="button"
+              className={styles.leaveButton}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+              onClick={() => {
+                window.location.href = `/myrooms/${roomId}`;
+              }}
+            >
+              <IconSettings size={16} />
+              <span>Room Settings & Details</span>
+            </button>
+            <button
+              type="button"
+              className={styles.leaveButton}
+              onClick={onLeave}
+            >
+              Exit to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );

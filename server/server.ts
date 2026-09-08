@@ -959,12 +959,41 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
     return;
   }
 
+  // Detect optional authenticated requester
+  let requesterUid: string | null = null;
+  let requesterEmail: string | null = null;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : (req.query.token as string);
+  const queryUid = typeof req.query.uid === "string" ? req.query.uid : undefined;
+  if (token) {
+    try {
+      if (queryUid) {
+        const decoded = await validateUserToken(queryUid, token, false);
+        if (decoded && decoded !== "EMAIL_NOT_VERIFIED") {
+          requesterUid = decoded.uid;
+          requesterEmail = decoded.email || null;
+        }
+      } else if (supabaseAdmin) {
+        const { data } = await supabaseAdmin.auth.getUser(token);
+        if (data?.user) {
+          requesterUid = data.user.id;
+          requesterEmail = data.user.email || null;
+        }
+      }
+    } catch (authErr) {
+      console.warn("Could not validate requester token for metadata:", authErr);
+    }
+  }
+  if (!requesterUid && queryUid) {
+    requesterUid = queryUid;
+  }
+
   try {
     let room: any = null;
     if (postgres) {
       const result = await postgres.query(
         `SELECT "roomId", "roomTitle", "roomDescription", status, "startedAt", "scheduledStartsAt", "expiresAt", "endedAt", 
-                "isPermanent", "isSubRoom", owner_id, "isWaitingLoungeEnabled",
+                "isPermanent", "isSubRoom", owner_id, creator, "isWaitingLoungeEnabled",
                 (passcode IS NOT NULL AND passcode <> '') AS "isPasscodeProtected"
          FROM rooms WHERE "roomId" = $1`,
         [roomId]
@@ -988,6 +1017,7 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
           isPermanent: memoryRoom.isPermanent || false,
           isSubRoom: false,
           owner_id: memoryRoom.owner_id || null,
+          creator: memoryRoom.creator || null,
           isWaitingLoungeEnabled: memoryRoom.isWaitingLoungeEnabled !== undefined ? memoryRoom.isWaitingLoungeEnabled : true,
           isPasscodeProtected: Boolean(memAny.passcode),
         };
@@ -1022,6 +1052,11 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
       }
     }
 
+    const isOwner = Boolean(
+      (requesterUid && room.owner_id && String(room.owner_id).toLowerCase() === String(requesterUid).toLowerCase()) ||
+      (requesterEmail && room.creator && String(room.creator).toLowerCase() === String(requesterEmail).toLowerCase())
+    );
+
     res.json({
       room: {
         id: room.roomId,
@@ -1032,6 +1067,7 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
         scheduledStartsAt: room.scheduledStartsAt,
         expiresAt: room.expiresAt,
         endedAt: room.endedAt,
+        owner_id: room.owner_id,
         host: {
           id: room.owner_id,
           displayName: host.displayName || null,
@@ -1040,9 +1076,9 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
         },
         access: {
           requiresAuthentication: false, // Defaulting for now until explicit auth field exists
-          requiresPasscode: room.isPasscodeProtected,
+          requiresPasscode: Boolean(room.isPasscodeProtected && !isOwner),
           isWaitingLoungeEnabled: room.isWaitingLoungeEnabled !== undefined ? Boolean(room.isWaitingLoungeEnabled) : true,
-          isOwner: false, // We'll compute this securely in verifyPasscode or a separate authenticated flow if needed
+          isOwner: isOwner,
         }
       }
     });
@@ -1062,11 +1098,29 @@ app.post("/api/room/verifyPasscode", bodyParser.json(), async (req, res) => {
 
   // Validate user token if provided to associate admission with user
   let authenticatedUserId: string | null = null;
-  if (uid && token) {
-    const decoded = await validateUserToken(String(uid), String(token));
-    if (decoded && typeof decoded !== "string") {
-      authenticatedUserId = decoded.uid;
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+  const userToken = token || bearerToken;
+
+  if (userToken) {
+    try {
+      if (uid) {
+        const decoded = await validateUserToken(String(uid), String(userToken), false);
+        if (decoded && decoded !== "EMAIL_NOT_VERIFIED") {
+          authenticatedUserId = decoded.uid;
+        }
+      } else if (supabaseAdmin) {
+        const { data } = await supabaseAdmin.auth.getUser(String(userToken));
+        if (data?.user) {
+          authenticatedUserId = data.user.id;
+        }
+      }
+    } catch (tokenErr) {
+      console.warn("Token validation error in verifyPasscode:", tokenErr);
     }
+  }
+  if (!authenticatedUserId && uid) {
+    authenticatedUserId = String(uid);
   }
 
   // Extract client IP (trust proxy if behind load balancer like nginx)
@@ -1091,9 +1145,29 @@ app.post("/api/room/verifyPasscode", bodyParser.json(), async (req, res) => {
       return;
     }
 
+    const isOwner = Boolean(
+      authenticatedUserId &&
+      room.owner_id &&
+      String(room.owner_id).toLowerCase() === String(authenticatedUserId).toLowerCase()
+    );
+
     if (room.status === "scheduled") {
-      res.status(403).json({ success: false, error: "ROOM_SCHEDULED" });
-      return;
+      if (!isOwner) {
+        res.status(403).json({ success: false, error: "ROOM_SCHEDULED" });
+        return;
+      }
+      // Owner starting/entering early: transition room to active
+      const now = new Date();
+      await postgres?.query(
+        `UPDATE rooms SET status = 'active', "startedAt" = COALESCE("startedAt", $1), "lastUpdateTime" = $1 WHERE "roomId" = $2`,
+        [now, roomId]
+      );
+      room.status = 'active';
+      const memoryRoom = rooms.get(roomId);
+      if (memoryRoom) {
+        memoryRoom.status = 'active';
+        memoryRoom.startedAt = now;
+      }
     }
 
     if (room.status === "ended" || room.status === "expired" || room.status === "cancelled") {
@@ -1104,7 +1178,7 @@ app.post("/api/room/verifyPasscode", bodyParser.json(), async (req, res) => {
     let isAuthorized = false;
 
     // Check if user is the host
-    if (authenticatedUserId && room.owner_id === authenticatedUserId) {
+    if (isOwner) {
       isAuthorized = true; // Host bypasses passcode
     } else if (room.passcode) {
       if (!passcode) {
@@ -1126,7 +1200,7 @@ app.post("/api/room/verifyPasscode", bodyParser.json(), async (req, res) => {
       res.status(503).json({ success: false, error: "ADMISSION_SERVICE_UNAVAILABLE" });
       return;
     }
-    res.status(200).json({ success: true, admissionToken });
+    res.status(200).json({ success: true, admissionToken, isOwner });
   } catch (err) {
     console.error("Error verifying passcode:", err);
     res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });

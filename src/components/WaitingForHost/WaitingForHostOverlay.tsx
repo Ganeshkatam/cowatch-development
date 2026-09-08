@@ -51,7 +51,22 @@ export const WaitingForHostOverlay: React.FC<WaitingForHostOverlayProps> = ({
     return null;
   }
 
-  const isOwner = Boolean(user && owner && user.id === owner);
+  const isOwner = Boolean(
+    user && owner && (
+      String(user.id).toLowerCase() === String(owner).toLowerCase() ||
+      (user.email && user.email.toLowerCase() === String(owner).toLowerCase())
+    )
+  );
+
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const handleCopyLink = () => {
+    const link = `${window.location.origin}/join/${roomId}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }).catch(console.error);
+  };
 
   const handleStartRoom = async () => {
     setIsStarting(true);
@@ -110,30 +125,27 @@ export const WaitingForHostOverlay: React.FC<WaitingForHostOverlayProps> = ({
       color="var(--bg-app, #08090D)"
       style={{
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: "24px",
-        padding: "24px",
       }}
     >
       <div
         style={{
-          maxWidth: "480px",
-          width: "100%",
           textAlign: "center",
+          maxWidth: "480px",
+          padding: "32px",
         }}
       >
-        {/* Status indicator */}
+        {/* Status badge */}
         <Badge
-          variant="light"
           color="violet"
+          variant="light"
           size="lg"
           radius="sm"
           mb="lg"
           style={{ textTransform: "uppercase", letterSpacing: "0.05em" }}
         >
-          Waiting to Start
+          {isOwner ? "Host Control" : "Waiting for Host"}
         </Badge>
 
         {/* Room title */}
@@ -217,6 +229,26 @@ export const WaitingForHostOverlay: React.FC<WaitingForHostOverlayProps> = ({
             >
               {isStarting ? "Starting..." : "Start Watch Party"}
             </Button>
+
+            <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
+              <Button
+                variant="light"
+                color="violet"
+                size="sm"
+                onClick={() => { window.location.href = `/myrooms/${roomId}`; }}
+              >
+                Room Settings
+              </Button>
+              <Button
+                variant="light"
+                color={copiedLink ? "teal" : "gray"}
+                size="sm"
+                onClick={handleCopyLink}
+              >
+                {copiedLink ? "Link Copied!" : "Copy Invite Link"}
+              </Button>
+            </div>
+
             {!roomIsPermanent && roomDurationMinutes && (
               <Text size="xs" c="dimmed" mt="xs">
                 The {formatDuration(roomDurationMinutes)} countdown begins when you press start

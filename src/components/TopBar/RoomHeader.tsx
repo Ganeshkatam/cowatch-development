@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { IconCheck, IconChevronDown, IconCopy, IconLock, IconLockOpen, IconSettings, IconUsers, IconX } from "@tabler/icons-react";
+import { IconAdjustments, IconCheck, IconChevronDown, IconCopy, IconCrown, IconLock, IconLockOpen, IconSettings, IconUsers, IconX } from "@tabler/icons-react";
 import { Menu, Tooltip } from "@mantine/core";
 import { SignInButton } from "./TopBar";
 import { HeaderSearchBar } from "./HeaderSearchBar";
@@ -82,6 +82,25 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
     <div className={styles.roomIdentity}>
       <div className={styles.roomTitleRow}>
         {renderStatusBadge()}
+        {isOwner && (
+          <span style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "4px",
+            fontSize: "11px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+            background: "rgba(139, 92, 246, 0.2)",
+            color: "var(--color-violet, #a78bfa)",
+            border: "1px solid rgba(139, 92, 246, 0.35)",
+            padding: "2px 6px",
+            borderRadius: "4px",
+          }}>
+            <IconCrown size={12} stroke={2.5} />
+            <span>Host</span>
+          </span>
+        )}
         <span className={styles.roomTitle}>{roomTitle || "Watch Party Room"}</span>
       </div>
       <Tooltip
@@ -141,10 +160,18 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
             </button>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Label>Room</Menu.Label>
+            <Menu.Label>{isOwner ? "Host Controls" : "Room"}</Menu.Label>
             <Menu.Item leftSection={<IconSettings size={16} />} onClick={onOpenSettings}>Room settings</Menu.Item>
+            {isOwner && (
+              <Menu.Item leftSection={<IconAdjustments size={16} />} onClick={() => {
+                const cleanId = window.location.pathname.replace(/^\/watch\//, "");
+                window.open(`/myrooms/${cleanId}`, "_blank");
+              }}>
+                Manage in Dashboard
+              </Menu.Item>
+            )}
             <Menu.Item leftSection={copied ? <IconCheck size={16} color="var(--color-live)" /> : <IconCopy size={16} />} onClick={handleCopyLink}>
-              {copied ? "Link Copied!" : "Copy room link"}
+              {copied ? "Link Copied!" : "Copy invite link"}
             </Menu.Item>
             {onToggleLock && (
               <Menu.Item disabled={!haveLock} leftSection={isLocked ? <IconLock size={16} color="var(--color-warning)" /> : <IconLockOpen size={16} />} onClick={onToggleLock}>
@@ -152,7 +179,7 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
               </Menu.Item>
             )}
             <Menu.Divider />
-            <Menu.Item color="red" leftSection={<IconX size={16} />} onClick={onExit}>Leave room</Menu.Item>
+            <Menu.Item color="red" leftSection={<IconX size={16} />} onClick={onExit}>{isOwner ? "Exit Room Session" : "Leave room"}</Menu.Item>
           </Menu.Dropdown>
         </Menu>
 
