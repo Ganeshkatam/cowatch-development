@@ -4,7 +4,6 @@ import { Badge, Alert, TextInput, Text } from "@mantine/core";
 import {
   IconArrowLeft,
   IconCalendarEvent,
-  IconClock,
   IconWorld,
 } from "@tabler/icons-react";
 import { MetadataContext } from "../../MetadataContext";

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createRoom } from "../TopBar/TopBar";
 import { supabase, getAccessToken } from "../../utils/supabaseClient";
 import { serverPath, addAndSavePasscode } from "../../utils/utils";
@@ -42,6 +42,14 @@ export function useRoomFormState(): RoomFormState {
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    return () => {
+      if (coverPreview) {
+        URL.revokeObjectURL(coverPreview);
+      }
+    };
+  }, [coverPreview]);
+
   const handleCoverChange = (file: File | null) => {
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
@@ -53,12 +61,18 @@ export function useRoomFormState(): RoomFormState {
         return;
       }
       setError("");
+      if (coverPreview) {
+        URL.revokeObjectURL(coverPreview);
+      }
       setCoverPhotoFile(file);
       setCoverPreview(URL.createObjectURL(file));
     }
   };
 
   const handleRemoveCover = () => {
+    if (coverPreview) {
+      URL.revokeObjectURL(coverPreview);
+    }
     setCoverPhotoFile(null);
     setCoverPreview(null);
   };
