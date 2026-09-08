@@ -217,14 +217,22 @@ export const ScheduleRoom: React.FC = () => {
 
               <div className={createStyles.stickyFooter}>
                 <Button
+                  type="button"
+                  variant="default"
+                  size="md"
+                  onClick={() => history.push("/myrooms")}
+                  className={createStyles.cancelBtn}
+                >
+                  Cancel
+                </Button>
+                <Button
                   type="submit"
-                  size="lg"
+                  size="md"
                   variant="gradient"
                   gradient={{ from: "violet", to: "grape", deg: 135 }}
                   disabled={loading || !formState.roomTitle.trim()}
-                  leftSection={loading ? <Loader size={20} color="white" /> : <IconCalendarEvent size={20} />}
+                  leftSection={loading ? <Loader size={18} color="white" /> : <IconCalendarEvent size={18} />}
                   className={createStyles.createBtnPrimary}
-                  fullWidth
                 >
                   {loading ? "Scheduling..." : "Schedule Watch Party"}
                 </Button>

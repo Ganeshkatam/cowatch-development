@@ -80,14 +80,22 @@ export const Create: React.FC = () => {
 
               <div className={styles.stickyFooter}>
                 <Button
+                  type="button"
+                  variant="default"
+                  size="md"
+                  onClick={() => history.push("/myrooms")}
+                  className={styles.cancelBtn}
+                >
+                  Cancel
+                </Button>
+                <Button
                   type="submit"
-                  size="lg"
+                  size="md"
                   variant="gradient"
                   gradient={{ from: "violet", to: "grape", deg: 135 }}
                   disabled={loading || !formState.roomTitle.trim()}
-                  leftSection={loading ? <Loader size={20} color="white" /> : <IconCirclePlusFilled size={20} />}
+                  leftSection={loading ? <Loader size={18} color="white" /> : <IconCirclePlusFilled size={18} />}
                   className={styles.createBtnPrimary}
-                  fullWidth
                 >
                   {loading ? "Creating..." : "Start Watch Party"}
                 </Button>
