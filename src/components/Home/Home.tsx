@@ -472,32 +472,56 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* Section 6: Ambient Cinema Call to Action Banner */}
+      {/* Section 6: Ambient Call to Action Banner */}
       <div className={styles.ctaWrapper}>
+        <div className={styles.ctaGlowBackground} />
         <div className={styles.ctaCard}>
-          <h2 className={styles.ctaTitle}>Ready to start watching?</h2>
+          <div className={styles.ctaBadge}>
+            <span className={styles.pulseDot} />
+            <span>Ready whenever you are</span>
+          </div>
+
+          <h2 className={styles.ctaTitle}>
+            Start your next <span className={styles.gradientText}>watch party</span>
+          </h2>
+
           <p className={styles.ctaSubtitle}>
-            Create your free account today and start hanging out with your friends.
+            Create your free account, invite your friends with a link,
+            and enjoy watching videos together anytime.
           </p>
-          <div className={styles.ctaButtons}>
+
+          <div className={styles.ctaActions}>
             {user ? (
-              <Button
-                size="lg"
-                variant="gradient"
-                gradient={{ from: "#8B5CF6", to: "#EC4899", deg: 135 }}
-                leftSection={<IconCirclePlusFilled size={20} />}
-                onClick={() => history.push("/room/new")}
-              >
-                Start a Watch Party
-              </Button>
+              <div className={styles.ctaButtonsRow}>
+                <Button
+                  size="lg"
+                  variant="gradient"
+                  gradient={{ from: "#8B5CF6", to: "#EC4899", deg: 135 }}
+                  leftSection={<IconCirclePlusFilled size={20} />}
+                  onClick={() => history.push("/room/new")}
+                  style={{ fontWeight: 600 }}
+                >
+                  Start a Watch Party
+                </Button>
+                <Button
+                  size="lg"
+                  variant="default"
+                  component={Link}
+                  to="/myrooms"
+                  style={{ fontWeight: 600 }}
+                >
+                  My Rooms
+                </Button>
+              </div>
             ) : (
-              <>
+              <div className={styles.ctaButtonsRow}>
                 <Button
                   size="lg"
                   variant="gradient"
                   gradient={{ from: "#8B5CF6", to: "#EC4899", deg: 135 }}
                   leftSection={<IconUserPlus size={20} />}
                   onClick={() => history.push("/signup")}
+                  style={{ fontWeight: 600 }}
                 >
                   Create Free Account
                 </Button>
@@ -506,11 +530,27 @@ export const Home = () => {
                   variant="default"
                   component={Link}
                   to="/login"
+                  style={{ fontWeight: 600 }}
                 >
                   Sign In
                 </Button>
-              </>
+              </div>
             )}
+          </div>
+
+          <div className={styles.ctaPerks}>
+            <div className={styles.ctaPerkItem}>
+              <IconCircleCheck size={16} color="#10B981" />
+              <span>100% Free Account</span>
+            </div>
+            <div className={styles.ctaPerkItem}>
+              <IconCircleCheck size={16} color="#10B981" />
+              <span>No Software Downloads</span>
+            </div>
+            <div className={styles.ctaPerkItem}>
+              <IconCircleCheck size={16} color="#10B981" />
+              <span>Desktop & Mobile Browsers</span>
+            </div>
           </div>
         </div>
       </div>
