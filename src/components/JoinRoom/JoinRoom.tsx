@@ -64,7 +64,7 @@ export default function JoinRoom() {
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<string>("");
 
-  // Determine if current user is the host/creator of this room
+  // Determine if current user is the host/owner of this room
   const isHost = Boolean(
     room?.access?.isOwner ||
     (context.user && room?.host?.id && String(room.host.id).toLowerCase() === String(context.user.id).toLowerCase()) ||
@@ -297,7 +297,7 @@ export default function JoinRoom() {
 
         <div className={styles.card}>
           {isHost ? (
-            <div className={styles.creatorTag}>
+            <div className={styles.hostRoomTag}>
               <IconCrown size={15} stroke={2.2} />
               <span>Your Watch Party</span>
             </div>
@@ -314,11 +314,13 @@ export default function JoinRoom() {
               {room.host.displayName?.[0] || room.host.username?.[0] || context.displayName?.[0] || "?"}
             </Avatar>
             <span className={styles.hostName}>
-              {isHost ? `Hosted by you (${room.host.displayName || context.displayName || "Host"})` : `Hosted by ${room.host.displayName || room.host.username || "Anonymous"}`}
+              {isHost
+                ? (room.host.displayName || context.displayName ? `${room.host.displayName || context.displayName} (You)` : "Hosted by you")
+                : `Hosted by ${room.host.displayName || room.host.username || "Anonymous"}`}
             </span>
             {isHost && (
               <span className={styles.ownerRoleBadge}>
-                Host & Creator
+                Host
               </span>
             )}
           </div>
@@ -328,7 +330,7 @@ export default function JoinRoom() {
             <>
               {room.access?.isWaitingLoungeEnabled && (
                 <div className={styles.privilegeBanner}>
-                  <IconUsers size={16} color="#a78bfa" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <IconUsers size={18} color="#c4b5fd" style={{ flexShrink: 0, marginTop: 1 }} />
                   <div>
                     <div className={styles.privilegeTitle}>Waiting Room Active</div>
                     <div className={styles.privilegeDesc}>Guests will queue in the lounge until you admit them inside.</div>
@@ -338,7 +340,7 @@ export default function JoinRoom() {
 
               {room.access?.requiresPasscode === false && (
                 <div className={styles.privilegeBanner}>
-                  <IconLock size={16} color="#a78bfa" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <IconLock size={18} color="#c4b5fd" style={{ flexShrink: 0, marginTop: 1 }} />
                   <div>
                     <div className={styles.privilegeTitle}>Passcode Bypass Active</div>
                     <div className={styles.privilegeDesc}>Passcode is required for guests, but automatically bypassed for you.</div>
@@ -514,7 +516,7 @@ export default function JoinRoom() {
                       leftSection={<IconSettings size={15} />}
                       className={styles.toolbarBtn}
                     >
-                      Edit Schedule & Details
+                      Room Settings
                     </Button>
                     <Button
                       onClick={handleCopyInviteLink}
@@ -524,7 +526,7 @@ export default function JoinRoom() {
                       leftSection={copiedInvite ? <IconCheck size={15} /> : <IconCopy size={15} />}
                       className={styles.toolbarBtn}
                     >
-                      {copiedInvite ? "Link Copied!" : "Copy Guest Link"}
+                      {copiedInvite ? "Link Copied!" : "Copy Invite Link"}
                     </Button>
                   </div>
                 </>
@@ -562,7 +564,7 @@ export default function JoinRoom() {
                       leftSection={<IconSettings size={15} />}
                       className={styles.toolbarBtn}
                     >
-                      Room Settings & Details
+                      Room Settings
                     </Button>
                     <Button
                       onClick={handleCopyInviteLink}
@@ -572,7 +574,7 @@ export default function JoinRoom() {
                       leftSection={copiedInvite ? <IconCheck size={15} /> : <IconCopy size={15} />}
                       className={styles.toolbarBtn}
                     >
-                      {copiedInvite ? "Link Copied!" : "Copy Guest Link"}
+                      {copiedInvite ? "Link Copied!" : "Copy Invite Link"}
                     </Button>
                   </div>
                 </>
