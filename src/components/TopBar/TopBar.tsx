@@ -9,7 +9,6 @@ import { MetadataContext } from "../../MetadataContext";
 import {
   IconCirclePlusFilled,
   IconDatabase,
-  IconLogin,
   IconLogout,
   IconSettings,
   IconCheck,
@@ -106,9 +105,7 @@ export const NewRoomButton = (props: { size?: string; openNewTab?: boolean }) =>
   );
 };
 
-type SignInButtonProps = {};
-
-export class SignInButton extends React.Component<SignInButtonProps> {
+export class SignInButton extends React.Component {
   static contextType = MetadataContext;
   declare context: React.ContextType<typeof MetadataContext>;
 
@@ -198,25 +195,10 @@ export class SignInButton extends React.Component<SignInButtonProps> {
   }
 }
 
-export const ListRoomsButton = () => {
-  const context = useContext(MetadataContext);
-  if (!context.user) return null;
-  return (
-    <Button component={Link} to="/myrooms" variant="subtle" color="gray">
-      My rooms
-    </Button>
-  );
-};
-
 export const TopBar = (props: {
   hideNewRoom?: boolean;
   hideSignin?: boolean;
-  hideMyRooms?: boolean;
-  hideJoin?: boolean;
-  showExit?: boolean;
-  onOpenSettings?: () => void;
   roomTitle?: string;
-  roomDescription?: string;
   roomStatus?: string;
 }) => {
   const context = useContext(MetadataContext);

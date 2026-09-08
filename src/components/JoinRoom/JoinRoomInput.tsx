@@ -42,7 +42,7 @@ export const JoinRoomInput: React.FC = () => {
 
   return (
     <>
-      <TopBar hideJoin />
+      <TopBar />
       <div className={styles.container}>
         <div className={styles.ambientGlow} />
         <div className={styles.ambientGlowSecondary} />
