@@ -4,9 +4,10 @@
 
 .page {
   display: flex;
-  justify-content: center;
-  align-items: stretch;
-  padding: 16px 24px 24px;
+  flex-direction: column;
+  padding: 12px 24px 20px;
+  width: 100%;
+  max-width: 100vw;
   height: calc(100vh - 60px);
   max-height: calc(100vh - 60px);
   background: var(--bg-app);
@@ -26,15 +27,17 @@
   }
 }
 
-/* Outer layout container */
+/* Outer layout container - full viewport studio */
 .container {
   display: flex;
   flex-direction: column;
-  width: min(100%, 1160px);
-  margin: 0 auto;
-  gap: 14px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  gap: 12px;
   height: 100%;
   min-height: 0;
+  flex: 1;
 }
 
 /* Top bar with back button */
