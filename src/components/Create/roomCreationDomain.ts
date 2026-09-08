@@ -36,7 +36,7 @@ export function useRoomFormState(): RoomFormState {
   const [isChatDisabled, setIsChatDisabled] = useState(false);
   const [lock, setLock] = useState(false);
   const [isPermanent, setIsPermanent] = useState(false);
-  const [isWaitingLoungeEnabled, setIsWaitingLoungeEnabled] = useState(false);
+  const [isWaitingLoungeEnabled, setIsWaitingLoungeEnabled] = useState(true);
   const [durationMinutes, setDurationMinutes] = useState<string>("300");
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);

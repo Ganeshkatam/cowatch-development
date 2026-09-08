@@ -140,7 +140,7 @@ export class Room {
   public creator: string | undefined = undefined; // email of the user who created the room (just used for stats)
   public lock: string | undefined = undefined; // uid of the user who locked the room
   public playlist: PlaylistVideo[] = [];
-  public isWaitingLoungeEnabled: boolean = false;
+  public isWaitingLoungeEnabled: boolean = true;
 
   // Non-serialized state
   public roomId: string;

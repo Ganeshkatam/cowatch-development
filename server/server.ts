@@ -508,7 +508,10 @@ app.post("/createRoom", async (req, res) => {
   }
   newRoom.isChatDisabled = Boolean(req.body?.isChatDisabled);
   newRoom.creator = decoded.email || "";
-  newRoom.isWaitingLoungeEnabled = Boolean(req.body?.isWaitingLoungeEnabled);
+  newRoom.isWaitingLoungeEnabled =
+    req.body?.isWaitingLoungeEnabled !== undefined
+      ? Boolean(req.body.isWaitingLoungeEnabled)
+      : true;
 
   const isPermanent = Boolean(req.body?.isPermanent);
   const now = new Date();
@@ -569,7 +572,7 @@ app.post("/createRoom", async (req, res) => {
       scheduledStartsAt: scheduledStartsAt,
       isPermanent: isPermanent,
       durationMinutes: durationMinutes,
-      isWaitingLoungeEnabled: Boolean(req.body?.isWaitingLoungeEnabled),
+      isWaitingLoungeEnabled: newRoom.isWaitingLoungeEnabled,
     };
 
     try {

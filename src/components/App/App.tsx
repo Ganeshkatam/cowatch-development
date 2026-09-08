@@ -273,7 +273,7 @@ export class App extends React.Component<AppProps, AppState> {
     uploadController: undefined,
     waitingLoungeState: null,
     waitingList: [],
-    isWaitingLoungeEnabled: false,
+    isWaitingLoungeEnabled: true,
     isRoomMinimized: false,
     // Room lifecycle initial state
     roomStatus: "waiting",
