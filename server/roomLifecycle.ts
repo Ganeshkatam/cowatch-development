@@ -10,14 +10,19 @@ export function initRoomLifecycle(io: Server, rooms: Map<string, Room>) {
   roomsMap = rooms;
 }
 
-export const ALLOWED_DURATION_PRESETS = [30, 60, 120, 180, 300, 360, 720, 1440] as const;
+export const ALLOWED_DURATION_PRESETS = [
+  30, 60, 120, 180, 300, 360, 720, 1440,
+] as const;
 export type AllowedDurationPreset = (typeof ALLOWED_DURATION_PRESETS)[number];
 
 export function validateTemporaryDuration(val: unknown): number {
   const num = typeof val === "number" ? val : Number(val);
-  if (!Number.isInteger(num) || !ALLOWED_DURATION_PRESETS.includes(num as any)) {
+  if (
+    !Number.isInteger(num) ||
+    !ALLOWED_DURATION_PRESETS.includes(num as any)
+  ) {
     throw new Error(
-      `Invalid session duration (${val}). Allowed presets are: ${ALLOWED_DURATION_PRESETS.join(", ")} minutes.`
+      `Invalid session duration (${val}). Allowed presets are: ${ALLOWED_DURATION_PRESETS.join(", ")} minutes.`,
     );
   }
   return num;
@@ -47,13 +52,18 @@ export interface StartRoomResult {
  * - In-memory room instance update
  * - Real-time socket broadcast to connected participants
  */
-export async function startRoomLifecycle(roomId: string, uid: string | "SYSTEM"): Promise<StartRoomResult> {
+export async function startRoomLifecycle(
+  roomId: string,
+  uid: string | "SYSTEM",
+): Promise<StartRoomResult> {
   if (!postgres) {
     throw new Error("Database is not configured.");
   }
 
   const cleanRoomId = roomId.trim();
-  const normalizedId = cleanRoomId.startsWith("/") ? cleanRoomId.substring(1) : cleanRoomId;
+  const normalizedId = cleanRoomId.startsWith("/")
+    ? cleanRoomId.substring(1)
+    : cleanRoomId;
   const slashedId = `/${normalizedId}`;
 
   // 1. Fetch current room state from database
@@ -61,7 +71,7 @@ export async function startRoomLifecycle(roomId: string, uid: string | "SYSTEM")
     `SELECT "roomId", owner_id, status, "startedAt", "expiresAt", "isPermanent", "durationMinutes", "roomTitle"
      FROM rooms
      WHERE "roomId" = $1 OR "roomId" = $2`,
-    [normalizedId, slashedId]
+    [normalizedId, slashedId],
   );
 
   if (!roomRes || roomRes.rowCount === 0) {
@@ -84,7 +94,9 @@ export async function startRoomLifecycle(roomId: string, uid: string | "SYSTEM")
     return {
       success: true,
       status: "active",
-      startedAt: room.startedAt ? new Date(room.startedAt).toISOString() : now.toISOString(),
+      startedAt: room.startedAt
+        ? new Date(room.startedAt).toISOString()
+        : now.toISOString(),
       expiresAt: room.expiresAt ? new Date(room.expiresAt).toISOString() : null,
       isPermanent: Boolean(room.isPermanent),
       durationMinutes: room.durationMinutes ?? null,
@@ -104,7 +116,9 @@ export async function startRoomLifecycle(roomId: string, uid: string | "SYSTEM")
   // 5. Compute timestamps on the server
   const isPermanent = Boolean(room.isPermanent);
   let expiresAt: Date | null = null;
-  const validatedDuration = isPermanent ? null : validateTemporaryDuration(room.durationMinutes);
+  const validatedDuration = isPermanent
+    ? null
+    : validateTemporaryDuration(room.durationMinutes);
 
   if (!isPermanent && validatedDuration !== null) {
     expiresAt = new Date(serverNow + validatedDuration * 60 * 1000);
@@ -123,7 +137,7 @@ export async function startRoomLifecycle(roomId: string, uid: string | "SYSTEM")
            "lastActiveAt" = $1
          WHERE "roomId" = $3 AND (status = 'waiting' OR status = 'scheduled')
          RETURNING *`,
-        [now, expiresAt, targetRoomId]
+        [now, expiresAt, targetRoomId],
       )
     : await postgres.query(
         `UPDATE rooms
@@ -135,7 +149,7 @@ export async function startRoomLifecycle(roomId: string, uid: string | "SYSTEM")
            "lastActiveAt" = $1
          WHERE "roomId" = $3 AND (status = 'waiting' OR status = 'scheduled') AND owner_id = $4
          RETURNING *`,
-        [now, expiresAt, targetRoomId, uid]
+        [now, expiresAt, targetRoomId, uid],
       );
 
   if (updateRes.rowCount === 0) {
@@ -143,7 +157,7 @@ export async function startRoomLifecycle(roomId: string, uid: string | "SYSTEM")
     const recheckRes = await postgres.query(
       `SELECT status, "startedAt", "expiresAt", "isPermanent", "durationMinutes"
        FROM rooms WHERE "roomId" = $1`,
-      [targetRoomId]
+      [targetRoomId],
     );
     const recheck = recheckRes.rows[0];
     if (recheck && recheck.status === "active") {
@@ -151,7 +165,9 @@ export async function startRoomLifecycle(roomId: string, uid: string | "SYSTEM")
         success: true,
         status: "active",
         startedAt: new Date(recheck.startedAt).toISOString(),
-        expiresAt: recheck.expiresAt ? new Date(recheck.expiresAt).toISOString() : null,
+        expiresAt: recheck.expiresAt
+          ? new Date(recheck.expiresAt).toISOString()
+          : null,
         isPermanent: Boolean(recheck.isPermanent),
         durationMinutes: recheck.durationMinutes ?? null,
         serverNow: Date.now(),
@@ -174,16 +190,21 @@ export async function startRoomLifecycle(roomId: string, uid: string | "SYSTEM")
         "active",
         null,
         expiresAt,
-        uid === "SYSTEM" ? "scheduled start time reached" : "host started watch party",
+        uid === "SYSTEM"
+          ? "scheduled start time reached"
+          : "host started watch party",
         now,
-      ]
+      ],
     );
   } catch (auditErr) {
     console.warn("Failed to write room.started audit event:", auditErr);
   }
 
   // 8. In-memory Room instance update
-  const memoryRoom = roomsMap?.get(targetRoomId) || roomsMap?.get(normalizedId) || roomsMap?.get(slashedId);
+  const memoryRoom =
+    roomsMap?.get(targetRoomId) ||
+    roomsMap?.get(normalizedId) ||
+    roomsMap?.get(slashedId);
   if (memoryRoom) {
     memoryRoom.status = "active";
     memoryRoom.startedAt = now;
@@ -235,26 +256,33 @@ export async function startRoomLifecycle(roomId: string, uid: string | "SYSTEM")
 export async function cancelRoomLifecycle(roomId: string, uid: string) {
   if (!postgres) throw new Error("Database is not configured.");
   const cleanRoomId = roomId.trim();
-  const normalizedId = cleanRoomId.startsWith("/") ? cleanRoomId.substring(1) : cleanRoomId;
+  const normalizedId = cleanRoomId.startsWith("/")
+    ? cleanRoomId.substring(1)
+    : cleanRoomId;
   const slashedId = `/${normalizedId}`;
 
   const roomRes = await postgres.query(
     `SELECT "roomId", owner_id, status FROM rooms WHERE "roomId" = $1 OR "roomId" = $2`,
-    [normalizedId, slashedId]
+    [normalizedId, slashedId],
   );
   if (!roomRes || roomRes.rowCount === 0) throw new Error("Room not found.");
   const room = roomRes.rows[0];
   const targetRoomId = room.roomId;
 
-  if (room.owner_id !== uid) throw new Error("Only the room owner can cancel the watch party.");
-  if (room.status !== "scheduled") throw new Error(`Cannot cancel a room that is ${room.status}. Only scheduled rooms can be cancelled.`);
+  if (room.owner_id !== uid)
+    throw new Error("Only the room owner can cancel the watch party.");
+  if (room.status !== "scheduled")
+    throw new Error(
+      `Cannot cancel a room that is ${room.status}. Only scheduled rooms can be cancelled.`,
+    );
 
   const now = new Date();
   const updateRes = await postgres.query(
     `UPDATE rooms SET status = 'cancelled', "cancelledAt" = $1, "lastUpdateTime" = $1 WHERE "roomId" = $2 AND owner_id = $3 AND status = 'scheduled' RETURNING *`,
-    [now, targetRoomId, uid]
+    [now, targetRoomId, uid],
   );
-  if (updateRes.rowCount === 0) throw new Error("Failed to transition room to cancelled state.");
+  if (updateRes.rowCount === 0)
+    throw new Error("Failed to transition room to cancelled state.");
 
   try {
     await postgres.query(
@@ -271,61 +299,86 @@ export async function cancelRoomLifecycle(roomId: string, uid: string) {
         null,
         "host cancelled scheduled watch party",
         now,
-      ]
+      ],
     );
   } catch (auditErr) {
     console.warn("Failed to write room.cancelled audit event:", auditErr);
   }
 
-  const memoryRoom = roomsMap?.get(targetRoomId) || roomsMap?.get(normalizedId) || roomsMap?.get(slashedId);
+  const memoryRoom =
+    roomsMap?.get(targetRoomId) ||
+    roomsMap?.get(normalizedId) ||
+    roomsMap?.get(slashedId);
   if (memoryRoom) {
     memoryRoom.status = "cancelled";
     memoryRoom.lastUpdateTime = now;
   }
   if (ioInstance) {
-    const broadcastPayload = { status: "cancelled", cancelledAt: now.toISOString(), serverNow: Date.now() };
+    const broadcastPayload = {
+      status: "cancelled",
+      cancelledAt: now.toISOString(),
+      serverNow: Date.now(),
+    };
     ioInstance.of(targetRoomId).emit("REC:roomCancelled", broadcastPayload);
-    if (normalizedId !== targetRoomId) ioInstance.of(normalizedId).emit("REC:roomCancelled", broadcastPayload);
+    if (normalizedId !== targetRoomId)
+      ioInstance.of(normalizedId).emit("REC:roomCancelled", broadcastPayload);
   }
   return { success: true, status: "cancelled", cancelledAt: now.toISOString() };
 }
 
-export async function rescheduleRoomLifecycle(roomId: string, uid: string, newTimestamp: string) {
+export async function rescheduleRoomLifecycle(
+  roomId: string,
+  uid: string,
+  newTimestamp: string,
+) {
   if (!postgres) throw new Error("Database is not configured.");
   const parsedDate = new Date(newTimestamp);
-  if (isNaN(parsedDate.getTime())) throw new Error("Invalid scheduledStartsAt timestamp");
-  if (parsedDate.getTime() <= Date.now()) throw new Error("Scheduled start must be in the future");
+  if (isNaN(parsedDate.getTime()))
+    throw new Error("Invalid scheduledStartsAt timestamp");
+  if (parsedDate.getTime() <= Date.now())
+    throw new Error("Scheduled start must be in the future");
 
   const cleanRoomId = roomId.trim();
-  const normalizedId = cleanRoomId.startsWith("/") ? cleanRoomId.substring(1) : cleanRoomId;
+  const normalizedId = cleanRoomId.startsWith("/")
+    ? cleanRoomId.substring(1)
+    : cleanRoomId;
   const slashedId = `/${normalizedId}`;
 
   const roomRes = await postgres.query(
     `SELECT "roomId", owner_id, status FROM rooms WHERE "roomId" = $1 OR "roomId" = $2`,
-    [normalizedId, slashedId]
+    [normalizedId, slashedId],
   );
   if (!roomRes || roomRes.rowCount === 0) throw new Error("Room not found.");
   const room = roomRes.rows[0];
   const targetRoomId = room.roomId;
 
-  if (room.owner_id !== uid) throw new Error("Only the room owner can reschedule the watch party.");
-  if (room.status !== "scheduled") throw new Error(`Cannot reschedule a room that is ${room.status}.`);
+  if (room.owner_id !== uid)
+    throw new Error("Only the room owner can reschedule the watch party.");
+  if (room.status !== "scheduled")
+    throw new Error(`Cannot reschedule a room that is ${room.status}.`);
 
   const updateRes = await postgres.query(
     `UPDATE rooms SET "scheduledStartsAt" = $1, "lastUpdateTime" = NOW() WHERE "roomId" = $2 AND owner_id = $3 AND status = 'scheduled' RETURNING *`,
-    [parsedDate, targetRoomId, uid]
+    [parsedDate, targetRoomId, uid],
   );
   if (updateRes.rowCount === 0) throw new Error("Failed to reschedule room.");
 
-  const memoryRoom = roomsMap?.get(targetRoomId) || roomsMap?.get(normalizedId) || roomsMap?.get(slashedId);
+  const memoryRoom =
+    roomsMap?.get(targetRoomId) ||
+    roomsMap?.get(normalizedId) ||
+    roomsMap?.get(slashedId);
   if (memoryRoom) {
     memoryRoom.scheduledStartsAt = parsedDate;
     memoryRoom.lastUpdateTime = new Date();
   }
   if (ioInstance) {
-    const broadcastPayload = { scheduledStartsAt: parsedDate.toISOString(), serverNow: Date.now() };
+    const broadcastPayload = {
+      scheduledStartsAt: parsedDate.toISOString(),
+      serverNow: Date.now(),
+    };
     ioInstance.of(targetRoomId).emit("REC:roomRescheduled", broadcastPayload);
-    if (normalizedId !== targetRoomId) ioInstance.of(normalizedId).emit("REC:roomRescheduled", broadcastPayload);
+    if (normalizedId !== targetRoomId)
+      ioInstance.of(normalizedId).emit("REC:roomRescheduled", broadcastPayload);
   }
   return { success: true, scheduledStartsAt: parsedDate.toISOString() };
 }
@@ -341,11 +394,13 @@ export async function activateDueScheduledRooms() {
         await startRoomLifecycle(row.roomId, "SYSTEM");
         console.log(`[RoomScheduler] Activated scheduled room ${row.roomId}`);
       } catch (err) {
-        console.error(`[RoomScheduler] Failed to activate scheduled room ${row.roomId}:`, err);
+        console.error(
+          `[RoomScheduler] Failed to activate scheduled room ${row.roomId}:`,
+          err,
+        );
       }
     }
   } catch (err) {
     console.error("[RoomScheduler] Failed to query due scheduled rooms:", err);
   }
 }
-

@@ -4,6 +4,7 @@ import "./index.css";
 import React, { lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Redirect, Switch } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 
 import type { User } from "@supabase/supabase-js";
 import {
@@ -489,6 +490,7 @@ class CoWatch extends React.Component {
               <MetadataContext.Provider value={this.state}>
                 <BrowserRouter>
                   <RouteSEO />
+                  <Analytics />
                   <Suspense fallback={<RouteFallback />}>
                     <Switch>
                       <Route

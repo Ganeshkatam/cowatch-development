@@ -104,7 +104,8 @@ interface PersistentRoom {
   data?: any;
   owner?: string;
   owner_id: string;
-  status?: 'waiting' | 'scheduled' | 'active' | 'inactive' | 'ended' | 'expired';
+  status?:
+    "waiting" | "scheduled" | "active" | "inactive" | "ended" | "expired";
   startedAt?: Date | string;
   expiresAt?: Date | string;
   endedAt?: Date | string;
@@ -158,17 +159,15 @@ interface DocumentPictureInPicture {
   addEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
-    options?: boolean | AddEventListenerOptions
+    options?: boolean | AddEventListenerOptions,
   ): void;
   removeEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
-    options?: boolean | EventListenerOptions
+    options?: boolean | EventListenerOptions,
   ): void;
 }
 
 interface Window {
   documentPictureInPicture?: DocumentPictureInPicture;
 }
-
-
