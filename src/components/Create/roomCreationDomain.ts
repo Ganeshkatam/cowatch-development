@@ -9,6 +9,8 @@ export interface RoomFormState {
   setRoomTitle: (v: string) => void;
   roomDescription: string;
   setRoomDescription: (v: string) => void;
+  passcode: string;
+  setPasscode: (v: string) => void;
 
   isChatDisabled: boolean;
   setIsChatDisabled: (v: boolean) => void;
@@ -28,9 +30,19 @@ export interface RoomFormState {
   setError: (v: string) => void;
 }
 
+function generatePasscode() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 export function useRoomFormState(): RoomFormState {
   const [roomTitle, setRoomTitle] = useState("Watch Party");
   const [roomDescription, setRoomDescription] = useState("");
+  const [passcode, setPasscode] = useState(generatePasscode());
 
   const [isChatDisabled, setIsChatDisabled] = useState(false);
   const [lock, setLock] = useState(false);
@@ -81,6 +93,8 @@ export function useRoomFormState(): RoomFormState {
     setRoomTitle,
     roomDescription,
     setRoomDescription,
+    passcode,
+    setPasscode,
     isChatDisabled,
     setIsChatDisabled,
     lock,
@@ -132,6 +146,13 @@ export async function submitRoomCreation({
     }
   }
 
+  if (formState.passcode && (formState.passcode.length < 1 || formState.passcode.length > 8)) {
+    throw new Error("Passcode must be between 1 and 8 characters.");
+  }
+  if (formState.passcode && !/^[A-Za-z0-9]+$/.test(formState.passcode)) {
+    throw new Error("Passcode can only contain letters and numbers.");
+  }
+
   const roomName = await createRoom(
     user,
     false,
@@ -139,6 +160,7 @@ export async function submitRoomCreation({
     {
       roomTitle: trimmedTitle,
       roomDescription: formState.roomDescription.trim() || undefined,
+      passcode: formState.passcode,
       isPermanent: formState.isPermanent,
       durationMinutes: formState.isPermanent ? undefined : Number(formState.durationMinutes),
       isChatDisabled: formState.isChatDisabled,

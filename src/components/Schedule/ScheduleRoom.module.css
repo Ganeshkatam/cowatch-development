@@ -15,12 +15,7 @@
   display: none;
 }
 
-.dateTimeGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 10px;
-}
+
 
 .timezoneNote {
   font-size: 12px;
@@ -37,8 +32,9 @@
   width: 100%;
   height: 44px;
   padding: 0 14px;
-  background-color: var(--surface-secondary);
-  border: 1px solid var(--border-subtle);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -168,16 +164,14 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 640px) {
-  .dateTimeGrid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .whenCard {
-    padding: 18px 14px;
-  }
+.dateTimeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: clamp(12px, 2dvw, 16px);
+  margin-bottom: 10px;
 }
+
+/* Fluid grids handle the responsiveness intrinsically */
 
 /* Light Theme Adaptation */
 :global([data-color-scheme="light"]) .pickerTrigger {

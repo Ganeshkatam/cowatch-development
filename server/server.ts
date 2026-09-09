@@ -27,6 +27,7 @@ import {
   decryptPasscodeForOwner,
   generateRandomPasscode,
   calculatePasscodeFingerprint,
+  isValidRoomPasscode,
 } from "./utils/roomPasscode.ts";
 import {
   validateTemporaryDuration,
@@ -646,7 +647,11 @@ app.post("/createRoom", async (req, res) => {
   let generatedPasscode = "";
 
   for (let attempt = 1; attempt <= MAX_PASSCODE_ATTEMPTS; attempt++) {
-    generatedPasscode = generateRandomPasscode();
+    if (attempt === 1 && isValidRoomPasscode(req.body?.passcode)) {
+      generatedPasscode = req.body.passcode;
+    } else {
+      generatedPasscode = generateRandomPasscode();
+    }
     const fingerprint = calculatePasscodeFingerprint(generatedPasscode);
 
     const roomObj: any = {

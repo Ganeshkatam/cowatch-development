@@ -49,9 +49,9 @@ export const DurationSelect: React.FC<DurationSelectProps> = ({ formState, class
         size="md"
         styles={{
           input: {
-            backgroundColor: "var(--surface-secondary)",
-            borderColor: "var(--border-subtle)",
-            color: "var(--text-primary)",
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
+            borderColor: "rgba(255, 255, 255, 0.1)",
+            color: "#ffffff",
           },
         }}
       />
@@ -94,9 +94,9 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
           size="md"
           styles={{
             input: {
-              backgroundColor: "var(--surface-secondary)",
-              borderColor: "var(--border-subtle)",
-              color: "var(--text-primary)",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              borderColor: "rgba(255, 255, 255, 0.1)",
+              color: "#ffffff",
               fontWeight: 600,
             },
           }}
@@ -144,9 +144,9 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
                 autoFocus
                 styles={{
                   input: {
-                    backgroundColor: "var(--surface-secondary)",
-                    borderColor: "var(--border-subtle)",
-                    color: "var(--text-primary)",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    borderColor: "rgba(255, 255, 255, 0.1)",
+                    color: "#ffffff",
                   },
                 }}
               />
@@ -203,26 +203,58 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
 
       {/* Passcode (and Duration if not hidden) */}
       {hideDuration ? (
-        <div className={styles.settingRow}>
+        <div className={styles.settingRow} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)" }}>
           <div>
-            <Text fw={500} size="sm" c="var(--text-primary)">
-              Room Passcode
-            </Text>
-            <Text size="xs" c="dimmed" mt={2}>
-              An 8-character passcode will be generated automatically for your room.
-            </Text>
+            <TextInput
+              label="Room Passcode"
+              description="Automatically generated, but you can change it."
+              value={formState.passcode}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^A-Za-z0-9]/g, '');
+                formState.setPasscode(val);
+              }}
+              minLength={1}
+              maxLength={8}
+              required
+              styles={{
+                input: {
+                  fontFamily: "monospace",
+                  letterSpacing: "1px",
+                  backgroundColor: "rgba(255, 255, 255, 0.05)",
+                  borderColor: "rgba(255, 255, 255, 0.1)",
+                  color: "#ffffff",
+                  fontWeight: 600,
+                },
+              }}
+            />
           </div>
         </div>
       ) : (
         <div className={styles.twoColRow}>
-          <div className={styles.settingRow}>
+          <div className={styles.settingRow} style={{ flex: 1 }}>
             <div>
-              <Text fw={500} size="sm" c="var(--text-primary)">
-                Room Passcode
-              </Text>
-              <Text size="xs" c="dimmed" mt={2}>
-                An 8-character passcode will be generated automatically.
-              </Text>
+              <TextInput
+                label="Room Passcode"
+                description="Automatically generated, but you can change it."
+                value={formState.passcode}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^A-Za-z0-9]/g, '');
+                  formState.setPasscode(val);
+                }}
+                minLength={1}
+                maxLength={8}
+                required
+                styles={{
+                  input: {
+                    fontFamily: "monospace",
+                    letterSpacing: "1px",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    borderColor: "rgba(255, 255, 255, 0.1)",
+                    color: "#ffffff",
+                    fontWeight: 600,
+                  },
+                }}
+              />
             </div>
           </div>
 

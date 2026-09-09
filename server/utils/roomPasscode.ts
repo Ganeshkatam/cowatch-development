@@ -30,8 +30,9 @@ export function calculatePasscodeFingerprint(passcode: string): string {
 export function isValidRoomPasscode(passcode: unknown): passcode is string {
   return (
     typeof passcode === "string" &&
-    passcode.length === ROOM_PASSCODE_LENGTH &&
-    /^[A-Za-z0-9]{8}$/.test(passcode)
+    passcode.length >= 1 &&
+    passcode.length <= 8 &&
+    /^[A-Za-z0-9]+$/.test(passcode)
   );
 }
 
