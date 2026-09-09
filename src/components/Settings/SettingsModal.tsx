@@ -171,6 +171,36 @@ export const SettingsModal = ({
     }
   };
 
+  const handleToggleNotif = (checked: boolean) => {
+    setDraftNotif(checked);
+    updateSettings(
+      JSON.stringify({
+        ...getCurrentSettings(),
+        disableChatSound: !checked,
+      })
+    );
+  };
+
+  const handleToggleCamera = async (checked: boolean) => {
+    setDraftCamera(checked);
+    if (!user) return;
+    try {
+      await supabase.from("profiles").update({ pref_camera_on: checked }).eq("id", user.id);
+    } catch (e) {
+      console.error("Failed to update camera preference:", e);
+    }
+  };
+
+  const handleToggleMic = async (checked: boolean) => {
+    setDraftMic(checked);
+    if (!user) return;
+    try {
+      await supabase.from("profiles").update({ pref_mic_on: checked }).eq("id", user.id);
+    } catch (e) {
+      console.error("Failed to update microphone preference:", e);
+    }
+  };
+
   const handleSave = async () => {
     setIsLoading(true);
     setError("");
@@ -286,24 +316,6 @@ export const SettingsModal = ({
         }
       }
 
-      // 3. Save Local Settings
-      updateSettings(
-        JSON.stringify({
-          ...getCurrentSettings(),
-          disableChatSound: !draftNotif,
-        })
-      );
-      
-      const { error: prefError } = await supabase
-        .from("profiles")
-        .update({
-          pref_camera_on: draftCamera,
-          pref_mic_on: draftMic,
-        })
-        .eq("id", user.id);
-      
-      if (prefError) throw prefError;
-
       setModalOpen(false);
     } catch (err: any) {
       console.error(err);
@@ -377,21 +389,21 @@ export const SettingsModal = ({
                 label="Chat Notifications"
                 description="Play a sound for new messages."
                 checked={draftNotif}
-                onChange={(e) => setDraftNotif(e.currentTarget.checked)}
+                onChange={(e) => handleToggleNotif(e.currentTarget.checked)}
                 size="md"
               />
               <Switch
                 label="Camera Default"
                 description="Join rooms with camera on."
                 checked={draftCamera}
-                onChange={(e) => setDraftCamera(e.currentTarget.checked)}
+                onChange={(e) => handleToggleCamera(e.currentTarget.checked)}
                 size="md"
               />
               <Switch
                 label="Microphone Default"
                 description="Join rooms with microphone on."
                 checked={draftMic}
-                onChange={(e) => setDraftMic(e.currentTarget.checked)}
+                onChange={(e) => handleToggleMic(e.currentTarget.checked)}
                 size="md"
               />
             </Stack>
@@ -444,21 +456,21 @@ export const SettingsModal = ({
                   label="Chat Notifications"
                   description="Play a sound for new messages."
                   checked={draftNotif}
-                  onChange={(e) => setDraftNotif(e.currentTarget.checked)}
+                  onChange={(e) => handleToggleNotif(e.currentTarget.checked)}
                   size="md"
                 />
                 <Switch
                   label="Camera Default"
                   description="Join rooms with camera on."
                   checked={draftCamera}
-                  onChange={(e) => setDraftCamera(e.currentTarget.checked)}
+                  onChange={(e) => handleToggleCamera(e.currentTarget.checked)}
                   size="md"
                 />
                 <Switch
                   label="Microphone Default"
                   description="Join rooms with microphone on."
                   checked={draftMic}
-                  onChange={(e) => setDraftMic(e.currentTarget.checked)}
+                  onChange={(e) => handleToggleMic(e.currentTarget.checked)}
                   size="md"
                 />
               </Stack>
@@ -624,8 +636,14 @@ export const SettingsModal = ({
         borderBottomLeftRadius: "8px",
         borderBottomRightRadius: "8px"
       }}>
-        <Button variant="default" onClick={() => setModalOpen(false)}>Cancel</Button>
-        <Button onClick={handleSave} loading={isLoading}>Save Changes</Button>
+        {isRoomActive ? (
+          <Button variant="default" onClick={() => setModalOpen(false)}>Close</Button>
+        ) : (
+          <>
+            <Button variant="default" onClick={() => setModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} loading={isLoading}>Save Changes</Button>
+          </>
+        )}
       </div>
     </Modal>
   );
