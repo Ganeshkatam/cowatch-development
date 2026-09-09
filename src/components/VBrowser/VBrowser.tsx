@@ -492,9 +492,7 @@ export class VBrowser extends React.Component<{
                     ?.dispatchEvent(new KeyboardEvent("keyup", { key: e.key }));
                 }
               }}
-              onBeforeInputCapture={(
-                e: React.CompositionEvent<HTMLInputElement>,
-              ) => {
+              onBeforeInputCapture={(e: any) => {
                 e.nativeEvent.preventDefault();
                 // document.getElementById('debug')!.innerHTML = e.type + ' ' + e.data;
                 if (e.type === "beforeinput") {
