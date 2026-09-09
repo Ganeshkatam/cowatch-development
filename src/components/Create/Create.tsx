@@ -5,6 +5,7 @@ import { MetadataContext } from "../../MetadataContext";
 import { useHistory } from "react-router-dom";
 import { useRoomFormState, submitRoomCreation } from "./roomCreationDomain";
 import { SharedRoomFields } from "./SharedRoomFields";
+import { TopBar } from "../TopBar/TopBar";
 import styles from "./Create.module.css";
 
 export const Create: React.FC = () => {
@@ -40,70 +41,73 @@ export const Create: React.FC = () => {
   };
 
   return (
-    <div className={styles.pageWrapper}>
-      <div className={styles.container}>
-        {/* Top Navigation */}
-        <div className={styles.topNav}>
-          <button
-            type="button"
-            className={styles.breadcrumbLink}
-            onClick={() => history.push("/myrooms")}
-          >
-            <IconArrowLeft size={16} />
-            <span>Back to My Rooms</span>
-          </button>
-          <Badge variant="light" color="violet" size="lg" radius="sm">
-            New Watch Party
-          </Badge>
-        </div>
+    <>
+      <TopBar hideNewRoom={true} />
+      <div className={styles.pageWrapper}>
+        <div className={styles.container}>
+          {/* Top Navigation */}
+          <div className={styles.topNav}>
+            <button
+              type="button"
+              className={styles.breadcrumbLink}
+              onClick={() => history.push("/myrooms")}
+            >
+              <IconArrowLeft size={16} />
+              <span>Back to My Rooms</span>
+            </button>
+            <Badge variant="light" color="violet" size="lg" radius="sm">
+              New Watch Party
+            </Badge>
+          </div>
 
 
-        {/* Responsive Grid Layout */}
-        <div className={styles.layoutGrid}>
-          {/* Left Column: Form Configuration */}
-          <div className={styles.formCard}>
-            <div className={styles.formHeader}>
-              <h1 className={styles.formTitle}>Create a New Room</h1>
-              <p className={styles.formSubtitle}>
-                Configure your room identity, access security, and preferences. You can update these settings anytime while the room is active.
-              </p>
-            </div>
-
-            {(formError || formState.error) && (
-              <Alert color="red" mb="lg" title="Notice">
-                {formError || formState.error}
-              </Alert>
-            )}
-
-            <form id="create-room-form" onSubmit={handleSubmit}>
-              <SharedRoomFields formState={formState} />
-
-              <div className={styles.stickyFooter}>
-                <Button
-                  type="button"
-                  variant="default"
-                  size="md"
-                  onClick={() => history.push("/myrooms")}
-                  className={styles.cancelBtn}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="md"
-                  variant="gradient"
-                  gradient={{ from: "violet", to: "grape", deg: 135 }}
-                  disabled={loading || !formState.roomTitle.trim()}
-                  leftSection={loading ? <Loader size={18} color="white" /> : <IconCirclePlusFilled size={18} />}
-                  className={styles.createBtnPrimary}
-                >
-                  {loading ? "Creating..." : "Start Watch Party"}
-                </Button>
+          {/* Responsive Grid Layout */}
+          <div className={styles.layoutGrid}>
+            {/* Left Column: Form Configuration */}
+            <div className={styles.formCard}>
+              <div className={styles.formHeader}>
+                <h1 className={styles.formTitle}>Create a New Room</h1>
+                <p className={styles.formSubtitle}>
+                  Configure your room identity, access security, and preferences. You can update these settings anytime while the room is active.
+                </p>
               </div>
-            </form>
+
+              {(formError || formState.error) && (
+                <Alert color="red" mb="lg" title="Notice">
+                  {formError || formState.error}
+                </Alert>
+              )}
+
+              <form id="create-room-form" onSubmit={handleSubmit}>
+                <SharedRoomFields formState={formState} />
+
+                <div className={styles.stickyFooter}>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="md"
+                    onClick={() => history.push("/myrooms")}
+                    className={styles.cancelBtn}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="md"
+                    variant="gradient"
+                    gradient={{ from: "violet", to: "grape", deg: 135 }}
+                    disabled={loading || !formState.roomTitle.trim()}
+                    leftSection={loading ? <Loader size={18} color="white" /> : <IconCirclePlusFilled size={18} />}
+                    className={styles.createBtnPrimary}
+                  >
+                    {loading ? "Creating..." : "Start Watch Party"}
+                  </Button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };

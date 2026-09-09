@@ -17,6 +17,7 @@ import {
 import { SharedRoomFields, DurationSelect } from "../Create/SharedRoomFields";
 import { DatePickerDropdown } from "./DatePickerDropdown";
 import { TimePickerDropdown } from "./TimePickerDropdown";
+import { TopBar } from "../TopBar/TopBar";
 import createStyles from "../Create/Create.module.css";
 import scheduleStyles from "./ScheduleRoom.module.css";
 
@@ -133,114 +134,117 @@ export const ScheduleRoom: React.FC = () => {
   const minDate = useMemo(() => formatDate(new Date()), []);
 
   return (
-    <div className={createStyles.pageWrapper}>
-      <div className={createStyles.container}>
-        {/* Top Navigation */}
-        <div className={createStyles.topNav}>
-          <button
-            type="button"
-            className={createStyles.breadcrumbLink}
-            onClick={() => history.push("/myrooms")}
-          >
-            <IconArrowLeft size={16} />
-            <span>Back to My Rooms</span>
-          </button>
-          <Badge variant="light" color="violet" size="lg" radius="sm">
-            Schedule Party
-          </Badge>
-        </div>
+    <>
+      <TopBar hideNewRoom={true} />
+      <div className={createStyles.pageWrapper}>
+        <div className={createStyles.container}>
+          {/* Top Navigation */}
+          <div className={createStyles.topNav}>
+            <button
+              type="button"
+              className={createStyles.breadcrumbLink}
+              onClick={() => history.push("/myrooms")}
+            >
+              <IconArrowLeft size={16} />
+              <span>Back to My Rooms</span>
+            </button>
+            <Badge variant="light" color="violet" size="lg" radius="sm">
+              Schedule Party
+            </Badge>
+          </div>
 
 
-        {/* Responsive Grid Layout */}
-        <div className={createStyles.layoutGrid}>
-          {/* Left Column: Form Configuration */}
-          <div className={createStyles.formCard}>
-            <div className={createStyles.formHeader}>
-              <h1 className={createStyles.formTitle}>Schedule a Watch Party</h1>
-              <p className={createStyles.formSubtitle}>
-                Plan the moment. We'll handle the room.
-              </p>
-            </div>
-
-            {(formError || formState.error) && (
-              <Alert color="red" mb="lg" title="Notice">
-                {formError || formState.error}
-              </Alert>
-            )}
-
-            <form id="schedule-room-form" onSubmit={handleSubmit}>
-              {/* Shared Room Fields with When section & Duration placed directly after Room Title */}
-              <SharedRoomFields
-                formState={formState}
-                hideDuration
-                afterTitle={
-                  <>
-                    <div style={{ margin: "4px 0" }}>
-                      <Text size="sm" fw={500} c="var(--text-primary)" mb={10}>
-                        When
-                      </Text>
-
-                      <div className={scheduleStyles.dateTimeGrid}>
-                        <div>
-                          <Text size="xs" fw={600} c="var(--text-secondary)" mb={6}>
-                            Date
-                          </Text>
-                          <DatePickerDropdown
-                            value={scheduleDate}
-                            onChange={handleDateChange}
-                            minDate={minDate}
-                          />
-                        </div>
-
-                        <div>
-                          <Text size="xs" fw={600} c="var(--text-secondary)" mb={6}>
-                            Time
-                          </Text>
-                          <TimePickerDropdown
-                            value={scheduleTime}
-                            onChange={handleTimeChange}
-                            selectedDate={scheduleDate}
-                          />
-                        </div>
-                      </div>
-
-                      <div className={scheduleStyles.timezoneNote}>
-                        <IconWorld size={14} />
-                        <span>{timezoneDisplay}</span>
-                      </div>
-                    </div>
-
-                    <DurationSelect formState={formState} />
-                  </>
-                }
-              />
-
-              <div className={createStyles.stickyFooter}>
-                <Button
-                  type="button"
-                  variant="default"
-                  size="md"
-                  onClick={() => history.push("/myrooms")}
-                  className={createStyles.cancelBtn}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="md"
-                  variant="gradient"
-                  gradient={{ from: "violet", to: "grape", deg: 135 }}
-                  disabled={loading || !formState.roomTitle.trim()}
-                  leftSection={loading ? <Loader size={18} color="white" /> : <IconCalendarEvent size={18} />}
-                  className={createStyles.createBtnPrimary}
-                >
-                  {loading ? "Scheduling..." : "Schedule Watch Party"}
-                </Button>
+          {/* Responsive Grid Layout */}
+          <div className={createStyles.layoutGrid}>
+            {/* Left Column: Form Configuration */}
+            <div className={createStyles.formCard}>
+              <div className={createStyles.formHeader}>
+                <h1 className={createStyles.formTitle}>Schedule a Watch Party</h1>
+                <p className={createStyles.formSubtitle}>
+                  Plan the moment. We'll handle the room.
+                </p>
               </div>
-            </form>
+
+              {(formError || formState.error) && (
+                <Alert color="red" mb="lg" title="Notice">
+                  {formError || formState.error}
+                </Alert>
+              )}
+
+              <form id="schedule-room-form" onSubmit={handleSubmit}>
+                {/* Shared Room Fields with When section & Duration placed directly after Room Title */}
+                <SharedRoomFields
+                  formState={formState}
+                  hideDuration
+                  afterTitle={
+                    <>
+                      <div style={{ margin: "4px 0" }}>
+                        <Text size="sm" fw={500} c="var(--text-primary)" mb={10}>
+                          When
+                        </Text>
+
+                        <div className={scheduleStyles.dateTimeGrid}>
+                          <div>
+                            <Text size="xs" fw={600} c="var(--text-secondary)" mb={6}>
+                              Date
+                            </Text>
+                            <DatePickerDropdown
+                              value={scheduleDate}
+                              onChange={handleDateChange}
+                              minDate={minDate}
+                            />
+                          </div>
+
+                          <div>
+                            <Text size="xs" fw={600} c="var(--text-secondary)" mb={6}>
+                              Time
+                            </Text>
+                            <TimePickerDropdown
+                              value={scheduleTime}
+                              onChange={handleTimeChange}
+                              selectedDate={scheduleDate}
+                            />
+                          </div>
+                        </div>
+
+                        <div className={scheduleStyles.timezoneNote}>
+                          <IconWorld size={14} />
+                          <span>{timezoneDisplay}</span>
+                        </div>
+                      </div>
+
+                      <DurationSelect formState={formState} />
+                    </>
+                  }
+                />
+
+                <div className={createStyles.stickyFooter}>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="md"
+                    onClick={() => history.push("/myrooms")}
+                    className={createStyles.cancelBtn}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="md"
+                    variant="gradient"
+                    gradient={{ from: "violet", to: "grape", deg: 135 }}
+                    disabled={loading || !formState.roomTitle.trim()}
+                    leftSection={loading ? <Loader size={18} color="white" /> : <IconCalendarEvent size={18} />}
+                    className={createStyles.createBtnPrimary}
+                  >
+                    {loading ? "Scheduling..." : "Schedule Watch Party"}
+                  </Button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
