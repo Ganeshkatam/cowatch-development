@@ -78,24 +78,20 @@ export const FileShareModal = (props: {
             </Table.Td>
             <Table.Td>
               <Button
-                color="orange"
-                onClick={() => {
-                  props.startFileShare(true);
-                  props.closeModal();
-                }}
+                color="gray"
+                disabled
+                title="Premium relay infrastructure is currently under development."
               >
-                Start Fileshare w/Relay
+                Coming Soon
               </Button>
             </Table.Td>
             <Table.Td>
               <Button
-                color="orange"
-                onClick={() => {
-                  props.startConvert();
-                  props.closeModal();
-                }}
+                color="gray"
+                disabled
+                title="Real-time media conversion infrastructure is currently under development."
               >
-                Start Fileshare w/Convert
+                Coming Soon
               </Button>
             </Table.Td>
           </Table.Tr>

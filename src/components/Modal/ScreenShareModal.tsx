@@ -72,13 +72,11 @@ export const ScreenShareModal = ({
             </Table.Td>
             <Table.Td>
               <Button
-                color="orange"
-                onClick={() => {
-                  startScreenShare(true);
-                  closeModal();
-                }}
+                color="gray"
+                disabled
+                title="Premium relay infrastructure is currently under development."
               >
-                Start Screenshare w/Relay
+                Coming Soon
               </Button>
             </Table.Td>
           </Table.Tr>

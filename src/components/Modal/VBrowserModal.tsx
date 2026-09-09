@@ -159,7 +159,13 @@ export class VBrowserModal extends React.Component<{
                 )}
               </Table.Td>
               <Table.Td>
-                <LaunchButton large />
+                <Button
+                  color="gray"
+                  disabled
+                  title="VBrowser+ infrastructure is currently under development."
+                >
+                  Coming Soon
+                </Button>
               </Table.Td>
             </Table.Tr>
           </Table.Tbody>
