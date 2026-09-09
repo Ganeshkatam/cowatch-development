@@ -254,12 +254,14 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
           description="Only the host can control playback"
           centerAlign
         >
-          <Switch
-            checked={formState.lock}
-            onChange={(e) => formState.setLock(e.currentTarget.checked)}
-            color="violet"
-            size="md"
-          />
+          <div style={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
+            <Switch
+              checked={formState.lock}
+              onChange={(e) => formState.setLock(e.currentTarget.checked)}
+              color="violet"
+              size="md"
+            />
+          </div>
         </FieldRow>
 
         <FieldRow
@@ -267,12 +269,14 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
           description="Require host approval before entry"
           centerAlign
         >
-          <Switch
-            checked={formState.isWaitingLoungeEnabled}
-            onChange={(e) => formState.setIsWaitingLoungeEnabled(e.currentTarget.checked)}
-            color="violet"
-            size="md"
-          />
+          <div style={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
+            <Switch
+              checked={formState.isWaitingLoungeEnabled}
+              onChange={(e) => formState.setIsWaitingLoungeEnabled(e.currentTarget.checked)}
+              color="violet"
+              size="md"
+            />
+          </div>
         </FieldRow>
 
         <FieldRow
@@ -280,12 +284,14 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
           description="Turn off text chat during the Room"
           centerAlign
         >
-          <Switch
-            checked={formState.isChatDisabled}
-            onChange={(e) => formState.setIsChatDisabled(e.currentTarget.checked)}
-            color="violet"
-            size="md"
-          />
+          <div style={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
+            <Switch
+              checked={formState.isChatDisabled}
+              onChange={(e) => formState.setIsChatDisabled(e.currentTarget.checked)}
+              color="violet"
+              size="md"
+            />
+          </div>
         </FieldRow>
 
         <FieldRow
@@ -293,12 +299,14 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
           description="Room stays available until manually ended"
           centerAlign
         >
-          <Switch
-            checked={formState.isPermanent}
-            onChange={(e) => formState.setIsPermanent(e.currentTarget.checked)}
-            color="violet"
-            size="md"
-          />
+          <div style={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
+            <Switch
+              checked={formState.isPermanent}
+              onChange={(e) => formState.setIsPermanent(e.currentTarget.checked)}
+              color="violet"
+              size="md"
+            />
+          </div>
         </FieldRow>
       </div>
     </Stack>
