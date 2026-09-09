@@ -247,7 +247,11 @@ export class Room {
 
         // Validate lifecycle
         const now = Date.now();
-        if (status === 'ended' || status === 'cancelled') {
+        if (status === 'ended') {
+          next(new Error("ROOM_ENDED"));
+          return;
+        }
+        if (status === 'cancelled') {
           next(new Error("ROOM_NOT_JOINABLE"));
           return;
         }

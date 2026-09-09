@@ -717,6 +717,7 @@ export class App extends React.Component<AppProps, AppState> {
           "UNAUTHORIZED",
           "ADMISSION_EXPIRED",
           "ROOM_NOT_JOINABLE",
+          "ROOM_ENDED",
           "ROOM_NOT_FOUND",
           "passcode",
           "password"
@@ -756,9 +757,20 @@ export class App extends React.Component<AppProps, AppState> {
           this.setState({ successMessage: "" });
         }, 3000);
       });
-      socket.on("kicked", () => {
+      socket.on("REC:roomEnded", (data?: any) => {
+        const targetId = data?.roomId || cleanRoomId;
+        this.setState({ roomStatus: "ended" });
+        window.location.assign(`/join/${targetId}`);
+      });
+      socket.on("kicked", (data?: any) => {
         const isOwner = Boolean(this.state.owner && this.context.user?.id === this.state.owner);
-        window.location.assign(isOwner ? "/home" : "/");
+        if (data?.reason === "ROOM_ENDED") {
+          const targetId = data?.roomId || cleanRoomId;
+          this.setState({ roomStatus: "ended" });
+          window.location.assign(`/join/${targetId}`);
+        } else {
+          window.location.assign(isOwner ? "/home" : "/");
+        }
       });
       socket.on("REC:play", (data?: any) => {
         if (
@@ -2866,6 +2878,91 @@ export class App extends React.Component<AppProps, AppState> {
             participantCount={this.state.participants.length}
             socket={this.socket}
           />
+        )}
+
+        {this.state.roomStatus === "ended" && (
+          <div style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            backgroundColor: "rgba(5, 5, 10, 0.96)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "24px",
+            textAlign: "center"
+          }}>
+            <div style={{
+              maxWidth: "480px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "16px"
+            }}>
+              <div style={{
+                width: "60px",
+                height: "60px",
+                borderRadius: "50%",
+                background: "rgba(239, 68, 68, 0.12)",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#f87171"
+              }}>
+                <IconPlayerStop size={28} stroke={1.8} />
+              </div>
+              <span style={{
+                fontSize: "12px",
+                fontWeight: 750,
+                letterSpacing: "1.5px",
+                textTransform: "uppercase",
+                color: "#f87171"
+              }}>
+                ROOM ENDED
+              </span>
+              <h2 style={{
+                fontSize: "26px",
+                fontWeight: 700,
+                color: "#ffffff",
+                margin: 0,
+                letterSpacing: "-0.5px"
+              }}>
+                This Room Has Ended
+              </h2>
+              <p style={{
+                fontSize: "14px",
+                color: "rgba(255, 255, 255, 0.65)",
+                margin: 0,
+                lineHeight: 1.5
+              }}>
+                The host has concluded this watch party screening. No further viewing or participation is active in this room.
+              </p>
+              <div style={{ display: "flex", gap: "12px", marginTop: "12px", width: "100%", justifyContent: "center" }}>
+                <Button
+                  color="violet"
+                  size="md"
+                  onClick={() => window.location.assign(this.context.user ? "/myrooms" : "/")}
+                >
+                  {this.context.user ? "Back to My Rooms" : "Return Home"}
+                </Button>
+                <Button
+                  variant="light"
+                  color="gray"
+                  size="md"
+                  onClick={() => {
+                    const cleanId = (this.state.roomId || "").replace(/^\//, "");
+                    window.location.assign(`/join/${cleanId}`);
+                  }}
+                >
+                  View Session Summary
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Host Exit Room Confirmation Modal */}

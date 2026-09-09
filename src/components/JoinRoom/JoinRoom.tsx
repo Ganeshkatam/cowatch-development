@@ -183,6 +183,9 @@ export default function JoinRoom() {
       if (!res.ok || !data.success) {
         if (res.status === 503 || data.error === "ADMISSION_SERVICE_UNAVAILABLE") {
           setError("Room access is temporarily unavailable. Please try again shortly.");
+        } else if (data.error === "ROOM_ENDED") {
+          setError("This room has ended.");
+          await fetchMetadata();
         } else if (data.error === "INVALID_PASSCODE") {
           setError("Incorrect passcode.");
         } else if (data.error === "RATE_LIMIT_EXCEEDED") {

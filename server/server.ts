@@ -1077,19 +1077,21 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
 
   try {
     let room: any = null;
+    const cleanRoomId = roomId.startsWith("/") ? roomId.substring(1) : roomId;
+    const slashRoomId = `/${cleanRoomId}`;
     if (postgres) {
       const result = await postgres.query(
         `SELECT "roomId", "roomTitle", "roomDescription", status, "startedAt", "scheduledStartsAt", "expiresAt", "endedAt", 
                 "isPermanent", "isSubRoom", owner_id, "isWaitingLoungeEnabled", "coverPhoto",
                 (passcode IS NOT NULL AND passcode <> '') AS "isPasscodeProtected"
-         FROM rooms WHERE "roomId" = $1`,
-        [roomId]
+         FROM rooms WHERE "roomId" = $1 OR "roomId" = $2`,
+        [cleanRoomId, slashRoomId]
       );
       room = result?.rows?.[0];
     }
 
     if (!room) {
-      const memoryRoom = rooms.get(roomId);
+      const memoryRoom = rooms.get(roomId) || rooms.get(cleanRoomId) || rooms.get(slashRoomId);
       if (memoryRoom) {
         const memAny = memoryRoom as any;
         room = {
@@ -1221,9 +1223,11 @@ app.post("/api/room/verifyPasscode", bodyParser.json(), async (req, res) => {
   }
 
   try {
+    const cleanRoomId = roomId.startsWith("/") ? roomId.substring(1) : roomId;
+    const slashRoomId = `/${cleanRoomId}`;
     const result = await postgres?.query(
-      `SELECT passcode, owner_id, status FROM rooms WHERE "roomId" = $1`,
-      [roomId]
+      `SELECT passcode, owner_id, status FROM rooms WHERE "roomId" = $1 OR "roomId" = $2`,
+      [cleanRoomId, slashRoomId]
     );
 
     const room = result?.rows?.[0];
@@ -1628,7 +1632,8 @@ app.post("/endRoom", async (req, res) => {
     const cleanId = roomId.startsWith("/") ? roomId.substring(1) : roomId;
     const nsp = io._nsps.get(roomId) || io._nsps.get("/" + cleanId) || io._nsps.get(cleanId);
     if (nsp) {
-      nsp.emit("kicked");
+      nsp.emit("REC:roomEnded", { roomId: cleanId });
+      nsp.emit("kicked", { reason: "ROOM_ENDED", roomId: cleanId });
     }
 
     res.json({ success: true, status: "ended" });

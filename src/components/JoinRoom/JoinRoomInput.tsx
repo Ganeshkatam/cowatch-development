@@ -181,7 +181,7 @@ export const JoinRoomInput: React.FC = () => {
       }
 
       if (data.error === "ROOM_ENDED") {
-        setError("This room session has already ended.");
+        history.push(`/join/${encodeURIComponent(targetRoomId)}`);
         return;
       }
 

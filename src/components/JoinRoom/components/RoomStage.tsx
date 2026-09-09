@@ -78,9 +78,14 @@ export const RoomStage: React.FC<RoomStageProps> = ({
             <span>SCHEDULED PARTY</span>
           </div>
         )}
-        {(room.status === "ended" || room.status === "expired") && (
+        {room.status === "ended" && (
           <div className={styles.eyebrowPast}>
-            <span>PAST SESSION</span>
+            <span>ROOM ENDED</span>
+          </div>
+        )}
+        {room.status === "expired" && (
+          <div className={styles.eyebrowPast}>
+            <span>EXPIRED SESSION</span>
           </div>
         )}
         {room.status === "cancelled" && (
@@ -143,10 +148,16 @@ export const RoomStage: React.FC<RoomStageProps> = ({
                 <span>PRE-FLIGHT STAGING</span>
               </div>
             )}
-            {(room.status === "ended" || room.status === "expired") && (
+            {room.status === "ended" && (
               <div className={styles.screenEndedIndicator}>
                 <IconMovieOff size={15} stroke={2} />
-                <span>SCREENING CONCLUDED</span>
+                <span>ROOM HAS ENDED</span>
+              </div>
+            )}
+            {room.status === "expired" && (
+              <div className={styles.screenEndedIndicator}>
+                <IconMovieOff size={15} stroke={2} />
+                <span>EXPIRED SESSION</span>
               </div>
             )}
             {room.status === "cancelled" && (

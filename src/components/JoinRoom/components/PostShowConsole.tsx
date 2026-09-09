@@ -6,6 +6,7 @@ import {
   IconHome,
   IconCalendarEvent,
   IconClock,
+  IconPlayerStop,
 } from "@tabler/icons-react";
 import styles from "../JoinRoom.module.css";
 
@@ -46,23 +47,39 @@ export const PostShowConsole: React.FC<PostShowConsoleProps> = ({
     <div className={styles.consolePanel}>
       <div className={styles.consoleHeader}>
         <span className={styles.consoleEyebrow}>
-          {status === "cancelled" ? "CANCELLED PARTY" : "PAST SESSION"}
+          {status === "cancelled"
+            ? "CANCELLED PARTY"
+            : status === "expired"
+            ? "EXPIRED SESSION"
+            : "ROOM ENDED"}
         </span>
         <h2 className={styles.consoleHeading}>
           {status === "cancelled"
             ? "Party Cancelled"
             : status === "expired"
             ? "Party Expired"
-            : "Screening Concluded"}
+            : "This Room Has Ended"}
         </h2>
         <p className={styles.consoleSubheading}>
           {status === "cancelled"
             ? "This scheduled watch party was cancelled by the host."
             : status === "expired"
             ? "This watch party expired after its configured viewing duration."
-            : "This watch party has concluded and is no longer accepting guests."}
+            : "This watch party room has ended. Joining this room is no longer possible."}
         </p>
       </div>
+
+      {status === "ended" && (
+        <div className={styles.endedAlertBanner}>
+          <IconPlayerStop size={18} className={styles.endedAlertIcon} />
+          <div className={styles.endedAlertContent}>
+            <span className={styles.endedAlertTitle}>Room Has Ended</span>
+            <span className={styles.endedAlertDesc}>
+              The host has concluded this watch party session. No further guests can be admitted.
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Show historical metadata ONLY for ended and expired rooms, NOT cancelled */}
       {status !== "cancelled" && (startedAt || endedAt || durationLabel) && (
