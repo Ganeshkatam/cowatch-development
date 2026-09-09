@@ -16,6 +16,8 @@ if (!supabaseUrl || !supabaseSecretKey) {
 // but for standard getUser(jwt), it doesn't matter since it sends the JWT directly.
 // Actually, to validate a JWT securely, we use supabase.auth.getUser(jwt).
 
+import { SecurityLogger } from "./SecurityLogger.ts";
+
 export const supabaseAdmin = supabaseUrl && supabaseSecretKey 
   ? createClient(supabaseUrl, supabaseSecretKey) 
   : null as any;
@@ -28,9 +30,11 @@ export async function validateUserToken(uid: string, token: string, requireConfi
     // getUser(token) validates the JWT against the Supabase Auth server directly.
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
     if (error || !user) {
+      SecurityLogger.warn("auth.token_validation_failed", { uid, error: error?.message }, "supabase");
       return undefined;
     }
     if (uid !== user.id) {
+      SecurityLogger.warn("auth.token_uid_mismatch", { expectedUid: uid, actualUid: user.id }, "supabase");
       // Valid but for wrong user
       return undefined;
     }

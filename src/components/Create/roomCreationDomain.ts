@@ -3,13 +3,13 @@ import { createRoom } from "../TopBar/TopBar";
 import { supabase, getAccessToken } from "../../utils/supabaseClient";
 import { serverPath, addAndSavePasscode } from "../../utils/utils";
 
+
 export interface RoomFormState {
   roomTitle: string;
   setRoomTitle: (v: string) => void;
   roomDescription: string;
   setRoomDescription: (v: string) => void;
-  passcode: string;
-  setPasscode: (v: string) => void;
+
   isChatDisabled: boolean;
   setIsChatDisabled: (v: boolean) => void;
   lock: boolean;
@@ -31,7 +31,6 @@ export interface RoomFormState {
 export function useRoomFormState(): RoomFormState {
   const [roomTitle, setRoomTitle] = useState("Watch Party");
   const [roomDescription, setRoomDescription] = useState("");
-  const [passcode, setPasscode] = useState("");
 
   const [isChatDisabled, setIsChatDisabled] = useState(false);
   const [lock, setLock] = useState(false);
@@ -82,8 +81,6 @@ export function useRoomFormState(): RoomFormState {
     setRoomTitle,
     roomDescription,
     setRoomDescription,
-    passcode,
-    setPasscode,
     isChatDisabled,
     setIsChatDisabled,
     lock,
@@ -124,6 +121,7 @@ export async function submitRoomCreation({
     throw new Error("Room title cannot exceed 50 characters.");
   }
 
+
   if (scheduledStartsAt) {
     const scheduledDate = new Date(scheduledStartsAt);
     if (isNaN(scheduledDate.getTime())) {
@@ -141,7 +139,6 @@ export async function submitRoomCreation({
     {
       roomTitle: trimmedTitle,
       roomDescription: formState.roomDescription.trim() || undefined,
-      passcode: formState.passcode || undefined,
       isPermanent: formState.isPermanent,
       durationMinutes: formState.isPermanent ? undefined : Number(formState.durationMinutes),
       isChatDisabled: formState.isChatDisabled,
@@ -152,9 +149,6 @@ export async function submitRoomCreation({
     }
   );
 
-  if (formState.passcode) {
-    addAndSavePasscode(roomName, formState.passcode);
-  }
 
   if (formState.coverPhotoFile && user) {
     try {

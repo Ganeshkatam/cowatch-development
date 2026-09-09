@@ -61,6 +61,8 @@ const defaults = {
   OPENSUBTITLES_KEY: "",
   SUPABASE_URL: "",
   SUPABASE_SECRET_KEY: "",
+  PASSCODE_FINGERPRINT_KEY: "",
+  ADMIN_API_KEY: "",
 };
 
 export default {

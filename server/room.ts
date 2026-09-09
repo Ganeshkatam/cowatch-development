@@ -436,24 +436,19 @@ export class Room {
         return;
       }
 
-      // Check if this socket matches this.lock UID or is the room owner
-      const validateLock = () => {
-        const isOwner = Boolean(this.owner_id && socket.uid === this.owner_id);
-        return !this.lock || socket.uid === this.lock || isOwner;
-      };
+      // Centralized authorization decision for privileged commands
+      const authorizeRoomCommand = async (commandType: "owner" | "lock" | "member" | "activeMember") => {
+        // 1. Admission
+        if (!this.isAdmitted(socket)) {
+          return false;
+        }
 
-      // Check if this room is expired
-      const validateNotExpired = () => {
+        // 2. Lifecycle
         if (this.status === 'expired' || this.status === 'ended') {
           socket.emit("errorMessage", "This room has ended or expired.");
           return false;
         }
-
-        // Permanent rooms never expire
-        if (this.isPermanent) {
-          return true;
-        }
-        if (this.expiresAt && this.expiresAt.getTime() <= Date.now()) {
+        if (!this.isPermanent && this.expiresAt && this.expiresAt.getTime() <= Date.now()) {
           this.status = 'expired';
           socket.emit("errorMessage", "This room has ended or expired.");
           if (postgres) {
@@ -468,17 +463,30 @@ export class Room {
           this.disconnectAllSockets();
           return false;
         }
-        return true;
-      };
 
-      // Check if this socket matches the room owner UID
-      const validateOwner = async () => {
-        const result = await postgres?.query(
-          'SELECT owner_id FROM rooms where "roomId" = $1',
-          [this.roomId],
-        );
-        const owner = result?.rows[0]?.owner_id;
-        return !owner || socket.uid === owner;
+        // 3. Command specific role authorization
+        if (commandType === "owner") {
+          const result = await postgres?.query(
+            'SELECT owner_id FROM rooms where "roomId" = $1',
+            [this.roomId],
+          );
+          const owner = result?.rows[0]?.owner_id;
+          return !owner || socket.uid === owner;
+        }
+
+        if (commandType === "lock" || commandType === "activeMember") {
+          const isOwner = Boolean(this.owner_id && socket.uid === this.owner_id);
+          const hasLock = !this.lock || socket.uid === this.lock || isOwner;
+          if (commandType === "lock" && !hasLock) return false;
+          
+          if (commandType === "activeMember" && this.status === 'waiting') {
+            socket.emit("errorMessage", "The host has not started the watch party yet.");
+            return false;
+          }
+          return hasLock;
+        }
+
+        return true;
       };
 
       const validateAdmitted = () => {
@@ -486,22 +494,22 @@ export class Room {
       };
 
       socket.on("CMD:admitUser", async (data: { clientId: string }) => {
-        if ((await validateOwner()) && validateNotExpired() && data?.clientId) {
+        if ((await authorizeRoomCommand("owner")) && data?.clientId) {
           await this.admitGuest(data.clientId);
         }
       });
       socket.on("CMD:admitAll", async () => {
-        if ((await validateOwner()) && validateNotExpired()) {
+        if (await authorizeRoomCommand("owner")) {
           await this.admitAllGuests();
         }
       });
       socket.on("CMD:declineUser", async (data: { clientId: string }) => {
-        if ((await validateOwner()) && validateNotExpired() && data?.clientId) {
+        if ((await authorizeRoomCommand("owner")) && data?.clientId) {
           this.declineGuest(data.clientId);
         }
       });
       socket.on("CMD:setWaitingLounge", async (data: { enabled: boolean }) => {
-        if ((await validateOwner()) && validateNotExpired() && data !== undefined) {
+        if ((await authorizeRoomCommand("owner")) && data !== undefined) {
           this.isWaitingLoungeEnabled = Boolean(data.enabled);
           if (!this.isWaitingLoungeEnabled) {
             await this.admitAllGuests();
@@ -633,44 +641,44 @@ export class Room {
         }
       });
 
-      socket.on("CMD:host", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.startHosting(socket, String(data));
+      socket.on("CMD:host", async (data: unknown) => {
+        (await authorizeRoomCommand("activeMember")) && this.startHosting(socket, String(data));
       });
-      socket.on("CMD:play", () => {
-        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.playVideo(socket);
+      socket.on("CMD:play", async () => {
+        (await authorizeRoomCommand("activeMember")) && this.playVideo(socket);
       });
-      socket.on("CMD:pause", () => {
-        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.pauseVideo(socket);
+      socket.on("CMD:pause", async () => {
+        (await authorizeRoomCommand("activeMember")) && this.pauseVideo(socket);
       });
-      socket.on("CMD:seek", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.seekVideo(socket, Number(data));
+      socket.on("CMD:seek", async (data: unknown) => {
+        (await authorizeRoomCommand("activeMember")) && this.seekVideo(socket, Number(data));
       });
-      socket.on("CMD:playbackRate", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.setPlaybackRate(socket, Number(data));
+      socket.on("CMD:playbackRate", async (data: unknown) => {
+        (await authorizeRoomCommand("activeMember")) && this.setPlaybackRate(socket, Number(data));
       });
-      socket.on("CMD:loop", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.setLoop(Boolean(data));
+      socket.on("CMD:loop", async (data: unknown) => {
+        (await authorizeRoomCommand("activeMember")) && this.setLoop(Boolean(data));
       });
-      socket.on("CMD:ts", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.setTimestamp(socket, Number(data)),
+      socket.on("CMD:ts", async (data: unknown) =>
+        (await authorizeRoomCommand("member")) && this.setTimestamp(socket, Number(data)),
       );
-      socket.on("CMD:chat", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.sendChatMessage(socket, String(data)),
+      socket.on("CMD:chat", async (data: unknown) =>
+        (await authorizeRoomCommand("member")) && this.sendChatMessage(socket, String(data)),
       );
-      socket.on("CMD:chatV2", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.sendChatMessage(socket, data),
+      socket.on("CMD:chatV2", async (data: unknown) =>
+        (await authorizeRoomCommand("member")) && this.sendChatMessage(socket, data),
       );
-      socket.on("CMD:editMessage", (data: unknown) => {
-        validateAdmitted() && validateNotExpired() && this.editMessage(socket, data);
+      socket.on("CMD:editMessage", async (data: unknown) => {
+        (await authorizeRoomCommand("member")) && this.editMessage(socket, data);
       });
-      socket.on("CMD:addReaction", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.addReaction(socket, data),
+      socket.on("CMD:addReaction", async (data: unknown) =>
+        (await authorizeRoomCommand("member")) && this.addReaction(socket, data),
       );
-      socket.on("CMD:removeReaction", (data: unknown) => {
-        validateAdmitted() && validateNotExpired() && this.removeReaction(socket, data);
+      socket.on("CMD:removeReaction", async (data: unknown) => {
+        (await authorizeRoomCommand("member")) && this.removeReaction(socket, data);
       });
       socket.on("CMD:loadMessages", async (data: any) => {
-        if (!validateAdmitted() || !validateNotExpired()) return;
+        if (!(await authorizeRoomCommand("member"))) return;
         const beforeCursor = data?.beforeCursor;
         const messages = await loadRoomMessages(this.roomId, 50, beforeCursor);
         const formattedMessages = messages.map((row: any) => ({
@@ -687,32 +695,32 @@ export class Room {
         }));
         socket.emit("ROOM_MESSAGES", formattedMessages.reverse());
       });
-      socket.on("CMD:joinVideo", () => validateAdmitted() && validateNotExpired() && this.joinVideo(socket));
-      socket.on("CMD:leaveVideo", () => validateAdmitted() && validateNotExpired() && this.leaveVideo(socket));
-      socket.on("CMD:joinScreenShare", (data) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.joinScreenSharing(socket, data);
+      socket.on("CMD:joinVideo", async () => (await authorizeRoomCommand("member")) && this.joinVideo(socket));
+      socket.on("CMD:leaveVideo", async () => (await authorizeRoomCommand("member")) && this.leaveVideo(socket));
+      socket.on("CMD:joinScreenShare", async (data) => {
+        (await authorizeRoomCommand("lock")) && this.joinScreenSharing(socket, data);
       });
-      socket.on("CMD:userMute", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.setUserMute(socket, data),
+      socket.on("CMD:userMute", async (data: unknown) =>
+        (await authorizeRoomCommand("member")) && this.setUserMute(socket, data),
       );
-      socket.on("CMD:userVideoMute", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.setUserVideoMute(socket, data),
+      socket.on("CMD:userVideoMute", async (data: unknown) =>
+        (await authorizeRoomCommand("member")) && this.setUserVideoMute(socket, data),
       );
-      socket.on("CMD:leaveScreenShare", () => validateAdmitted() && validateNotExpired() && this.leaveScreenSharing(socket));
-      socket.on("CMD:startVBrowser", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.startVBrowser(socket, data);
+      socket.on("CMD:leaveScreenShare", async () => (await authorizeRoomCommand("member")) && this.leaveScreenSharing(socket));
+      socket.on("CMD:startVBrowser", async (data: unknown) => {
+        (await authorizeRoomCommand("lock")) && this.startVBrowser(socket, data);
       });
-      socket.on("CMD:stopVBrowser", () => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.stopVBrowser();
+      socket.on("CMD:stopVBrowser", async () => {
+        (await authorizeRoomCommand("lock")) && this.stopVBrowser();
       });
-      socket.on("CMD:changeController", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.changeController(String(data));
+      socket.on("CMD:changeController", async (data: unknown) => {
+        (await authorizeRoomCommand("lock")) && this.changeController(String(data));
       });
-      socket.on("CMD:subtitle", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.addSubtitles(String(data));
+      socket.on("CMD:subtitle", async (data: unknown) => {
+        (await authorizeRoomCommand("lock")) && this.addSubtitles(String(data));
       });
       socket.on("CMD:lock", async (data: unknown) => {
-        if (!validateAdmitted() || !validateNotExpired()) return;
+        if (!(await authorizeRoomCommand("member"))) return;
         const isOwner = Boolean(this.owner_id && socket.uid === this.owner_id);
         const isCurrentLockHolder = Boolean(this.lock && socket.uid === this.lock);
         if (!this.lock || isOwner || isCurrentLockHolder) {
@@ -721,40 +729,40 @@ export class Room {
           socket.emit("errorMessage", "Only the room owner can change the lock");
         }
       });
-      socket.on("CMD:askHost", () => {
-        validateAdmitted() && validateNotExpired() && socket.emit("REC:host", this.getHostState());
+      socket.on("CMD:askHost", async () => {
+        (await authorizeRoomCommand("member")) && socket.emit("REC:host", this.getHostState());
       });
-      socket.on("CMD:getRoomState", () => validateAdmitted() && validateNotExpired() && this.getRoomState(socket));
+      socket.on("CMD:getRoomState", async () => (await authorizeRoomCommand("member")) && this.getRoomState(socket));
       socket.on("CMD:setRoomState", async (data: unknown) => {
         socket.emit("errorMessage", "Room settings cannot be changed while the room is active");
       });
       socket.on("CMD:setRoomOwner", async (data: unknown) => {
         socket.emit("errorMessage", "Room settings cannot be changed while the room is active");
       });
-      socket.on("CMD:playlistNext", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.playlistNext(data);
+      socket.on("CMD:playlistNext", async (data: unknown) => {
+        (await authorizeRoomCommand("lock")) && this.playlistNext(data);
       });
-      socket.on("CMD:playlistAdd", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.playlistAdd(socket, String(data));
+      socket.on("CMD:playlistAdd", async (data: unknown) => {
+        (await authorizeRoomCommand("lock")) && this.playlistAdd(socket, String(data));
       });
-      socket.on("CMD:playlistMove", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.playlistMove(data);
+      socket.on("CMD:playlistMove", async (data: unknown) => {
+        (await authorizeRoomCommand("lock")) && this.playlistMove(data);
       });
-      socket.on("CMD:playlistDelete", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.playlistDelete(Number(data));
+      socket.on("CMD:playlistDelete", async (data: unknown) => {
+        (await authorizeRoomCommand("lock")) && this.playlistDelete(Number(data));
       });
       socket.on("CMD:kickUser", async (data: unknown) => {
-        (await validateOwner()) && validateNotExpired() && this.kickUser(data);
+        (await authorizeRoomCommand("owner")) && this.kickUser(data);
       });
       socket.on("CMD:deleteChatMessages", async (data: unknown) => {
-        (await validateOwner()) && validateNotExpired() && this.deleteChatMessages(data);
+        (await authorizeRoomCommand("owner")) && this.deleteChatMessages(data);
       });
 
-      socket.on("signal", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.sendSignal(socket, data, "signal"),
+      socket.on("signal", async (data: unknown) =>
+        (await authorizeRoomCommand("member")) && this.sendSignal(socket, data, "signal"),
       );
-      socket.on("signalSS", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.sendSignal(socket, data, "signalSS"),
+      socket.on("signalSS", async (data: unknown) =>
+        (await authorizeRoomCommand("member")) && this.sendSignal(socket, data, "signalSS"),
       );
 
       socket.on("disconnect", () => this.onDisconnect(socket));

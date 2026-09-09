@@ -1,4 +1,5 @@
 import config from "./config.ts";
+import { authorizeAdmin } from "./utils/adminAuth.ts";
 import { getBgVMManagers } from "./vm/utils.ts";
 import express from "express";
 import bodyParser from "body-parser";
@@ -61,6 +62,10 @@ app.post("/releaseVM", async (req, res) => {
 });
 
 app.get("/stats", async (req, res) => {
+  if (!authorizeAdmin(req.headers.authorization)) {
+    res.status(401).json({ error: "Access Denied" });
+    return;
+  }
   const vmManagerStats: AnyDict = {};
   for (let [key, vmManager] of Object.entries(vmManagers)) {
     const availableVBrowsers = await vmManager?.getAvailableVBrowsers();
@@ -80,6 +85,10 @@ app.get("/stats", async (req, res) => {
 });
 
 app.get("/isFreePoolFull", async (req, res) => {
+  if (!authorizeAdmin(req.headers.authorization)) {
+    res.status(401).json({ error: "Access Denied" });
+    return;
+  }
   const freePools = Object.values(vmManagers).filter((mgr) => {
     return mgr?.getIsLarge() === false && mgr?.getLimitSize() > 0;
   });

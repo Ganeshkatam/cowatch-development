@@ -203,46 +203,26 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
 
       {/* Passcode (and Duration if not hidden) */}
       {hideDuration ? (
-        <div>
-          <PasswordInput
-            label="Room Passcode (Optional)"
-            placeholder="Leave empty for public access"
-            value={formState.passcode}
-            onChange={(e) => formState.setPasscode(e.target.value)}
-            size="md"
-            leftSection={<IconLock size={18} color="var(--text-muted)" />}
-            styles={{
-              input: {
-                backgroundColor: "var(--surface-secondary)",
-                borderColor: "var(--border-subtle)",
-                color: "var(--text-primary)",
-              },
-            }}
-          />
-          <div className={styles.inputHelp}>
-            <span>Anyone with the room link will need this passcode to enter</span>
+        <div className={styles.settingRow}>
+          <div>
+            <Text fw={500} size="sm" c="var(--text-primary)">
+              Room Passcode
+            </Text>
+            <Text size="xs" c="dimmed" mt={2}>
+              An 8-character passcode will be generated automatically for your room.
+            </Text>
           </div>
         </div>
       ) : (
         <div className={styles.twoColRow}>
-          <div>
-            <PasswordInput
-              label="Room Passcode (Optional)"
-              placeholder="Leave empty for public access"
-              value={formState.passcode}
-              onChange={(e) => formState.setPasscode(e.target.value)}
-              size="md"
-              leftSection={<IconLock size={18} color="var(--text-muted)" />}
-              styles={{
-                input: {
-                  backgroundColor: "var(--surface-secondary)",
-                  borderColor: "var(--border-subtle)",
-                  color: "var(--text-primary)",
-                },
-              }}
-            />
-            <div className={styles.inputHelp}>
-              <span>Anyone with the room link will need this passcode to enter</span>
+          <div className={styles.settingRow}>
+            <div>
+              <Text fw={500} size="sm" c="var(--text-primary)">
+                Room Passcode
+              </Text>
+              <Text size="xs" c="dimmed" mt={2}>
+                An 8-character passcode will be generated automatically.
+              </Text>
             </div>
           </div>
 

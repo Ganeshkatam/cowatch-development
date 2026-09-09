@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { redis } from "./redis.ts";
+import { SecurityLogger } from "./SecurityLogger.ts";
 
 export interface AdmissionRecord {
   roomId: string;
@@ -53,6 +54,10 @@ export async function getAdmissionRecord(roomId: string, token: string): Promise
     const record = JSON.parse(data) as AdmissionRecord;
     // Strict defense-in-depth binding validation
     if (record.roomId !== roomId) {
+      SecurityLogger.warn("admission.token_binding_mismatch", { 
+        expectedRoom: roomId, 
+        actualRoom: record.roomId 
+      }, "roomAdmission");
       console.warn(`[AdmissionSecurity] Token for room ${record.roomId} used against room ${roomId}`);
       return null;
     }
@@ -99,12 +104,14 @@ export async function checkRateLimit(roomId: string, ip: string, userId: string 
 
   const ipAttempts = results[0][1] as number;
   if (ipAttempts > RATE_LIMIT_MAX_ATTEMPTS) {
+    SecurityLogger.warn("admission.rate_limit_exceeded", { roomId, ip }, "roomAdmission");
     return false;
   }
 
   if (userId && results.length >= 3) {
     const userAttempts = results[2][1] as number;
     if (userAttempts > RATE_LIMIT_MAX_ATTEMPTS) {
+      SecurityLogger.warn("admission.rate_limit_exceeded", { roomId, userId }, "roomAdmission");
       return false;
     }
   }

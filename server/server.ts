@@ -25,6 +25,8 @@ import {
   verifyRoomPasscode,
   encryptPasscodeForOwner,
   decryptPasscodeForOwner,
+  generateRandomPasscode,
+  calculatePasscodeFingerprint,
 } from "./utils/roomPasscode.ts";
 import {
   validateTemporaryDuration,
@@ -43,6 +45,7 @@ import {
   checkRateLimit,
   createAdmissionToken,
 } from "./utils/roomAdmission.ts";
+import { authorizeAdmin } from "./utils/adminAuth.ts";
 
 process.on("uncaughtException", (err) => {
   console.error("Uncaught exception in server process:", err);
@@ -174,6 +177,11 @@ if (process.env.NODE_ENV === "development") {
   }
 }
 
+app.use((req, res, next) => {
+  (req as any).id = (req.headers['x-request-id'] as string) || crypto.randomUUID();
+  res.setHeader('X-Request-ID', (req as any).id);
+  next();
+});
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.raw({ type: "text/plain", limit: 1000000 }));
@@ -312,12 +320,12 @@ app.get("/searchSubtitles", async (req, res) => {
 });
 
 app.get("/stats", async (req, res) => {
-  if (req.query.key && req.query.key === config.STATS_KEY) {
-    const stats = await getStats();
-    res.json(stats);
-  } else {
-    res.status(403).json({ error: "Access Denied" });
+  if (!authorizeAdmin(req.headers.authorization)) {
+    res.status(401).json({ error: "Access Denied" });
+    return;
   }
+  const stats = await getStats();
+  res.json(stats);
 });
 
 async function cleanupRoomCoverStorage(uid: string, roomId: string) {
@@ -629,14 +637,25 @@ app.post("/createRoom", async (req, res) => {
   newRoom.isPermanent = isPermanent;
   newRoom.durationMinutes = durationMinutes;
 
-  if (postgres) {
-    const rawPasscode = req.body?.passcode;
+  if (!postgres) {
+    res.status(500).json({ error: "Database connection required for room creation." });
+    return;
+  }
+
+  const MAX_PASSCODE_ATTEMPTS = 5;
+  let generatedPasscode = "";
+
+  for (let attempt = 1; attempt <= MAX_PASSCODE_ATTEMPTS; attempt++) {
+    generatedPasscode = generateRandomPasscode();
+    const fingerprint = calculatePasscodeFingerprint(generatedPasscode);
+
     const roomObj: any = {
       roomId: newRoom.roomId,
       lastUpdateTime: now,
       creationTime: now,
-      passcode: await hashRoomPasscode(rawPasscode),
-      owner_passcode: encryptPasscodeForOwner(rawPasscode),
+      passcode_fingerprint: fingerprint,
+      passcode: await hashRoomPasscode(generatedPasscode),
+      owner_passcode: encryptPasscodeForOwner(generatedPasscode),
 
       isChatDisabled: Boolean(req.body?.isChatDisabled),
       roomTitle: roomTitle,
@@ -659,9 +678,14 @@ app.post("/createRoom", async (req, res) => {
         ("roomId", actor, event, "newStatus", "newExpiresAt", reason)
         VALUES ($1, $2, $3, $4, $5, $6)
       `, [newRoom.roomId, decoded.uid, 'room.created', initialStatus, null, isPermanent ? 'permanent room creation' : `temporary room creation (${durationMinutes}min)`]);
-    } catch (e) {
+      break; // Success
+    } catch (e: any) {
+      if (e.code === '23505' && e.constraint === 'rooms_passcode_fingerprint_key' && attempt < MAX_PASSCODE_ATTEMPTS) {
+        continue; // Collision on fingerprint, retry
+      }
       redisCount("createRoomError");
-      throw e;
+      res.status(500).json({ error: "Failed to create room." });
+      return;
     }
   }
 
@@ -679,7 +703,7 @@ app.post("/createRoom", async (req, res) => {
     }
   }
   rooms.set(name, newRoom);
-  res.json({ name });
+  res.json({ name, passcode: generatedPasscode });
 });
 
 app.post("/startRoom", async (req, res) => {
@@ -1010,6 +1034,9 @@ app.get("/metadata", async (req, res) => {
       isFreePoolFull = (
         await axios.get(
           "http://localhost:" + config.VMWORKER_PORT + "/isFreePoolFull",
+          {
+            headers: { Authorization: `Bearer ${config.ADMIN_API_KEY}` },
+          }
         )
       ).data.isFull;
     } catch (e: any) {
@@ -1349,35 +1376,51 @@ app.post("/api/room/duplicate", bodyParser.json(), async (req, res) => {
 
     const now = new Date();
 
-    // We explicitly only clone certain fields, ignoring timestamps, chat, and participants.
-    const roomObj = {
-      roomId: newRoomId,
-      lastUpdateTime: now,
-      creationTime: now,
-      passcode: null, // Deliberately clearing the passcode to prevent silent credential reuse
-      owner_passcode: null,
-      isChatDisabled: sourceRoom.isChatDisabled,
-      roomTitle: sourceRoom.roomTitle,
-      roomDescription: sourceRoom.roomDescription,
-      owner_id: decoded.uid,
-      isSubRoom: sourceRoom.isSubRoom,
-      status: 'waiting',
-      startedAt: null,
-      expiresAt: null,
-      isPermanent: sourceRoom.isPermanent,
-      durationMinutes: sourceRoom.durationMinutes,
-      isWaitingLoungeEnabled: sourceRoom.isWaitingLoungeEnabled,
-    };
+    const MAX_PASSCODE_ATTEMPTS = 5;
+    let generatedPasscode = "";
 
-    await insertObject(postgres, "rooms", roomObj);
-    await postgres.query(`
-      INSERT INTO room_lifecycle_events 
-      ("roomId", actor, event, "newStatus", "newExpiresAt", reason)
-      VALUES ($1, $2, $3, $4, $5, $6)
-    `, [newRoomId, decoded.uid, 'room.created', 'waiting', null, `Duplicated from ${sourceRoomId}`]);
+    for (let attempt = 1; attempt <= MAX_PASSCODE_ATTEMPTS; attempt++) {
+      generatedPasscode = generateRandomPasscode();
+      const fingerprint = calculatePasscodeFingerprint(generatedPasscode);
+
+      const roomObj = {
+        roomId: newRoomId,
+        lastUpdateTime: now,
+        creationTime: now,
+        passcode_fingerprint: fingerprint,
+        passcode: await hashRoomPasscode(generatedPasscode),
+        owner_passcode: encryptPasscodeForOwner(generatedPasscode),
+        isChatDisabled: sourceRoom.isChatDisabled,
+        roomTitle: sourceRoom.roomTitle,
+        roomDescription: sourceRoom.roomDescription,
+        owner_id: decoded.uid,
+        isSubRoom: sourceRoom.isSubRoom,
+        status: 'waiting',
+        startedAt: null,
+        expiresAt: null,
+        isPermanent: sourceRoom.isPermanent,
+        durationMinutes: sourceRoom.durationMinutes,
+        isWaitingLoungeEnabled: sourceRoom.isWaitingLoungeEnabled,
+      };
+
+      try {
+        await insertObject(postgres, "rooms", roomObj);
+        await postgres.query(`
+          INSERT INTO room_lifecycle_events 
+          ("roomId", actor, event, "newStatus", "newExpiresAt", reason)
+          VALUES ($1, $2, $3, $4, $5, $6)
+        `, [newRoomId, decoded.uid, 'room.created', 'waiting', null, `Duplicated from ${sourceRoomId}`]);
+        break; // Success
+      } catch (e: any) {
+        if (e.code === '23505' && e.constraint === 'rooms_passcode_fingerprint_key' && attempt < MAX_PASSCODE_ATTEMPTS) {
+          continue; // Collision on fingerprint namespace, retry
+        }
+        throw e;
+      }
+    }
 
     rooms.set(newRoomId, newRoom);
-    res.json({ roomId: newRoomId });
+    res.json({ roomId: newRoomId, passcode: generatedPasscode });
   } catch (e) {
     console.error("Room duplication failed", e);
     res.status(500).json({ error: "INTERNAL_SERVER_ERROR" });

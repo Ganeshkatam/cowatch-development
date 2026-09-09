@@ -5,6 +5,36 @@ import config from '../config.ts';
 const ENCRYPTION_SECRET = config.SUPABASE_SECRET_KEY || config.STATS_KEY || "cowatch-room-passcode-salt-key-32b";
 const ENCRYPTION_KEY = crypto.createHash('sha256').update(ENCRYPTION_SECRET).digest();
 
+const FINGERPRINT_SECRET = config.PASSCODE_FINGERPRINT_KEY;
+if (!FINGERPRINT_SECRET) {
+  throw new Error("PASSCODE_FINGERPRINT_KEY is required");
+}
+
+const ROOM_PASSCODE_LENGTH = 8;
+const ROOM_PASSCODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+export function generateRandomPasscode(): string {
+  let result = "";
+  for (let i = 0; i < ROOM_PASSCODE_LENGTH; i++) {
+    result += ROOM_PASSCODE_ALPHABET.charAt(
+      crypto.randomInt(0, ROOM_PASSCODE_ALPHABET.length)
+    );
+  }
+  return result;
+}
+
+export function calculatePasscodeFingerprint(passcode: string): string {
+  return crypto.createHmac('sha256', FINGERPRINT_SECRET).update(passcode).digest('hex');
+}
+
+export function isValidRoomPasscode(passcode: unknown): passcode is string {
+  return (
+    typeof passcode === "string" &&
+    passcode.length === ROOM_PASSCODE_LENGTH &&
+    /^[A-Za-z0-9]{8}$/.test(passcode)
+  );
+}
+
 /**
  * Validates and hashes a room passcode.
  * @param passcode The plaintext passcode to hash.
