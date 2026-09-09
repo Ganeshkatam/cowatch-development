@@ -3634,49 +3634,6 @@ export class App extends React.Component<AppProps, AppState> {
                   />
                 </Tabs.Panel>
               </Tabs>
-              <div
-                style={{
-                  marginTop: "8px",
-                  padding: "10px 14px",
-                  background: "var(--bg-surface)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "var(--radius-lg)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                  flexShrink: 0,
-                }}
-                onClick={this.handleCopyRoomLink}
-                title="Click to copy room link"
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                  }}
-                >
-                  <IconLink size={16} color="var(--color-violet)" />
-                  <span
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: 500,
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {this.state.copiedRoomLink
-                      ? "Room link copied!"
-                      : "Copy room link"}
-                  </span>
-                </div>
-                {this.state.copiedRoomLink ? (
-                  <IconCheck size={16} color="var(--color-live)" />
-                ) : (
-                  <IconCopy size={16} color="var(--text-muted)" />
-                )}
-              </div>
             </div>
           </div>
         }
