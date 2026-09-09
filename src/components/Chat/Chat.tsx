@@ -13,8 +13,7 @@ import {
 import Picker from "@emoji-mart/react";
 import { init } from "emoji-mart";
 // import onClickOutside from 'react-onclickoutside';
-//@ts-expect-error
-import Linkify from "react-linkify";
+import Linkify from "linkify-react";
 import { SecureLink } from "react-secure-link";
 import { IconArrowBackUp, IconCheck, IconMoodSmile, IconPencil, IconSend, IconTrash, IconX } from "@tabler/icons-react";
 import styles from "./Chat.module.css";
@@ -789,15 +788,16 @@ const ChatMessage = ({
         ) : (
           <>
             <Linkify
-              componentDecorator={(
-                decoratedHref: string,
-                decoratedText: string,
-                key: string,
-              ) => (
-                <SecureLink href={decoratedHref} key={key}>
-                  {decoratedText}
-                </SecureLink>
-              )}
+              options={{
+                render: ({ attributes, content }: any) => {
+                  const { href, ...props } = attributes;
+                  return (
+                    <SecureLink href={href} {...props}>
+                      {content}
+                    </SecureLink>
+                  );
+                }
+              }}
             >
               <div
                 className={`${styles.light} ${isEmojiString(msg) ? styles.emoji : ""
