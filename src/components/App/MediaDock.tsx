@@ -312,64 +312,41 @@ export const MediaDock: React.FC<MediaDockProps> = ({
         </Menu.Dropdown>
       </Menu>
 
-      {/* More Options Menu */}
-      <Menu
-        shadow="xl"
-        width={200}
-        position="top-end"
-        offset={10}
-        onOpen={handleMenuOpen}
-        onClose={handleMenuClose}
+      {/* Direct Options */}
+      {onToggleFullScreen && (
+        <button
+          type="button"
+          className={styles.dockBtn}
+          onClick={onToggleFullScreen}
+          title={isFullScreen ? "Exit Fullscreen" : "Fullscreen"}
+        >
+          {isFullScreen ? <IconMinimize size={16} /> : <IconMaximize size={16} />}
+          <span>{isFullScreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+        </button>
+      )}
+
+      {onToggleLock && (
+        <button
+          type="button"
+          className={styles.dockBtn}
+          onClick={onToggleLock}
+          disabled={!haveLock}
+          title={isLocked ? "Unlock controls" : "Lock controls"}
+        >
+          {isLocked ? <IconLock size={16} color="var(--color-warning)" /> : <IconLockOpen size={16} />}
+          <span>{isLocked ? "Unlock" : "Lock"}</span>
+        </button>
+      )}
+
+      <button
+        type="button"
+        className={styles.dockBtn}
+        onClick={handleCopyLink}
+        title="Copy room link"
       >
-        <Menu.Target>
-          <button type="button" className={styles.iconBtn} title="More actions">
-            <IconDots size={16} />
-          </button>
-        </Menu.Target>
-        <Menu.Dropdown>
-          {onToggleFullScreen && (
-            <Menu.Item
-              leftSection={
-                isFullScreen ? (
-                  <IconMinimize size={16} />
-                ) : (
-                  <IconMaximize size={16} />
-                )
-              }
-              onClick={onToggleFullScreen}
-            >
-              {isFullScreen ? "Exit Fullscreen" : "Fullscreen"}
-            </Menu.Item>
-          )}
-          {onToggleLock && (
-            <Menu.Item
-              disabled={!haveLock}
-              leftSection={
-                isLocked ? (
-                  <IconLock size={16} color="var(--color-warning)" />
-                ) : (
-                  <IconLockOpen size={16} />
-                )
-              }
-              onClick={onToggleLock}
-            >
-              {isLocked ? "Unlock controls" : "Lock controls"}
-            </Menu.Item>
-          )}
-          <Menu.Item
-            leftSection={
-              copied ? (
-                <IconCheck size={16} color="var(--color-live)" />
-              ) : (
-                <IconCopy size={16} />
-              )
-            }
-            onClick={handleCopyLink}
-          >
-            {copied ? "Link Copied!" : "Copy room link"}
-          </Menu.Item>
-        </Menu.Dropdown>
-      </Menu>
+        {copied ? <IconCheck size={16} color="var(--color-live)" /> : <IconCopy size={16} />}
+        <span>{copied ? "Copied!" : "Copy Link"}</span>
+      </button>
 
       {/* Collapse button when media is loaded */}
       {Boolean(roomMedia) && (
