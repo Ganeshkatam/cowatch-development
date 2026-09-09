@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   TextInput,
   Textarea,
-  PasswordInput,
   Switch,
   Text,
   FileButton,
@@ -14,7 +13,6 @@ import {
 import {
   IconPhotoPlus,
   IconTrash,
-  IconLock,
   IconPlus,
 } from "@tabler/icons-react";
 import type { RoomFormState } from "./roomCreationDomain";
@@ -29,8 +27,8 @@ export const DurationSelect: React.FC<DurationSelectProps> = ({ formState, class
   if (formState.isPermanent) return null;
 
   return (
-    <div className={className}>
-      <Text fw={500} size="sm" c="var(--text-primary)" mb={6}>
+    <div className={className ? `${styles.horizontalInputGroup} ${className}` : styles.horizontalInputGroup}>
+      <Text fw={500} size="sm" c="var(--text-primary)">
         Session Duration
       </Text>
       <Select
@@ -83,31 +81,31 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
   return (
     <Stack gap="lg">
       {/* Room Title */}
-      <div>
-        <TextInput
-          label="Room Title"
-          placeholder="e.g. Saturday Movie Night, Anime Marathon"
-          required
-          value={formState.roomTitle}
-          onChange={(e) => formState.setRoomTitle(e.target.value)}
-          maxLength={50}
-          size="md"
-          styles={{
-            input: {
-              backgroundColor: "rgba(255, 255, 255, 0.05)",
-              borderColor: "rgba(255, 255, 255, 0.1)",
-              color: "#ffffff",
-              fontWeight: 600,
-            },
-          }}
-        />
-      </div>
+      <TextInput
+        className={styles.horizontalInputGroup}
+        label="Room Title"
+        placeholder="e.g. Saturday Movie Night, Anime Marathon"
+        required
+        value={formState.roomTitle}
+        onChange={(e) => formState.setRoomTitle(e.target.value)}
+        maxLength={50}
+        size="md"
+        styles={{
+          input: {
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
+            borderColor: "rgba(255, 255, 255, 0.1)",
+            color: "#ffffff",
+            fontWeight: 600,
+          },
+        }}
+      />
 
       {afterTitle}
 
-      {/* Description + Cover side by side */}
-      <div className={styles.twoColRow}>
-        <div>
+      {/* Description */}
+      <div className={styles.optionalFieldGroup}>
+        <div className={styles.optionalFieldLabel}>Description</div>
+        <div className={styles.optionalFieldControl}>
           {!showDescription ? (
             <button
               type="button"
@@ -121,7 +119,7 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
             <div>
               <Group justify="space-between" align="center" mb={6}>
                 <Text size="sm" fw={500} c="var(--text-primary)">
-                  Description (Optional)
+                  Optional details
                 </Text>
                 <button
                   type="button"
@@ -157,11 +155,12 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
             </div>
           )}
         </div>
+      </div>
 
-        <div>
-          <Text size="sm" fw={500} c="var(--text-primary)" mb={6}>
-            Cover Photo (Optional)
-          </Text>
+      {/* Cover Photo */}
+      <div className={styles.optionalFieldGroup}>
+        <div className={styles.optionalFieldLabel}>Cover Photo</div>
+        <div className={styles.optionalFieldControl}>
           <div className={styles.coverUploadBox}>
             {formState.coverPreview ? (
               <div className={styles.coverThumbSmall}>
@@ -201,66 +200,33 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
         </div>
       </div>
 
-      {/* Passcode (and Duration if not hidden) */}
-      {hideDuration ? (
-        <div className={styles.settingRow} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)" }}>
-          <div>
-            <TextInput
-              label="Room Passcode"
-              description="Automatically generated, but you can change it."
-              value={formState.passcode}
-              onChange={(e) => {
-                const val = e.target.value.replace(/[^A-Za-z0-9]/g, '');
-                formState.setPasscode(val);
-              }}
-              minLength={1}
-              maxLength={8}
-              required
-              styles={{
-                input: {
-                  fontFamily: "monospace",
-                  letterSpacing: "1px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  borderColor: "rgba(255, 255, 255, 0.1)",
-                  color: "#ffffff",
-                  fontWeight: 600,
-                },
-              }}
-            />
-          </div>
-        </div>
-      ) : (
-        <div className={styles.twoColRow}>
-          <div className={styles.settingRow} style={{ flex: 1 }}>
-            <div>
-              <TextInput
-                label="Room Passcode"
-                description="Automatically generated, but you can change it."
-                value={formState.passcode}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^A-Za-z0-9]/g, '');
-                  formState.setPasscode(val);
-                }}
-                minLength={1}
-                maxLength={8}
-                required
-                styles={{
-                  input: {
-                    fontFamily: "monospace",
-                    letterSpacing: "1px",
-                    backgroundColor: "rgba(255, 255, 255, 0.05)",
-                    borderColor: "rgba(255, 255, 255, 0.1)",
-                    color: "#ffffff",
-                    fontWeight: 600,
-                  },
-                }}
-              />
-            </div>
-          </div>
+      {/* Passcode */}
+      <TextInput
+        className={styles.horizontalInputGroup}
+        label="Room Passcode"
+        description="Automatically generated, but you can change it."
+        value={formState.passcode}
+        onChange={(e) => {
+          const val = e.target.value.replace(/[^A-Za-z0-9]/g, "");
+          formState.setPasscode(val);
+        }}
+        minLength={1}
+        maxLength={8}
+        required
+        styles={{
+          input: {
+            fontFamily: "monospace",
+            letterSpacing: "1px",
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
+            borderColor: "rgba(255, 255, 255, 0.1)",
+            color: "#ffffff",
+            fontWeight: 600,
+          },
+        }}
+      />
 
-          <DurationSelect formState={formState} />
-        </div>
-      )}
+      {/* Duration */}
+      {!hideDuration && <DurationSelect formState={formState} />}
 
       {/* Party Settings */}
       <div className={styles.settingsGroup}>
