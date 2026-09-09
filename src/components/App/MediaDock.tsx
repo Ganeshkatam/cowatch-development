@@ -23,6 +23,7 @@ import styles from "./MediaDock.module.css";
 import { findPlaylistVideoByUrl } from "../../../server/utils/playlist";
 
 interface MediaDockProps {
+  isVBrowserEnabled?: boolean;
   haveLock: boolean;
   onOpenScreenShare: () => void;
   onOpenVBrowser: () => void;
@@ -46,6 +47,7 @@ interface MediaDockProps {
 }
 
 export const MediaDock: React.FC<MediaDockProps> = ({
+  isVBrowserEnabled,
   haveLock,
   onOpenScreenShare,
   onOpenVBrowser,
@@ -223,7 +225,7 @@ export const MediaDock: React.FC<MediaDockProps> = ({
             </div>
           </Menu.Item>
 
-          {import.meta.env.VITE_VBROWSER_ENABLED !== "false" && (
+          {isVBrowserEnabled && (
             <Menu.Item
               leftSection={<IconBrowser size={18} color="#34D399" />}
               onClick={onOpenVBrowser}

@@ -1885,6 +1885,7 @@ export class Room {
       roomDescription: first?.roomDescription,
       mediaPath: first?.mediaPath,
       isWaitingLoungeEnabled: this.isWaitingLoungeEnabled,
+      isVBrowserEnabled: Boolean(config.VM_MANAGER_CONFIG),
       // Lifecycle fields - authoritative from server
       status: this.status,
       startedAt: this.startedAt ? this.startedAt.toISOString() : null,

@@ -192,6 +192,7 @@ interface AppState {
   roomServerNow: number | null;
   hostExitModalOpen: boolean;
   isEndingRoom: boolean;
+  isVBrowserEnabled?: boolean;
 }
 
 export class App extends React.Component<AppProps, AppState> {
@@ -248,6 +249,7 @@ export class App extends React.Component<AppProps, AppState> {
     errorMessage: "",
     successMessage: "",
     warningMessage: "",
+    isVBrowserEnabled: false,
     isChatDisabled: false,
     showChatColumn: isMobile()
       ? true
@@ -1568,6 +1570,9 @@ export class App extends React.Component<AppProps, AppState> {
     this.setMediaPath(data.mediaPath);
     if (data.isWaitingLoungeEnabled !== undefined) {
       this.setState({ isWaitingLoungeEnabled: data.isWaitingLoungeEnabled });
+    }
+    if (data.isVBrowserEnabled !== undefined) {
+      this.setState({ isVBrowserEnabled: Boolean(data.isVBrowserEnabled) });
     }
     // Lifecycle fields from server (authoritative)
     if (data.status !== undefined) {
@@ -3438,6 +3443,7 @@ export class App extends React.Component<AppProps, AppState> {
                     )}
 
                     <MediaDock
+                      isVBrowserEnabled={this.state.isVBrowserEnabled}
                       haveLock={this.haveLock()}
                       onOpenScreenShare={() =>
                         this.setState({ isScreenShareModalOpen: true })
