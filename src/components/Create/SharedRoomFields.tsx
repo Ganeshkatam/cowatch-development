@@ -248,66 +248,75 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
 
       {!hideDuration && <DurationSelect formState={formState} />}
 
+
       <div className={styles.settingsGroup} style={{ marginTop: 16 }}>
-        <FieldRow
-          label="Host Controls Only"
-          description="Only the host can control playback"
-          centerAlign
-        >
-          <div style={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
-            <Switch
-              checked={formState.lock}
-              onChange={(e) => formState.setLock(e.currentTarget.checked)}
-              color="violet"
-              size="md"
-            />
+        <div className={styles.settingRow}>
+          <div className={styles.formRowLabel}>
+            <Text fw={500} size="sm" c="var(--text-primary)">
+              Host Controls Only
+            </Text>
+            <Text size="xs" c="dimmed" mt={2}>
+              Only the host can control playback
+            </Text>
           </div>
-        </FieldRow>
+          <Switch
+            checked={formState.lock}
+            onChange={(e) => formState.setLock(e.currentTarget.checked)}
+            color="violet"
+            size="md"
+          />
+        </div>
 
-        <FieldRow
-          label="Waiting Room"
-          description="Require host approval before entry"
-          centerAlign
-        >
-          <div style={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
-            <Switch
-              checked={formState.isWaitingLoungeEnabled}
-              onChange={(e) => formState.setIsWaitingLoungeEnabled(e.currentTarget.checked)}
-              color="violet"
-              size="md"
-            />
+        <div className={styles.settingRow}>
+          <div className={styles.formRowLabel}>
+            <Text fw={500} size="sm" c="var(--text-primary)">
+              Waiting Room
+            </Text>
+            <Text size="xs" c="dimmed" mt={2}>
+              Require host approval before entry
+            </Text>
           </div>
-        </FieldRow>
+          <Switch
+            checked={formState.isWaitingLoungeEnabled}
+            onChange={(e) => formState.setIsWaitingLoungeEnabled(e.currentTarget.checked)}
+            color="violet"
+            size="md"
+          />
+        </div>
 
-        <FieldRow
-          label="Disable Chat"
-          description="Turn off text chat during the Room"
-          centerAlign
-        >
-          <div style={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
-            <Switch
-              checked={formState.isChatDisabled}
-              onChange={(e) => formState.setIsChatDisabled(e.currentTarget.checked)}
-              color="violet"
-              size="md"
-            />
+        <div className={styles.settingRow}>
+          <div className={styles.formRowLabel}>
+            <Text fw={500} size="sm" c="var(--text-primary)">
+              Disable Chat
+            </Text>
+            <Text size="xs" c="dimmed" mt={2}>
+              Turn off text chat during the Room
+            </Text>
           </div>
-        </FieldRow>
+          <Switch
+            checked={formState.isChatDisabled}
+            onChange={(e) => formState.setIsChatDisabled(e.currentTarget.checked)}
+            color="violet"
+            size="md"
+          />
+        </div>
 
-        <FieldRow
-          label="Make room permanent"
-          description="Room stays available until manually ended"
-          centerAlign
-        >
-          <div style={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
-            <Switch
-              checked={formState.isPermanent}
-              onChange={(e) => formState.setIsPermanent(e.currentTarget.checked)}
-              color="violet"
-              size="md"
-            />
+        <div className={styles.settingRow}>
+          <div className={styles.formRowLabel}>
+            <Text fw={500} size="sm" c="var(--text-primary)">
+              Make room permanent
+            </Text>
+            <Text size="xs" c="dimmed" mt={2}>
+              Room stays available until manually ended
+            </Text>
           </div>
-        </FieldRow>
+          <Switch
+            checked={formState.isPermanent}
+            onChange={(e) => formState.setIsPermanent(e.currentTarget.checked)}
+            color="violet"
+            size="md"
+          />
+        </div>
       </div>
     </Stack>
   );
