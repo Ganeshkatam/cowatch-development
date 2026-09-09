@@ -14,6 +14,10 @@ Object.values(vmManagers).forEach((manager) => {
   manager?.runBackgroundJobs();
 });
 
+// Security Invariant: vmWorker is strictly an internal-only service. 
+// It relies on the public application server (e.g. room.ts) to enforce 
+// all user authorization, admission, and lifecycle checks.
+// Do not expose this service to the public internet.
 app.post("/assignVM", async (req, res) => {
   try {
     if (!isVBrowserEnabled()) {
