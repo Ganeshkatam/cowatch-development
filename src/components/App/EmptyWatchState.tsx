@@ -36,16 +36,7 @@ export const EmptyWatchState: React.FC<EmptyWatchStateProps> = ({
           Add a video, share your screen, or browse together.
         </p>
 
-        <button
-          type="button"
-          className={styles.addMediaCtaBtn}
-          onClick={onOpenAddMedia}
-          disabled={!haveLock}
-          title={haveLock ? "Add something to watch" : "Controls are locked"}
-        >
-          <IconPlus size={16} stroke={2.5} />
-          <span>Add something to watch</span>
-        </button>
+
 
         {!haveLock && (
           <div className={styles.lockNotice}>
