@@ -299,8 +299,19 @@
 }
 
 :global([data-color-scheme="light"]) .collapseBtn:hover {
+.collapseBtn:hover {
   background: #e2e8f0;
   color: #0f172a;
+}
+
+.activePlaylistItem {
+  background: rgba(139, 92, 246, 0.15);
+  border-left: 3px solid var(--color-violet);
+}
+
+:global([data-color-scheme="light"]) .activePlaylistItem {
+  background: #ede9fe;
+  border-left: 3px solid #6d28d9;
 }
 
 

@@ -20,6 +20,7 @@ import {
 import { Menu } from "@mantine/core";
 import ChatVideoCard from "../ChatVideoCard/ChatVideoCard";
 import styles from "./MediaDock.module.css";
+import { findPlaylistVideoByUrl } from "../../../server/utils/playlist";
 
 interface MediaDockProps {
   haveLock: boolean;
@@ -285,8 +286,13 @@ export const MediaDock: React.FC<MediaDockProps> = ({
             if (Boolean(videoItem.img)) {
               videoItem.type = "youtube";
             }
+            const isActive = roomMedia && findPlaylistVideoByUrl([videoItem], roomMedia) !== undefined;
             return (
-              <Menu.Item key={index} closeMenuOnClick={false}>
+              <Menu.Item 
+                key={index} 
+                closeMenuOnClick={false}
+                className={isActive ? styles.activePlaylistItem : undefined}
+              >
                 <ChatVideoCard
                   video={videoItem}
                   index={index}
