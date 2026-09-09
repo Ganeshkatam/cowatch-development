@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Modal, TextInput, ActionIcon, Button, Text, Group, Tooltip, Loader } from "@mantine/core";
+import { Drawer, TextInput, ActionIcon, Button, Text, Group, Tooltip, Loader } from "@mantine/core";
 import {
   IconCopy,
   IconCheck,
@@ -100,23 +100,31 @@ export const InviteModal = ({
   )}`;
 
   return (
-    <Modal
+    <Drawer
       opened
-      centered
+      position="right"
+      size="md"
       onClose={closeInviteModal}
       title="Invite friends to your Watch Party!"
-      radius="md"
       styles={{
         content: {
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-subtle)",
+          background: "rgba(10, 13, 20, 0.85)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderLeft: "1px solid rgba(255, 255, 255, 0.08)",
           color: "var(--text-primary)",
         },
         header: {
-          background: "var(--bg-surface)",
+          background: "transparent",
           color: "var(--text-primary)",
-          borderBottom: "1px solid var(--border-subtle)",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
         },
+        close: {
+          color: "var(--text-primary)",
+          '&:hover': {
+            background: "rgba(255, 255, 255, 0.1)",
+          }
+        }
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -251,6 +259,6 @@ export const InviteModal = ({
           )}
         </div>
       </div>
-    </Modal>
+    </Drawer>
   );
 };

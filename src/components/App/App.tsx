@@ -52,6 +52,7 @@ import { EmptyWatchState, NonPlayableMediaState } from "./EmptyWatchState";
 import { RoomHeader } from "../TopBar/RoomHeader";
 import { WaitingForHostOverlay } from "../WaitingForHost/WaitingForHostOverlay";
 import { MediaDock } from "./MediaDock";
+import { InviteModal } from "../Modal/InviteModal";
 import config from "../../config";
 import { MetadataContext } from "../../MetadataContext";
 import {
@@ -158,6 +159,7 @@ interface AppState {
   isFileShareModalOpen: boolean;
   isSubtitleModalOpen: boolean;
   isMultiSelectModalOpen: boolean;
+  isInviteModalOpen: boolean;
   copiedRoomLink: boolean;
   roomLock: string;
   controller?: string;
@@ -241,6 +243,7 @@ export class App extends React.Component<AppProps, AppState> {
     isFileShareModalOpen: false,
     isSubtitleModalOpen: false,
     isMultiSelectModalOpen: false,
+    isInviteModalOpen: false,
     copiedRoomLink: false,
     roomLock: "",
     controller: "",
@@ -3169,6 +3172,7 @@ export class App extends React.Component<AppProps, AppState> {
             onOpenSettings={() => this.setSettingsModalOpen(true)}
             onExit={this.handleExitClick}
             onLogoClick={this.handleExitClick}
+            onOpenInvite={() => this.setState({ isInviteModalOpen: true })}
             isLocked={Boolean(this.state.roomLock)}
             onToggleLock={this.toggleLock}
             haveLock={this.haveLock()}
@@ -3583,6 +3587,7 @@ export class App extends React.Component<AppProps, AppState> {
                 >
                   <VideoChatErrorBoundary>
                     <VideoChat
+                      onOpenInviteModal={() => this.setState({ isInviteModalOpen: true })}
                       ref={this.videoChatRef}
                       socket={this.socket}
                       participants={this.state.participants}
@@ -3637,6 +3642,12 @@ export class App extends React.Component<AppProps, AppState> {
             </div>
           </div>
         }
+        {this.state.isInviteModalOpen && (
+          <InviteModal
+            roomId={this.state.roomId}
+            closeInviteModal={() => this.setState({ isInviteModalOpen: false })}
+          />
+        )}
       </React.Fragment>
     );
   }

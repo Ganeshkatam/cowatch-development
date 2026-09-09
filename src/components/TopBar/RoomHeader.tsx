@@ -30,6 +30,7 @@ interface RoomHeaderProps {
   onDeclineUser?: (clientId: string) => void;
   isOwner?: boolean;
   onLogoClick?: () => void;
+  onOpenInvite?: () => void;
 }
 
 export const RoomHeader: React.FC<RoomHeaderProps> = ({
@@ -55,6 +56,7 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
   onDeclineUser,
   isOwner,
   onLogoClick,
+  onOpenInvite,
 }) => {
   const [copied, setCopied] = useState(false);
   const isRoomActive = roomStatus === "active" || roomStatus === "expiring";
@@ -141,16 +143,29 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
       </div>
 
       <div className={styles.rightSection}>
-        <button
-          type="button"
-          className={`${styles.actionBtn} ${copied ? styles.actionBtnCopied : ""}`}
-          onClick={handleCopyLink}
-          title={copied ? "Invite link copied to clipboard!" : "Copy room invite link"}
-          aria-label="Copy room invite link"
-        >
-          {copied ? <IconCheck size={15} stroke={2.5} /> : <IconCopy size={15} stroke={1.8} />}
-          <span className={styles.actionBtnLabel}>{copied ? "Copied" : "Invite"}</span>
-        </button>
+        {onOpenInvite ? (
+          <button
+            type="button"
+            className={styles.actionBtn}
+            onClick={onOpenInvite}
+            title="Invite friends"
+            aria-label="Invite friends"
+          >
+            <IconUsers size={15} stroke={1.8} />
+            <span className={styles.actionBtnLabel}>Invite</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={`${styles.actionBtn} ${copied ? styles.actionBtnCopied : ""}`}
+            onClick={handleCopyLink}
+            title={copied ? "Invite link copied to clipboard!" : "Copy room invite link"}
+            aria-label="Copy room invite link"
+          >
+            {copied ? <IconCheck size={15} stroke={2.5} /> : <IconCopy size={15} stroke={1.8} />}
+            <span className={styles.actionBtnLabel}>{copied ? "Copied" : "Invite"}</span>
+          </button>
+        )}
 
         {isOwner && waitingList && waitingList.length > 0 && (
           <WaitingParticipantsPopover waitingList={waitingList} onAdmitUser={onAdmitUser} onDeclineUser={onDeclineUser} onAdmitAll={onAdmitAll} position="bottom-end">

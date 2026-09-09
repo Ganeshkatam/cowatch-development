@@ -25,7 +25,6 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import styles from "./VideoChat.module.css";
-import { InviteModal } from "../Modal/InviteModal";
 import { WaitingParticipantsPopover } from "../WaitingLounge/WaitingParticipantsPopover";
 
 interface VideoChatProps {
@@ -117,14 +116,11 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
   state = {
     copied: false,
-    isInviteModalOpen: false,
   };
 
   private handleOpenInvite = () => {
     if (this.props.onOpenInviteModal) {
       this.props.onOpenInviteModal();
-    } else {
-      this.setState({ isInviteModalOpen: true });
     }
   };
 
@@ -1245,12 +1241,6 @@ export class VideoChat extends React.Component<VideoChatProps> {
           </div>
         </div>
 
-        {this.state.isInviteModalOpen && (
-          <InviteModal
-            roomId={this.props.roomId || ""}
-            closeInviteModal={() => this.setState({ isInviteModalOpen: false })}
-          />
-        )}
       </div>
     );
   }
