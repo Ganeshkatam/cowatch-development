@@ -299,7 +299,6 @@
 }
 
 :global([data-color-scheme="light"]) .collapseBtn:hover {
-.collapseBtn:hover {
   background: #e2e8f0;
   color: #0f172a;
 }
@@ -313,6 +312,3 @@
   background: #ede9fe;
   border-left: 3px solid #6d28d9;
 }
-
-
-
