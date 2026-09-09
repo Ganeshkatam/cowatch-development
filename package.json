@@ -76,6 +76,11 @@
     "vite": "^7.2.7",
     "webtorrent": "^2.8.5"
   },
+  "overrides": {
+    "@emoji-mart/react": {
+      "react": "$react"
+    }
+  },
   "browserslist": {
     "production": [
       ">0.2%",
