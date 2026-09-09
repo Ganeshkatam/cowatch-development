@@ -1177,6 +1177,8 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
       requesterUid && room.owner_id && String(room.owner_id).toLowerCase() === String(requesterUid).toLowerCase()
     );
 
+    const activeRoom = rooms.get(roomId) || rooms.get(cleanRoomId) || rooms.get(slashRoomId);
+
     res.json({
       room: {
         id: room.roomId,
@@ -1199,6 +1201,7 @@ app.get("/api/room/metadata/:roomId", async (req, res) => {
           requiresAuthentication: false, // Defaulting for now until explicit auth field exists
           requiresPasscode: Boolean(room.isPasscodeProtected && !isOwner),
           isWaitingLoungeEnabled: room.isWaitingLoungeEnabled !== undefined ? Boolean(room.isWaitingLoungeEnabled) : true,
+          isRoomLocked: activeRoom ? Boolean((activeRoom as any).isRoomLocked) : false,
           isOwner: isOwner,
         }
       }
@@ -1295,6 +1298,12 @@ app.post("/api/room/verifyPasscode", bodyParser.json(), async (req, res) => {
 
     if (room.status === "ended" || room.status === "expired" || room.status === "cancelled") {
       res.status(403).json({ success: false, error: "ROOM_ENDED" });
+      return;
+    }
+
+    const activeRoom = rooms.get(roomId) || rooms.get(cleanRoomId) || rooms.get(slashRoomId);
+    if (activeRoom && (activeRoom as any).isRoomLocked && !isOwner) {
+      res.status(403).json({ success: false, error: "ROOM_LOCKED" });
       return;
     }
 

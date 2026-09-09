@@ -161,7 +161,7 @@ interface AppState {
   isMultiSelectModalOpen: boolean;
   isInviteModalOpen: boolean;
   copiedRoomLink: boolean;
-  roomLock: string;
+  isRoomLocked: boolean;
   controller?: string;
   savedPasscodes: StringDict;
   roomId: string;
@@ -245,7 +245,7 @@ export class App extends React.Component<AppProps, AppState> {
     isMultiSelectModalOpen: false,
     isInviteModalOpen: false,
     copiedRoomLink: false,
-    roomLock: "",
+    isRoomLocked: false,
     controller: "",
     roomId: "",
     savedPasscodes: {},
@@ -724,6 +724,7 @@ export class App extends React.Component<AppProps, AppState> {
           "ROOM_NOT_JOINABLE",
           "ROOM_ENDED",
           "ROOM_NOT_FOUND",
+          "ROOM_LOCKED",
           "passcode",
           "password"
         ];
@@ -1260,8 +1261,8 @@ export class App extends React.Component<AppProps, AppState> {
       socket.on("REC:pictureMap", (data: StringDict) => {
         this.setState({ pictureMap: data });
       });
-      socket.on("REC:lock", (data: string) => {
-        this.setState({ roomLock: data });
+      socket.on("REC:roomLock", (data: { locked: boolean }) => {
+        this.setState({ isRoomLocked: data.locked });
       });
       socket.on("roster", (data: any[]) => {
         this.setState({ participants: data, rosterUpdateTS: Date.now() }, () => {
@@ -1654,15 +1655,12 @@ export class App extends React.Component<AppProps, AppState> {
   };
 
   haveLock = () => {
-    if (!this.state.roomLock) {
-      return true;
-    }
     const isOwner = Boolean(this.state.owner && this.context.user?.id === this.state.owner);
-    return this.context.user?.id === this.state.roomLock || isOwner;
+    return !this.state.owner || isOwner;
   };
 
   toggleLock = () => {
-    void this.setRoomLock(!Boolean(this.state.roomLock));
+    void this.setRoomLock(!this.state.isRoomLocked);
   };
 
   focusHeaderSearch = () => {
@@ -3089,7 +3087,7 @@ export class App extends React.Component<AppProps, AppState> {
           modalOpen={this.state.settingsModalOpen}
           setModalOpen={this.setSettingsModalOpen}
           isRoomActive={this.state.roomStatus === "active" || this.state.roomStatus === "expiring" || Boolean(this.state.roomStartedAt)}
-          roomLock={this.state.roomLock}
+          isRoomLocked={this.state.isRoomLocked}
           setRoomLock={this.setRoomLock}
           socket={this.socket}
           roomId={this.state.roomId}
@@ -3157,6 +3155,7 @@ export class App extends React.Component<AppProps, AppState> {
         )}
         {!this.state.fullScreen && (
           <RoomHeader
+            roomId={this.state.roomId}
             roomTitle={this.state.roomTitle}
             roomStatus={this.state.roomStatus}
             participantCount={this.state.participants.length}
@@ -3173,7 +3172,7 @@ export class App extends React.Component<AppProps, AppState> {
             onExit={this.handleExitClick}
             onLogoClick={this.handleExitClick}
             onOpenInvite={() => this.setState({ isInviteModalOpen: true })}
-            isLocked={Boolean(this.state.roomLock)}
+            isLocked={this.state.isRoomLocked}
             onToggleLock={this.toggleLock}
             haveLock={this.haveLock()}
             currentMedia={this.state.roomMedia}
@@ -3483,12 +3482,14 @@ export class App extends React.Component<AppProps, AppState> {
                       onStopScreenShare={this.stopPublishingLocalStream}
                       isPlayingVBrowser={this.playingVBrowser()}
                       onStopVBrowser={this.stopVBrowser}
-                      isLocked={Boolean(this.state.roomLock)}
+                      isLocked={this.state.isRoomLocked}
                       onToggleLock={this.toggleLock}
                       isFullScreen={this.state.fullScreen}
                       onToggleFullScreen={() =>
                         this.localFullScreen(!this.state.fullScreen)
                       }
+                      onOpenInvite={() => this.setState({ isInviteModalOpen: true })}
+                      isOwner={Boolean(this.state.owner && this.context.user?.id === this.state.owner)}
                     />
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Drawer, TextInput, ActionIcon, Button, Text, Group, Tooltip, Loader } from "@mantine/core";
+import { Modal, ActionIcon, Button, Text, Group, Tooltip, Tabs } from "@mantine/core";
 import {
   IconCopy,
   IconCheck,
@@ -9,6 +9,8 @@ import {
   IconHash,
   IconQrcode,
   IconShare,
+  IconBrandGmail,
+  IconBrandYahoo,
 } from "@tabler/icons-react";
 import { serverPath } from "../../utils/utils";
 import { getAccessToken, supabase } from "../../utils/supabaseClient";
@@ -22,9 +24,10 @@ export const InviteModal = ({
 }) => {
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
   const [roomIdCopied, setRoomIdCopied] = useState(false);
-  const [showQr, setShowQr] = useState(false);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [loadingInvite, setLoadingInvite] = useState<boolean>(true);
+  const [invitationCopied, setInvitationCopied] = useState(false);
+  const [hostName, setHostName] = useState<string>("A friend");
 
   const pathParts = window.location.pathname.split("/");
   const roomIdOrVanity = roomId || pathParts[pathParts.length - 1] || "";
@@ -37,6 +40,10 @@ export const InviteModal = ({
         const token = await getAccessToken();
         const user = await supabase.auth.getUser();
         const uid = user?.data?.user?.id;
+        const name = user?.data?.user?.user_metadata?.name || user?.data?.user?.user_metadata?.display_name || "A friend";
+        
+        if (isMounted) setHostName(name);
+
         if (!uid || !token) {
           if (isMounted) setLoadingInvite(false);
           return;
@@ -69,10 +76,24 @@ export const InviteModal = ({
     ? `${baseUrl}?invite=${encodeURIComponent(inviteToken)}`
     : baseUrl;
 
+  const invitationText = `${hostName} is inviting you to a CoWatch Watch Party.
+
+Topic: ${hostName}'s Watch Party
+Join Watch Party
+${fullUrl}
+
+Room ID: ${roomIdOrVanity}`;
+
   const handleCopyInviteLink = () => {
     void navigator.clipboard.writeText(fullUrl);
     setInviteLinkCopied(true);
     setTimeout(() => setInviteLinkCopied(false), 2000);
+  };
+
+  const handleCopyInvitation = () => {
+    void navigator.clipboard.writeText(invitationText);
+    setInvitationCopied(true);
+    setTimeout(() => setInvitationCopied(false), 2000);
   };
 
   const handleCopyRoomId = () => {
@@ -81,43 +102,44 @@ export const InviteModal = ({
     setTimeout(() => setRoomIdCopied(false), 2000);
   };
 
-  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(
-    `Join my watch party: ${fullUrl}`
-  )}`;
-
-  const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(
-    fullUrl
-  )}&text=${encodeURIComponent("Join my watch party!")}`;
-
-  const mailtoUrl = `mailto:?subject=${encodeURIComponent(
-    "Join my CoWatch Party"
-  )}&body=${encodeURIComponent(
-    `Hey! Join my watch party and let's watch together:\n\n${fullUrl}`
-  )}`;
-
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
-    fullUrl
-  )}`;
+  const subject = encodeURIComponent(`${hostName}'s CoWatch Party`);
+  const bodyText = encodeURIComponent(invitationText);
+  
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(invitationText)}`;
+  const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(fullUrl)}&text=${encodeURIComponent(invitationText)}`;
+  
+  const mailtoUrl = `mailto:?subject=${subject}&body=${bodyText}`;
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${bodyText}`;
+  const yahooUrl = `http://compose.mail.yahoo.com/?to=&subj=${subject}&body=${bodyText}`;
+  
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(fullUrl)}`;
 
   return (
-    <Drawer
+    <Modal
       opened
-      position="right"
-      size="md"
+      centered
+      size="lg"
       onClose={closeInviteModal}
-      title="Invite friends to your Watch Party!"
+      title="Invite People"
       styles={{
         content: {
-          background: "rgba(10, 13, 20, 0.85)",
+          background: "rgba(10, 13, 20, 0.95)",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
-          borderLeft: "1px solid rgba(255, 255, 255, 0.08)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: "16px",
           color: "var(--text-primary)",
         },
         header: {
           background: "transparent",
           color: "var(--text-primary)",
           borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          paddingBottom: "16px",
+          marginBottom: "16px",
+        },
+        title: {
+          fontWeight: 600,
+          fontSize: "18px",
         },
         close: {
           color: "var(--text-primary)",
@@ -127,42 +149,41 @@ export const InviteModal = ({
         }
       }}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {/* Copy Invite Link */}
-        <TextInput
-          label="Invite Link"
-          readOnly
-          rightSection={
-            <Tooltip label={inviteLinkCopied ? "Copied!" : "Copy Link"}>
-              <ActionIcon onClick={handleCopyInviteLink} color={inviteLinkCopied ? "green" : "violet"} variant="light">
-                {inviteLinkCopied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-              </ActionIcon>
-            </Tooltip>
-          }
-          value={fullUrl}
-        />
+      <Tabs defaultValue="email" variant="pills" color="violet">
+        <Tabs.List grow justify="center" mb="md">
+          <Tabs.Tab value="email" leftSection={<IconMail size={16} />}>
+            Email
+          </Tabs.Tab>
+          <Tabs.Tab value="social" leftSection={<IconShare size={16} />}>
+            Social Share
+          </Tabs.Tab>
+          <Tabs.Tab value="qrcode" leftSection={<IconQrcode size={16} />}>
+            QR Code
+          </Tabs.Tab>
+        </Tabs.List>
 
-        {/* Copy Room ID / Name */}
-        <TextInput
-          label="Room ID / Slug"
-          readOnly
-          rightSection={
-            <Tooltip label={roomIdCopied ? "Copied!" : "Copy Room ID"}>
-              <ActionIcon onClick={handleCopyRoomId} color={roomIdCopied ? "green" : "violet"} variant="light">
-                {roomIdCopied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-              </ActionIcon>
-            </Tooltip>
-          }
-          leftSection={<IconHash size={16} />}
-          value={roomIdOrVanity}
-        />
-
-        {/* Share buttons */}
-        <div>
-          <Text size="sm" fw={500} mb="xs">
-            Quick Share
+        <Tabs.Panel value="email" pt="md" pb="lg" style={{ minHeight: "150px" }}>
+          <Text size="sm" c="dimmed" mb="lg" ta="center">
+            Send an invitation to your friends via your favorite email client.
           </Text>
-          <Group gap="xs">
+          <Group justify="center" gap="md">
+            <Button component="a" href={mailtoUrl} color="gray" variant="light" leftSection={<IconMail size={18} />} size="md">
+              Default Email
+            </Button>
+            <Button component="a" href={gmailUrl} target="_blank" rel="noopener noreferrer" color="red" variant="light" leftSection={<IconBrandGmail size={18} />} size="md">
+              Gmail
+            </Button>
+            <Button component="a" href={yahooUrl} target="_blank" rel="noopener noreferrer" color="violet" variant="light" leftSection={<IconBrandYahoo size={18} />} size="md">
+              Yahoo Mail
+            </Button>
+          </Group>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="social" pt="md" pb="lg" style={{ minHeight: "150px" }}>
+          <Text size="sm" c="dimmed" mb="lg" ta="center">
+            Share your watch party link instantly via messaging apps.
+          </Text>
+          <Group justify="center" gap="md">
             <Button
               component="a"
               href={whatsappUrl}
@@ -170,8 +191,8 @@ export const InviteModal = ({
               rel="noopener noreferrer"
               color="green"
               variant="light"
-              leftSection={<IconBrandWhatsapp size={16} />}
-              style={{ flexGrow: 1 }}
+              leftSection={<IconBrandWhatsapp size={18} />}
+              size="md"
             >
               WhatsApp
             </Button>
@@ -182,83 +203,83 @@ export const InviteModal = ({
               rel="noopener noreferrer"
               color="blue"
               variant="light"
-              leftSection={<IconBrandTelegram size={16} />}
-              style={{ flexGrow: 1 }}
+              leftSection={<IconBrandTelegram size={18} />}
+              size="md"
             >
               Telegram
-            </Button>
-            <Button
-              component="a"
-              href={mailtoUrl}
-              color="gray"
-              variant="light"
-              leftSection={<IconMail size={16} />}
-              style={{ flexGrow: 1 }}
-            >
-              Email
             </Button>
             {typeof navigator !== "undefined" && typeof navigator.share === "function" && (
               <Button
                 onClick={() => {
-                  navigator
-                    .share({
-                      title: "Join my CoWatch Party",
-                      text: "Join my watch party and let's watch together!",
-                      url: fullUrl,
-                    })
-                    .catch(() => {});
+                  navigator.share({
+                    title: `${hostName}'s CoWatch Party`,
+                    text: invitationText,
+                    url: fullUrl,
+                  }).catch(() => {});
                 }}
                 color="violet"
                 variant="light"
-                leftSection={<IconShare size={16} />}
-                style={{ flexGrow: 1 }}
+                leftSection={<IconShare size={18} />}
+                size="md"
               >
-                Share
+                Share Menu
               </Button>
             )}
           </Group>
-        </div>
+        </Tabs.Panel>
 
-        {/* QR Code toggler */}
-        <div style={{ marginTop: "8px" }}>
-          <Button
-            onClick={() => setShowQr(!showQr)}
-            variant="default"
-            fullWidth
-            leftSection={<IconQrcode size={16} />}
-          >
-            {showQr ? "Hide QR Code" : "Show QR Code"}
-          </Button>
-
-          {showQr && (
-            <div
+        <Tabs.Panel value="qrcode" pt="sm" pb="sm" style={{ minHeight: "150px" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <img
+              src={qrCodeUrl}
+              alt="Room QR Code"
               style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                marginTop: "16px",
-                padding: "16px",
-                background: "var(--bg-elevated)",
                 borderRadius: "8px",
+                border: "8px solid white",
+                boxShadow: "var(--shadow-sm)",
+                width: "160px",
+                height: "160px",
               }}
-            >
-              <img
-                src={qrCodeUrl}
-                alt="Room QR Code"
-                style={{
-                  borderRadius: "4px",
-                  border: "8px solid white",
-                  boxShadow: "var(--shadow-sm)",
-                }}
-              />
-              <Text size="xs" c="dimmed" mt="xs">
-                Scan with a mobile camera to join instantly
-              </Text>
-            </div>
-          )}
-        </div>
+            />
+            <Text size="xs" c="dimmed" mt="md">
+              Scan with a mobile camera to join instantly
+            </Text>
+          </div>
+        </Tabs.Panel>
+      </Tabs>
+
+      {/* Footer bar matches Zoom style bottom sticky actions */}
+      <div style={{
+        marginTop: "16px",
+        paddingTop: "20px",
+        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between"
+      }}>
+        <Group gap="sm">
+          <Button
+            variant="light"
+            color={inviteLinkCopied ? "green" : "violet"}
+            onClick={handleCopyInviteLink}
+            leftSection={inviteLinkCopied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+          >
+            Copy Link
+          </Button>
+          <Button
+            variant="light"
+            color={invitationCopied ? "green" : "violet"}
+            onClick={handleCopyInvitation}
+            leftSection={invitationCopied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+          >
+            Copy Invitation
+          </Button>
+        </Group>
+        
+        <Text size="sm" c="dimmed" fw={500}>
+          ID: {roomIdOrVanity}
+        </Text>
       </div>
-    </Drawer>
+    </Modal>
   );
 };

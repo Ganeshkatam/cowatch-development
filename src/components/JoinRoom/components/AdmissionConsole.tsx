@@ -12,7 +12,7 @@ import styles from "../JoinRoom.module.css";
 
 interface AdmissionConsoleProps {
   roomId: string;
-  requirement: "none" | "passcode" | "authentication";
+  requirement: "none" | "passcode" | "authentication" | "locked";
   passcode: string;
   onPasscodeChange: (val: string) => void;
   onSubmit: (e?: React.FormEvent) => void;
@@ -39,12 +39,16 @@ export const AdmissionConsole: React.FC<AdmissionConsoleProps> = ({
       <div className={styles.consoleHeader}>
         <span className={styles.consoleEyebrow}>SCREENING ADMISSION</span>
         <h2 className={styles.consoleHeading}>
-          {requirement === "authentication"
+          {requirement === "locked"
+            ? "Room Locked"
+            : requirement === "authentication"
             ? "Account Required"
             : "Join Watch Party"}
         </h2>
         <p className={styles.consoleSubheading}>
-          {requirement === "authentication"
+          {requirement === "locked"
+            ? "The host has locked this room to prevent new entries."
+            : requirement === "authentication"
             ? "Sign in to enter this private watch party."
             : requirement === "passcode"
             ? "Enter the room passcode to access the screening."
@@ -63,7 +67,12 @@ export const AdmissionConsole: React.FC<AdmissionConsoleProps> = ({
         </Alert>
       )}
 
-      {requirement === "authentication" ? (
+      {requirement === "locked" ? (
+        <div className={styles.loungeAdvisory} style={{ marginTop: '20px' }}>
+          <IconLock size={15} className={styles.statusIconViolet} />
+          <span>This room is currently locked by the host. Please check back later.</span>
+        </div>
+      ) : requirement === "authentication" ? (
         <div className={styles.authActionGroup}>
           <Button
             onClick={onNavigateLogin}

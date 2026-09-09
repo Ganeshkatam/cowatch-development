@@ -36,7 +36,7 @@ interface SettingsModalProps {
   modalOpen: boolean;
   setModalOpen: (open: boolean) => void;
   isRoomActive?: boolean;
-  roomLock: string;
+  isRoomLocked: boolean;
   setRoomLock: (lock: boolean) => Promise<void>;
   socket: Socket;
   roomId: string;
@@ -62,7 +62,7 @@ export const SettingsModal = ({
   modalOpen,
   setModalOpen,
   isRoomActive = false,
-  roomLock,
+  isRoomLocked,
   setRoomLock,
   socket,
   owner,
@@ -84,7 +84,7 @@ export const SettingsModal = ({
   // -- DRAFT STATE --
   const [draftTitle, setDraftTitle] = useState(roomTitle || "");
   const [draftDescription, setDraftDescription] = useState(roomDescription || "");
-  const [draftLock, setDraftLock] = useState(Boolean(roomLock));
+  const [draftLock, setDraftLock] = useState(isRoomLocked);
   const [draftPermanent, setDraftPermanent] = useState(false);
   const [draftChatEnabled, setDraftChatEnabled] = useState(!isChatDisabled);
   const [draftWaitingLounge, setDraftWaitingLounge] = useState(Boolean(isWaitingLoungeEnabled));
@@ -113,7 +113,7 @@ export const SettingsModal = ({
     if (modalOpen) {
       setDraftTitle(roomTitle || "");
       setDraftDescription(roomDescription || "");
-      setDraftLock(Boolean(roomLock));
+      setDraftLock(isRoomLocked);
       setDraftChatEnabled(!isChatDisabled);
       setDraftWaitingLounge(Boolean(isWaitingLoungeEnabled));
       
@@ -147,7 +147,7 @@ export const SettingsModal = ({
       };
       void fetchRoomData();
     }
-  }, [modalOpen, roomTitle, roomDescription, roomLock, isChatDisabled, isWaitingLoungeEnabled, profile, roomId]);
+  }, [modalOpen, roomTitle, roomDescription, isRoomLocked, isChatDisabled, isWaitingLoungeEnabled, profile, roomId]);
 
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [copiedCurrentPassword, setCopiedCurrentPassword] = useState(false);
@@ -303,7 +303,7 @@ export const SettingsModal = ({
             setPasscode(draftPassword.trim());
           }
 
-          if (draftLock !== Boolean(roomLock)) {
+          if (draftLock !== isRoomLocked) {
             void setRoomLock(draftLock);
           }
 

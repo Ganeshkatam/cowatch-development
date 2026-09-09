@@ -139,7 +139,7 @@ export class Room {
   private pictureMap: StringDict = {};
   public vBrowser: AssignedVM | undefined = undefined;
   public creator: string | undefined = undefined; // email of the user who created the room (just used for stats)
-  public lock: string | undefined = undefined; // uid of the user who locked the room
+  public isRoomLocked: boolean = false; // prevents new users from entering the room
   public playlist: PlaylistVideo[] = [];
   public isWaitingLoungeEnabled: boolean = true;
 
@@ -178,6 +178,7 @@ export class Room {
       clientId: string;
     }
     | undefined = undefined;
+  lock: any;
 
   constructor(
     io: Server,
@@ -413,6 +414,14 @@ export class Room {
         }
       }
 
+      if (this.isRoomLocked) {
+        const isOwner = Boolean(this.owner_id && socket.uid === this.owner_id);
+        const isAdmitted = Boolean(this.roster.find((user) => user.id === clientId));
+        if (!isOwner && !isAdmitted) {
+          return next(new Error("ROOM_LOCKED"));
+        }
+      }
+
       next();
     });
     io.of(roomId).on("connection", async (socket: Socket) => {
@@ -477,14 +486,15 @@ export class Room {
 
         if (commandType === "lock" || commandType === "activeMember") {
           const isOwner = Boolean(this.owner_id && socket.uid === this.owner_id);
-          const hasLock = !this.lock || socket.uid === this.lock || isOwner;
-          if (commandType === "lock" && !hasLock) return false;
-          
+
           if (commandType === "activeMember" && this.status === 'waiting') {
             socket.emit("errorMessage", "The host has not started the watch party yet.");
             return false;
           }
-          return hasLock;
+
+          // Only the host can perform privileged media operations (and lock operations).
+          // If a room has no owner for some reason, we fail open.
+          return !this.owner_id || isOwner;
         }
 
         return true;
@@ -723,8 +733,7 @@ export class Room {
       socket.on("CMD:lock", async (data: unknown) => {
         if (!(await authorizeRoomCommand("member"))) return;
         const isOwner = Boolean(this.owner_id && socket.uid === this.owner_id);
-        const isCurrentLockHolder = Boolean(this.lock && socket.uid === this.lock);
-        if (!this.lock || isOwner || isCurrentLockHolder) {
+        if (isOwner) {
           await this.lockRoom(socket, data);
         } else {
           socket.emit("errorMessage", "Only the room owner can change the lock");
@@ -860,7 +869,7 @@ export class Room {
       nameMap: abbrNameMap,
       pictureMap: abbrPictureMap,
       vBrowser: this.vBrowser,
-      lock: this.lock,
+      isRoomLocked: this.isRoomLocked,
       creator: this.creator,
       playlist: this.playlist,
       loop: this.loop,
@@ -887,8 +896,8 @@ export class Room {
     if (roomObj.vBrowser) {
       this.vBrowser = roomObj.vBrowser;
     }
-    if (roomObj.lock) {
-      this.lock = roomObj.lock;
+    if (roomObj.isRoomLocked !== undefined) {
+      this.isRoomLocked = roomObj.isRoomLocked;
     }
     if (roomObj.creator) {
       this.creator = roomObj.creator;
@@ -1782,15 +1791,15 @@ export class Room {
 
   private lockRoom = async (socket: Socket, raw: unknown) => {
     const data = raw as { locked: boolean };
-    if (!data) {
+    if (!data || data.locked === undefined) {
       return;
     }
-    const { uid, clientId } = socket;
-    this.lock = data.locked ? uid : "";
-    this.emitToRoom("REC:lock", this.lock);
+    const { clientId } = socket;
+    this.isRoomLocked = Boolean(data.locked);
+    this.emitToRoom("REC:roomLock", { locked: this.isRoomLocked });
     const chatMsg = {
       id: clientId,
-      cmd: data.locked ? "lock" : "unlock",
+      cmd: this.isRoomLocked ? "lock" : "unlock",
       msg: "",
     };
     void this.addChatMessage(socket, chatMsg);

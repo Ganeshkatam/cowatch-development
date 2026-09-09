@@ -41,8 +41,9 @@ export default function JoinRoom() {
   );
 
   // Determine Derived Admission Requirement (Guests only; host always bypasses)
-  const admissionRequirement: "none" | "passcode" | "authentication" = useMemo(() => {
+  const admissionRequirement: "none" | "passcode" | "authentication" | "locked" = useMemo(() => {
     if (isHost) return "none";
+    if (room?.access?.isRoomLocked) return "locked";
     if (room?.access?.requiresAuthentication && !context.user) return "authentication";
     if (room?.access?.requiresPasscode) return "passcode";
     return "none";

@@ -36,6 +36,7 @@ export interface RoomMetadata {
     isWaitingLoungeEnabled: boolean;
     isOwner?: boolean;
     requiresAuthentication?: boolean;
+    isRoomLocked?: boolean;
   };
 }
 

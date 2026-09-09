@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { IconAdjustments, IconCheck, IconChevronDown, IconCopy, IconCrown, IconLock, IconLockOpen, IconSettings, IconUsers, IconX } from "@tabler/icons-react";
-import { Menu, Tooltip } from "@mantine/core";
+import { IconAdjustments, IconCheck, IconChevronDown, IconCopy, IconCrown, IconLock, IconLockOpen, IconSettings, IconUsers, IconX, IconInfoCircle } from "@tabler/icons-react";
+import { Menu, Tooltip, Popover, ActionIcon } from "@mantine/core";
 import { SignInButton } from "./TopBar";
 import { HeaderSearchBar } from "./HeaderSearchBar";
 import { WaitingParticipantsPopover } from "../WaitingLounge/WaitingParticipantsPopover";
 import styles from "./RoomHeader.module.css";
+import { serverPath } from "../../utils/utils";
 
 interface RoomHeaderProps {
+  roomId?: string;
   roomTitle: string;
   roomStatus?: string;
   participantCount?: number;
@@ -34,6 +36,7 @@ interface RoomHeaderProps {
 }
 
 export const RoomHeader: React.FC<RoomHeaderProps> = ({
+  roomId,
   roomTitle,
   roomStatus,
   participantCount,
@@ -59,7 +62,17 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
   onOpenInvite,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [roomIdCopied, setRoomIdCopied] = useState(false);
   const isRoomActive = roomStatus === "active" || roomStatus === "expiring";
+
+  const pathParts = window.location.pathname.split("/");
+  const roomIdOrVanity = roomId || pathParts[pathParts.length - 1] || "";
+
+  const handleCopyRoomId = () => {
+    void navigator.clipboard.writeText(roomIdOrVanity);
+    setRoomIdCopied(true);
+    setTimeout(() => setRoomIdCopied(false), 2000);
+  };
 
   const handleCopyLink = async () => {
     try {
@@ -83,18 +96,67 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
 
   const roomIdentity = (
     <div className={styles.roomIdentity}>
-      <div className={styles.roomTitleRow}>
-        {renderStatusBadge()}
-        {isOwner && (
-          <span className={styles.hostBadge}>
-            <IconCrown size={12} stroke={2.5} />
-            <span>Host</span>
-          </span>
-        )}
-        <span className={styles.roomTitle} title={roomTitle || "Watch Party Room"}>
-          {roomTitle || "Watch Party Room"}
-        </span>
-      </div>
+      <Popover position="bottom-start" offset={4} classNames={{ dropdown: styles.roomInfoDropdown }}>
+        <Popover.Target>
+          <div className={styles.roomTitleTrigger} title="View Room Info">
+            <div className={styles.roomTitleRow}>
+              <IconInfoCircle size={16} stroke={2} className={styles.infoIcon} />
+              <span className={styles.roomTitle} title={roomTitle || "Watch Party Room"}>
+                {roomTitle || "Watch Party Room"}
+              </span>
+            </div>
+          </div>
+        </Popover.Target>
+        <Popover.Dropdown>
+          <div className={styles.roomInfoDropdownContainer}>
+            <div className={styles.roomInfoDropdownHeader}>
+              {roomTitle || "Watch Party Room"}
+            </div>
+
+            <table className={styles.roomInfoTable}>
+              <tbody>
+                <tr>
+                  <td className={styles.roomInfoLabel}>Invite Link</td>
+                  <td className={styles.roomInfoValue}>
+                    <div className={styles.roomInfoLinkRow}>
+                      <span className={styles.roomInfoLinkText}>{window.location.href}</span>
+                      <ActionIcon
+                        onClick={handleCopyLink}
+                        className={styles.roomInfoCopyBtn}
+                        title={copied ? "Copied!" : "Copy Link"}
+                      >
+                        {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                      </ActionIcon>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td className={styles.roomInfoLabel}>Room ID</td>
+                  <td className={styles.roomInfoValue}>{roomIdOrVanity}</td>
+                </tr>
+                {isOwner && (
+                  <tr>
+                    <td className={styles.roomInfoLabel}>Host</td>
+                    <td className={styles.roomInfoValue}>You</td>
+                  </tr>
+                )}
+                {roomStatus && (
+                  <tr>
+                    <td className={styles.roomInfoLabel}>Status</td>
+                    <td className={styles.roomInfoValue} style={{ textTransform: 'capitalize' }}>
+                      {roomStatus === 'active' ? (
+                        <span style={{ color: '#4ade80', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <div className={styles.statusLiveDot} /> Live
+                        </span>
+                      ) : roomStatus}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Popover.Dropdown>
+      </Popover>
       <Tooltip
         label={currentMedia ? `Now Playing: ${mediaDisplayName || currentMedia} (Click to change)` : "Nothing playing (Click to add media)"}
         position="bottom"

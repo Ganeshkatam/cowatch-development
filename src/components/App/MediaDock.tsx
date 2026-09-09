@@ -5,7 +5,6 @@ import {
   IconChevronDown,
   IconChevronUp,
   IconCopy,
-  IconDots,
   IconFile,
   IconLink,
   IconList,
@@ -16,6 +15,7 @@ import {
   IconPlus,
   IconScreenShare,
   IconX,
+  IconUserPlus,
 } from "@tabler/icons-react";
 import { Menu } from "@mantine/core";
 import ChatVideoCard from "../ChatVideoCard/ChatVideoCard";
@@ -44,6 +44,8 @@ interface MediaDockProps {
   isFullScreen?: boolean;
   onToggleFullScreen?: () => void;
   paused?: boolean;
+  onOpenInvite?: () => void;
+  isOwner?: boolean;
 }
 
 export const MediaDock: React.FC<MediaDockProps> = ({
@@ -57,6 +59,7 @@ export const MediaDock: React.FC<MediaDockProps> = ({
   onPlayPlaylistItem,
   onDeletePlaylistItem,
   onMovePlaylistItem,
+  isOwner,
   roomMedia,
   onStopMedia,
   isScreenSharing,
@@ -68,6 +71,7 @@ export const MediaDock: React.FC<MediaDockProps> = ({
   isFullScreen,
   onToggleFullScreen,
   paused = false,
+  onOpenInvite,
 }) => {
   const [copied, setCopied] = React.useState(false);
   const [openMenus, setOpenMenus] = React.useState(0);
@@ -292,8 +296,8 @@ export const MediaDock: React.FC<MediaDockProps> = ({
             }
             const isActive = roomMedia && findPlaylistVideoByUrl([videoItem], roomMedia) !== undefined;
             return (
-              <Menu.Item 
-                key={index} 
+              <Menu.Item
+                key={index}
                 closeMenuOnClick={false}
                 className={isActive ? styles.activePlaylistItem : undefined}
               >
@@ -325,13 +329,12 @@ export const MediaDock: React.FC<MediaDockProps> = ({
         </button>
       )}
 
-      {onToggleLock && (
+      {onToggleLock && isOwner && (
         <button
           type="button"
           className={styles.dockBtn}
           onClick={onToggleLock}
-          disabled={!haveLock}
-          title={isLocked ? "Unlock controls" : "Lock controls"}
+          title={isLocked ? "Unlock room access" : "Lock room access"}
         >
           {isLocked ? <IconLock size={16} color="var(--color-warning)" /> : <IconLockOpen size={16} />}
           <span>{isLocked ? "Unlock" : "Lock"}</span>
@@ -341,11 +344,11 @@ export const MediaDock: React.FC<MediaDockProps> = ({
       <button
         type="button"
         className={styles.dockBtn}
-        onClick={handleCopyLink}
-        title="Copy room link"
+        onClick={onOpenInvite || handleCopyLink}
+        title="Invite friends"
       >
-        {copied ? <IconCheck size={16} color="var(--color-live)" /> : <IconCopy size={16} />}
-        <span>{copied ? "Copied!" : "Copy Link"}</span>
+        <IconUserPlus size={16} />
+        <span>Invite</span>
       </button>
 
       {/* Collapse button when media is loaded */}
