@@ -94,7 +94,6 @@
     "@emoji-mart/react": {
       "react": "$react"
     },
-    "ip": "^1.1.9",
     "js-yaml": "^4.3.2"
   },
   "allowScripts": {
