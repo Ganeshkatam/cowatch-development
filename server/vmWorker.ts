@@ -3,6 +3,7 @@ import { authorizeAdmin } from "./utils/adminAuth.ts";
 import { getBgVMManagers } from "./vm/utils.ts";
 import express from "express";
 import bodyParser from "body-parser";
+import { isVBrowserEnabled } from "./vm/capability.ts";
 
 const app = express();
 const vmManagers = getBgVMManagers();
@@ -15,6 +16,10 @@ Object.values(vmManagers).forEach((manager) => {
 
 app.post("/assignVM", async (req, res) => {
   try {
+    if (!isVBrowserEnabled()) {
+      res.status(503).json({ error: "VBROWSER_UNAVAILABLE" });
+      return;
+    }
     // Find a pool that matches the size and region requirements
     const pools = Object.values(vmManagers).filter((mgr) => {
       return (

@@ -1399,6 +1399,17 @@ export class App extends React.Component<AppProps, AppState> {
       socket.on("REC:waitingLoungeEnabled", (data: { enabled: boolean }) => {
         this.setState({ isWaitingLoungeEnabled: data.enabled });
       });
+      socket.on("vbrowser:error", (data: any) => {
+        if (data?.code === "VBROWSER_UNAVAILABLE") {
+          this.setState({
+            errorMessage: "Virtual browser access isn't currently available for this room.",
+            isVBrowserEnabled: false,
+          });
+          if (this.state.roomMedia && this.state.roomMedia.startsWith("vbrowser://")) {
+            this.roomSetMedia(""); 
+          }
+        }
+      });
       window.setInterval(() => {
         if (this.state.roomMedia) {
           const curr = this.Player().getCurrentTime();

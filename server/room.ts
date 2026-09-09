@@ -3,6 +3,7 @@ import axios from "axios";
 import { Server, Socket } from "socket.io";
 import { getUser, validateUserToken } from "./utils/supabase.ts";
 import { redis, redisCount, redisCountDistinct } from "./utils/redis.ts";
+import { isVBrowserEnabled } from "./vm/capability.ts";
 import { type AssignedVM } from "./vm/base.ts";
 import { getStartOfDay } from "./utils/time.ts";
 import { postgres, updateObject, upsertObject } from "./utils/postgres.ts";
@@ -959,6 +960,8 @@ export class Room {
     });
   };
 
+
+
   private getHostState = (): HostState => {
     let currentTS = this.videoTS;
     const sockets = Array.from(this.io.of(this.roomId).sockets.values());
@@ -1610,6 +1613,10 @@ export class Room {
   };
 
   private startVBrowser = async (socket: Socket, raw: unknown) => {
+    if (!isVBrowserEnabled()) {
+      socket.emit("vbrowser:error", { code: "VBROWSER_UNAVAILABLE" });
+      return;
+    }
     const data = raw as {
       options?: { size: string; region: string; provider: string };
     };
@@ -1885,7 +1892,7 @@ export class Room {
       roomDescription: first?.roomDescription,
       mediaPath: first?.mediaPath,
       isWaitingLoungeEnabled: this.isWaitingLoungeEnabled,
-      isVBrowserEnabled: Boolean(config.VM_MANAGER_CONFIG),
+      isVBrowserEnabled: isVBrowserEnabled(),
       // Lifecycle fields - authoritative from server
       status: this.status,
       startedAt: this.startedAt ? this.startedAt.toISOString() : null,
