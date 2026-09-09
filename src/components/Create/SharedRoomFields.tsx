@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   TextInput,
   Textarea,
+  PasswordInput,
   Switch,
   Text,
   FileButton,
@@ -13,10 +14,42 @@ import {
 import {
   IconPhotoPlus,
   IconTrash,
+  IconLock,
   IconPlus,
 } from "@tabler/icons-react";
 import type { RoomFormState } from "./roomCreationDomain";
 import styles from "./Create.module.css";
+
+// Reusable Field Row Component
+const FieldRow: React.FC<{
+  label: React.ReactNode;
+  description?: React.ReactNode;
+  children: React.ReactNode;
+  centerAlign?: boolean;
+  noBorder?: boolean;
+}> = ({ label, description, children, centerAlign, noBorder }) => {
+  const rowClasses = [
+    styles.formRow,
+    centerAlign ? styles.centerAlign : "",
+    noBorder ? styles.noBorder : "",
+  ].filter(Boolean).join(" ");
+
+  return (
+    <div className={rowClasses}>
+      <div className={styles.formRowLabel}>
+        <Text fw={500} size="sm" c="var(--text-primary)">
+          {label}
+        </Text>
+        {description && (
+          <Text size="xs" c="dimmed" mt={2}>
+            {description}
+          </Text>
+        )}
+      </div>
+      <div className={styles.formRowContent}>{children}</div>
+    </div>
+  );
+};
 
 export interface DurationSelectProps {
   formState: RoomFormState;
@@ -27,10 +60,11 @@ export const DurationSelect: React.FC<DurationSelectProps> = ({ formState, class
   if (formState.isPermanent) return null;
 
   return (
-    <div className={className ? `${styles.horizontalInputGroup} ${className}` : styles.horizontalInputGroup}>
-      <Text fw={500} size="sm" c="var(--text-primary)">
-        Session Duration
-      </Text>
+    <FieldRow
+      label="Session Duration"
+      description="The expiration countdown starts only when you start the watch party."
+      centerAlign
+    >
       <Select
         value={formState.durationMinutes}
         onChange={(val) => val && formState.setDurationMinutes(val)}
@@ -53,10 +87,7 @@ export const DurationSelect: React.FC<DurationSelectProps> = ({ formState, class
           },
         }}
       />
-      <div className={styles.inputHelp}>
-        <span>The expiration countdown starts only when you start the watch party.</span>
-      </div>
-    </div>
+    </FieldRow>
   );
 };
 
@@ -79,225 +110,198 @@ export const SharedRoomFields: React.FC<SharedRoomFieldsProps> = ({
     isDescriptionOpen || Boolean(formState.roomDescription && formState.roomDescription.trim().length > 0);
 
   return (
-    <Stack gap="lg">
-      {/* Room Title */}
-      <TextInput
-        className={styles.horizontalInputGroup}
-        label="Room Title"
-        placeholder="e.g. Saturday Movie Night, Anime Marathon"
-        required
-        value={formState.roomTitle}
-        onChange={(e) => formState.setRoomTitle(e.target.value)}
-        maxLength={50}
-        size="md"
-        styles={{
-          input: {
-            backgroundColor: "rgba(255, 255, 255, 0.05)",
-            borderColor: "rgba(255, 255, 255, 0.1)",
-            color: "#ffffff",
-            fontWeight: 600,
-          },
-        }}
-      />
+    <Stack gap={0}>
+      <FieldRow label="Room Title" centerAlign>
+        <TextInput
+          placeholder="e.g. Saturday Movie Night, Anime Marathon"
+          required
+          value={formState.roomTitle}
+          onChange={(e) => formState.setRoomTitle(e.target.value)}
+          maxLength={50}
+          size="md"
+          styles={{
+            input: {
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              borderColor: "rgba(255, 255, 255, 0.1)",
+              color: "#ffffff",
+              fontWeight: 600,
+            },
+          }}
+        />
+      </FieldRow>
 
       {afterTitle}
 
-      {/* Description */}
-      <div className={styles.optionalFieldGroup}>
-        <div className={styles.optionalFieldLabel}>Description</div>
-        <div className={styles.optionalFieldControl}>
-          {!showDescription ? (
+      {!showDescription ? (
+        <FieldRow label="Description" centerAlign>
+          <button
+            type="button"
+            className={styles.addFieldLink}
+            onClick={() => setIsDescriptionOpen(true)}
+          >
+            <IconPlus size={14} />
+            <span>Add Description</span>
+          </button>
+        </FieldRow>
+      ) : (
+        <FieldRow
+          label="Description (Optional)"
+          description={
             <button
               type="button"
-              className={styles.addFieldLink}
-              onClick={() => setIsDescriptionOpen(true)}
+              className={styles.removeFieldLink}
+              onClick={() => {
+                formState.setRoomDescription("");
+                setIsDescriptionOpen(false);
+              }}
+              style={{ marginTop: 8 }}
             >
-              <IconPlus size={14} />
-              <span>Add Description</span>
+              <IconTrash size={13} />
+              <span>Remove</span>
             </button>
-          ) : (
-            <div>
-              <Group justify="space-between" align="center" mb={6}>
-                <Text size="sm" fw={500} c="var(--text-primary)">
-                  Optional details
-                </Text>
-                <button
-                  type="button"
-                  className={styles.removeFieldLink}
-                  onClick={() => {
-                    formState.setRoomDescription("");
-                    setIsDescriptionOpen(false);
-                  }}
-                >
-                  <IconTrash size={13} />
-                  <span>Remove</span>
-                </button>
-              </Group>
-              <Textarea
-                placeholder="What are we watching? Bring snacks!"
-                value={formState.roomDescription}
-                onChange={(e) => formState.setRoomDescription(e.target.value)}
-                maxLength={200}
-                rows={2}
-                autoFocus
-                styles={{
-                  input: {
-                    backgroundColor: "rgba(255, 255, 255, 0.05)",
-                    borderColor: "rgba(255, 255, 255, 0.1)",
-                    color: "#ffffff",
-                  },
-                }}
-              />
-              <div className={styles.inputHelp}>
-                <span>Visible to invited guests</span>
-                <span>{formState.roomDescription.length}/200</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+          }
+        >
+          <Textarea
+            placeholder="What are we watching? Bring snacks!"
+            value={formState.roomDescription}
+            onChange={(e) => formState.setRoomDescription(e.target.value)}
+            maxLength={200}
+            rows={2}
+            autoFocus
+            styles={{
+              input: {
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                borderColor: "rgba(255, 255, 255, 0.1)",
+                color: "#ffffff",
+              },
+            }}
+          />
+          <div className={styles.inputHelp}>
+            <span>Visible to invited guests</span>
+            <span>{formState.roomDescription.length}/200</span>
+          </div>
+        </FieldRow>
+      )}
 
-      {/* Cover Photo */}
-      <div className={styles.optionalFieldGroup}>
-        <div className={styles.optionalFieldLabel}>Cover Photo</div>
-        <div className={styles.optionalFieldControl}>
-          <div className={styles.coverUploadBox}>
-            {formState.coverPreview ? (
-              <div className={styles.coverThumbSmall}>
-                <img src={formState.coverPreview} alt="Cover preview" />
-              </div>
-            ) : null}
-            <Group gap="sm">
-              <FileButton onChange={formState.handleCoverChange} accept="image/png,image/jpeg,image/webp">
-                {(props) => (
-                  <Button
-                    {...props}
-                    variant="light"
-                    color="violet"
-                    size="xs"
-                    leftSection={<IconPhotoPlus size={16} />}
-                  >
-                    {formState.coverPreview ? "Change" : "Upload"}
-                  </Button>
-                )}
-              </FileButton>
-              {formState.coverPreview && (
+      <FieldRow label="Cover Photo (Optional)" description="16:9, max 1MB (PNG, JPG, WebP)" centerAlign>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {formState.coverPreview ? (
+            <div className={styles.coverThumbSmall}>
+              <img src={formState.coverPreview} alt="Cover preview" />
+            </div>
+          ) : null}
+          <Group gap="sm">
+            <FileButton onChange={formState.handleCoverChange} accept="image/png,image/jpeg,image/webp">
+              {(props) => (
                 <Button
-                  variant="subtle"
-                  color="red"
+                  {...props}
+                  variant="light"
+                  color="violet"
                   size="xs"
-                  onClick={formState.handleRemoveCover}
-                  leftSection={<IconTrash size={14} />}
+                  leftSection={<IconPhotoPlus size={16} />}
                 >
-                  Remove
+                  {formState.coverPreview ? "Change" : "Upload"}
                 </Button>
               )}
-            </Group>
-          </div>
-          <Text size="xs" c="dimmed" mt={4}>
-            16:9, max 1MB (PNG, JPG, WebP)
-          </Text>
+            </FileButton>
+            {formState.coverPreview && (
+              <Button
+                variant="subtle"
+                color="red"
+                size="xs"
+                onClick={formState.handleRemoveCover}
+                leftSection={<IconTrash size={14} />}
+              >
+                Remove
+              </Button>
+            )}
+          </Group>
         </div>
-      </div>
+      </FieldRow>
 
-      {/* Passcode */}
-      <TextInput
-        className={styles.horizontalInputGroup}
+      <FieldRow
         label="Room Passcode"
         description="Automatically generated, but you can change it."
-        value={formState.passcode}
-        onChange={(e) => {
-          const val = e.target.value.replace(/[^A-Za-z0-9]/g, "");
-          formState.setPasscode(val);
-        }}
-        minLength={1}
-        maxLength={8}
-        required
-        styles={{
-          input: {
-            fontFamily: "monospace",
-            letterSpacing: "1px",
-            backgroundColor: "rgba(255, 255, 255, 0.05)",
-            borderColor: "rgba(255, 255, 255, 0.1)",
-            color: "#ffffff",
-            fontWeight: 600,
-          },
-        }}
-      />
+        centerAlign
+      >
+        <TextInput
+          value={formState.passcode}
+          onChange={(e) => {
+            const val = e.target.value.replace(/[^A-Za-z0-9]/g, '');
+            formState.setPasscode(val);
+          }}
+          minLength={1}
+          maxLength={8}
+          required
+          styles={{
+            input: {
+              fontFamily: "monospace",
+              letterSpacing: "1px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              borderColor: "rgba(255, 255, 255, 0.1)",
+              color: "#ffffff",
+              fontWeight: 600,
+            },
+          }}
+        />
+      </FieldRow>
 
-      {/* Duration */}
       {!hideDuration && <DurationSelect formState={formState} />}
 
-      {/* Party Settings */}
-      <div className={styles.settingsGroup}>
-        <div className={styles.settingRow}>
-          <div>
-            <Text fw={500} size="sm" c="var(--text-primary)">
-              Host Controls Only
-            </Text>
-            <Text size="xs" c="dimmed" mt={2}>
-              Only the host can control playback
-            </Text>
-          </div>
+      <div className={styles.settingsGroup} style={{ marginTop: 16 }}>
+        <FieldRow
+          label="Host Controls Only"
+          description="Only the host can control playback"
+          centerAlign
+        >
           <Switch
             checked={formState.lock}
             onChange={(e) => formState.setLock(e.currentTarget.checked)}
             color="violet"
             size="md"
           />
-        </div>
+        </FieldRow>
 
-        <div className={styles.settingRow}>
-          <div>
-            <Text fw={500} size="sm" c="var(--text-primary)">
-              Waiting Room
-            </Text>
-            <Text size="xs" c="dimmed" mt={2}>
-              Require host approval before entry
-            </Text>
-          </div>
+        <FieldRow
+          label="Waiting Room"
+          description="Require host approval before entry"
+          centerAlign
+        >
           <Switch
             checked={formState.isWaitingLoungeEnabled}
             onChange={(e) => formState.setIsWaitingLoungeEnabled(e.currentTarget.checked)}
             color="violet"
             size="md"
           />
-        </div>
+        </FieldRow>
 
-        <div className={styles.settingRow}>
-          <div>
-            <Text fw={500} size="sm" c="var(--text-primary)">
-              Disable Chat
-            </Text>
-            <Text size="xs" c="dimmed" mt={2}>
-              Turn off text chat during the Room
-            </Text>
-          </div>
+        <FieldRow
+          label="Disable Chat"
+          description="Turn off text chat during the Room"
+          centerAlign
+        >
           <Switch
             checked={formState.isChatDisabled}
             onChange={(e) => formState.setIsChatDisabled(e.currentTarget.checked)}
             color="violet"
             size="md"
           />
-        </div>
+        </FieldRow>
 
-        <div className={styles.settingRow}>
-          <div>
-            <Text fw={500} size="sm" c="var(--text-primary)">
-              Make room permanent
-            </Text>
-            <Text size="xs" c="dimmed" mt={2}>
-              Room stays available until manually ended
-            </Text>
-          </div>
+        <FieldRow
+          label="Make room permanent"
+          description="Room stays available until manually ended"
+          centerAlign
+        >
           <Switch
             checked={formState.isPermanent}
             onChange={(e) => formState.setIsPermanent(e.currentTarget.checked)}
             color="violet"
             size="md"
           />
-        </div>
+        </FieldRow>
       </div>
     </Stack>
   );
 };
+
