@@ -379,7 +379,7 @@ export class App extends React.Component<AppProps, AppState> {
 
   confirmLeave = () => {
     this.isLeaving = true;
-    closeRealPiP();
+    void closeRealPiP();
     try {
       if (window.cowatch?.ourStream) {
         window.cowatch.ourStream.getTracks().forEach((t) => t.stop());
@@ -546,16 +546,16 @@ export class App extends React.Component<AppProps, AppState> {
     // Send heartbeat to the server
     this.heartbeat = window.setInterval(
       () => {
-        fetch(serverPath + "/ping");
+        void fetch(serverPath + "/ping");
       },
       10 * 60 * 1000,
     );
 
     const canAutoplay = await testAutoplay();
     this.setState({ isAutoPlayable: canAutoplay });
-    this.loadSettings();
+    void this.loadSettings();
     this.loadYouTube();
-    this.init();
+    void this.init();
   }
 
   componentWillUnmount() {
@@ -569,7 +569,7 @@ export class App extends React.Component<AppProps, AppState> {
         navigator.mediaSession.setActionHandler("enterpictureinpicture" as any, null);
       } catch (e) {}
     }
-    closeRealPiP();
+    void closeRealPiP();
     window.clearInterval(this.heartbeat);
     if (this.startingTimer) {
       window.clearTimeout(this.startingTimer);
@@ -581,7 +581,7 @@ export class App extends React.Component<AppProps, AppState> {
     let roomId = this.props.urlRoomId || "";
 
     this.setState({ roomId }, () => {
-      this.join(roomId);
+      void this.join(roomId);
     });
   };
 
@@ -702,7 +702,7 @@ export class App extends React.Component<AppProps, AppState> {
         if (currentPicture) {
           this.updatePicture(currentPicture);
         }
-        this.loadSignInData(this.context.user);
+        void this.loadSignInData(this.context.user);
         // Re-join video chat if we were in it before the reconnection
         if (window.cowatch.ourStream) {
           socket.emit("CMD:joinVideo");
@@ -789,7 +789,7 @@ export class App extends React.Component<AppProps, AppState> {
             }
           }
         }
-        this.localPlay();
+        void this.localPlay();
       });
       socket.on("REC:pause", (data?: any) => {
         this.localPause();
@@ -816,7 +816,7 @@ export class App extends React.Component<AppProps, AppState> {
       });
       socket.on("REC:subtitle", (data: string) => {
         this.setState({ roomSubtitle: data }, () => {
-          this.Player().loadSubtitles(data);
+          void this.Player().loadSubtitles(data);
         });
       });
       socket.on("REC:loop", (data: boolean) => {
@@ -828,13 +828,13 @@ export class App extends React.Component<AppProps, AppState> {
       socket.on("REC:host", async (data: HostState) => {
         let currentMedia = data.video || "";
         if (this.playingScreenShare() && !isScreenShare(currentMedia)) {
-          this.stopPublishingLocalStream();
+          void this.stopPublishingLocalStream();
         }
         if (this.playingFileShare() && !isFileShare(currentMedia)) {
-          this.stopPublishingLocalStream();
+          void this.stopPublishingLocalStream();
         }
         if (this.playingVBrowser() && !isVBrowser(currentMedia)) {
-          this.stopVBrowser();
+          void this.stopVBrowser();
         }
         if (this.playingScreenShare() && isScreenShare(currentMedia)) {
           // Ignore, it's probably a reconnection
@@ -881,7 +881,7 @@ export class App extends React.Component<AppProps, AppState> {
               this.Player().clearState();
             }
             if (data.subtitle) {
-              this.Player().loadSubtitles(data.subtitle);
+              void this.Player().loadSubtitles(data.subtitle);
             }
             if (data.playbackRate) {
               this.Player().setPlaybackRate(data.playbackRate);
@@ -1042,7 +1042,7 @@ export class App extends React.Component<AppProps, AppState> {
             }
             // Start this video
             if (!data.paused) {
-              this.localPlay();
+              void this.localPlay();
             }
             // Do right before playing
             leftVideo?.addEventListener(
@@ -1114,7 +1114,7 @@ export class App extends React.Component<AppProps, AppState> {
           ((document.visibilityState && document.visibilityState !== "visible") ||
             this.state.currentTab !== "chat")
         ) {
-          new Audio("/clearly.mp3").play();
+          void new Audio("/clearly.mp3").play();
         }
         this.state.chat.push(data);
         if (this.state.chat.length > 100) {
@@ -1215,7 +1215,7 @@ export class App extends React.Component<AppProps, AppState> {
                     this.Player().seekVideo(leader);
                     this.Player().setPlaybackRate(1.0);
                     if (this.Player().shouldPlay()) {
-                      this.localPlay();
+                      void this.localPlay();
                     }
                   } else if (Math.abs(delta) >= 0.08) {
                     // Tier 2: Sub-second continuous pacing between 80ms and 850ms
@@ -1262,7 +1262,7 @@ export class App extends React.Component<AppProps, AppState> {
       });
       socket.on("roster", (data: any[]) => {
         this.setState({ participants: data, rosterUpdateTS: Date.now() }, () => {
-          this.setupRTCConnections();
+          void this.setupRTCConnections();
         });
       });
       socket.on("chatinit", (data: ChatMessage[]) => {
@@ -1353,7 +1353,7 @@ export class App extends React.Component<AppProps, AppState> {
                 );
             }
             await pc.setLocalDescription(answer);
-            this.sendSignalSS(from, { sdp: pc.localDescription }, !data.sharer);
+            void this.sendSignalSS(from, { sdp: pc.localDescription }, !data.sharer);
           } else if (msg.sdp && msg.sdp.type === "answer") {
             await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
             // Drain queued ICE candidates for this peer
@@ -1451,7 +1451,7 @@ export class App extends React.Component<AppProps, AppState> {
 
   loadSignInData = async (user: User | null | undefined) => {
     if (user && this.socket) {
-      this.updateUid(user);
+      void this.updateUid(user);
     }
   };
 
@@ -1537,7 +1537,7 @@ export class App extends React.Component<AppProps, AppState> {
               this.ytDebounce = false;
               if (e.data === window.YT?.PlayerState?.PLAYING) {
                 this.socket.emit("CMD:play");
-                this.localPlay();
+                void this.localPlay();
               } else {
                 this.socket.emit("CMD:pause");
                 this.localPause();
@@ -1659,7 +1659,7 @@ export class App extends React.Component<AppProps, AppState> {
   };
 
   toggleLock = () => {
-    this.setRoomLock(!Boolean(this.state.roomLock));
+    void this.setRoomLock(!Boolean(this.state.roomLock));
   };
 
   focusHeaderSearch = () => {
@@ -1675,7 +1675,7 @@ export class App extends React.Component<AppProps, AppState> {
   };
 
   handleCopyRoomLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    void navigator.clipboard.writeText(window.location.href);
     this.setState({ copiedRoomLink: true });
     setTimeout(() => this.setState({ copiedRoomLink: false }), 2000);
   };
@@ -1716,7 +1716,7 @@ export class App extends React.Component<AppProps, AppState> {
       // Same URL but GET
       this.roomSetMedia(convertUrl);
     };
-    poll();
+    void poll();
     const reader = stream.getReader();
     const start = Date.now();
     let bytes = 0;
@@ -1768,7 +1768,7 @@ export class App extends React.Component<AppProps, AppState> {
     this.Player().clearState();
     const leftVideo = this.HTMLInterface.getVideoEl();
     leftVideo.src = URL.createObjectURL(file);
-    leftVideo.play();
+    void leftVideo.play();
     //@ts-expect-error
     this.localStreamToPublish = leftVideo?.captureStream();
     this.isLocalStreamAFile = true;
@@ -2021,7 +2021,7 @@ export class App extends React.Component<AppProps, AppState> {
         mediaStream.addTrack(track);
         video.srcObject = mediaStream;
       }
-      this.localPlay();
+      void this.localPlay();
     };
 
     async function consumeAndResume(kind: string) {
@@ -2246,7 +2246,7 @@ export class App extends React.Component<AppProps, AppState> {
           });
           pc.onicecandidate = (event) => {
             if (event.candidate) {
-              this.sendSignalSS(id, { ice: event.candidate }, true);
+              void this.sendSignalSS(id, { ice: event.candidate }, true);
             }
           };
 
@@ -2256,7 +2256,7 @@ export class App extends React.Component<AppProps, AppState> {
               const offer = await pc.createOffer();
               if (pc.signalingState !== "stable") return;
               await pc.setLocalDescription(offer);
-              this.sendSignalSS(id, { sdp: pc.localDescription }, true);
+              void this.sendSignalSS(id, { sdp: pc.localDescription }, true);
             } catch (e) {
               console.warn(`[App] Error creating screen share offer for ${id}:`, e);
             }
@@ -2264,7 +2264,7 @@ export class App extends React.Component<AppProps, AppState> {
 
           pc.onnegotiationneeded = createAndSendOffer;
           // Dispatch initial offer immediately to avoid browser negotiation delay
-          createAndSendOffer();
+          void createAndSendOffer();
         }
       });
     }
@@ -2274,7 +2274,7 @@ export class App extends React.Component<AppProps, AppState> {
       this.consumerConn = pc;
       pc.onicecandidate = (event) => {
         if (event.candidate) {
-          this.sendSignalSS(sharer.id, { ice: event.candidate });
+          void this.sendSignalSS(sharer.id, { ice: event.candidate });
         }
       };
       pc.ontrack = (event: RTCTrackEvent) => {
@@ -2300,7 +2300,7 @@ export class App extends React.Component<AppProps, AppState> {
           if (playPromise && typeof (playPromise as any).catch === "function") {
             (playPromise as any).catch(() => {
               const unlock = () => {
-                this.localPlay();
+                void this.localPlay();
                 window.removeEventListener("click", unlock);
                 window.removeEventListener("touchstart", unlock);
               };
@@ -2380,7 +2380,7 @@ export class App extends React.Component<AppProps, AppState> {
       console.log("syncing self to leader or custom:", target);
       this.Player().seekVideo(target);
       if (!this.state.roomPaused && this.Player().shouldPlay()) {
-        this.localPlay();
+        void this.localPlay();
       }
       this.refreshControls();
     }
@@ -2457,7 +2457,7 @@ export class App extends React.Component<AppProps, AppState> {
     const shouldPlay = this.Player().shouldPlay();
     if (shouldPlay) {
       this.socket.emit("CMD:play");
-      this.localPlay();
+      void this.localPlay();
     } else {
       this.socket.emit("CMD:pause");
       this.localPause();
@@ -2499,9 +2499,9 @@ export class App extends React.Component<AppProps, AppState> {
       } else if (e.key === "ArrowLeft") {
         this.roomSeek(this.Player().getCurrentTime() - 10);
       } else if (e.key === "t") {
-        this.localFullScreen(false);
+        void this.localFullScreen(false);
       } else if (e.key === "f") {
-        this.localFullScreen(true);
+        void this.localFullScreen(true);
       } else if (e.key === "m") {
         this.localToggleMute();
       }
@@ -2709,7 +2709,7 @@ export class App extends React.Component<AppProps, AppState> {
     // check if looping is on, if so set time back to 0 and restart
     if (this.state.roomLoop) {
       this.localSeek(0);
-      this.localPlay();
+      void this.localPlay();
       return;
     }
     if (this.state.playlist.length) {

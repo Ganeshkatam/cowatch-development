@@ -226,7 +226,7 @@ export const RoomDetails = () => {
     "";
 
   useEffect(() => {
-    fetchRoomDetails();
+    void fetchRoomDetails();
   }, [roomId]);
 
   const handleCopyUrl = () => {

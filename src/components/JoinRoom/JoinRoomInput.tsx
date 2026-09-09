@@ -213,7 +213,7 @@ export const JoinRoomInput: React.FC = () => {
     }
 
     // Attempt direct join with any passcode extracted from the URL
-    attemptDirectJoin(cleanRoomId, parsed.passcode, parsed.invite);
+    void attemptDirectJoin(cleanRoomId, parsed.passcode, parsed.invite);
   };
 
   const handlePasscodeSubmit = (e: React.FormEvent) => {
@@ -222,7 +222,7 @@ export const JoinRoomInput: React.FC = () => {
       setError("Please enter the room passcode.");
       return;
     }
-    attemptDirectJoin(activeRoomId, passcode.trim(), inviteToken);
+    void attemptDirectJoin(activeRoomId, passcode.trim(), inviteToken);
   };
 
   const handleResetToCodeInput = () => {

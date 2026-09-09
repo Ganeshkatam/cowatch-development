@@ -42,4 +42,4 @@ async function stripSlashes() {
   }
 }
 
-stripSlashes();
+void stripSlashes();

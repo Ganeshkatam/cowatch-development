@@ -428,8 +428,8 @@ export class Room {
         socket.uid = "";
       }
 
-      redisCount("connectStarts");
-      redisCountDistinct("connectStartsDistinct", clientId);
+      void redisCount("connectStarts");
+      void redisCountDistinct("connectStartsDistinct", clientId);
 
       if (this.status === 'expired' || this.status === 'ended') {
         socket.emit("errorMessage", "This room has ended or expired.");
@@ -459,7 +459,7 @@ export class Room {
             ).catch(e => console.error("Failed to update status on real-time check:", e));
           }
           if (this.vBrowser) {
-            this.stopVBrowserInternal();
+            void this.stopVBrowserInternal();
           }
           this.disconnectAllSockets();
           return false;
@@ -523,7 +523,7 @@ export class Room {
       socket.on("CMD:leaveLounge", () => {
         if (this.waitingLounge.has(socket.clientId)) {
           this.waitingLounge.delete(socket.clientId);
-          this.broadcastWaitingLoungeStateToWaitingGuests();
+          void this.broadcastWaitingLoungeStateToWaitingGuests();
           this.broadcastWaitingListToHost();
         }
       });
@@ -643,7 +643,7 @@ export class Room {
       });
 
       socket.on("CMD:host", async (data: unknown) => {
-        (await authorizeRoomCommand("activeMember")) && this.startHosting(socket, String(data));
+        void ((await authorizeRoomCommand("activeMember")) && this.startHosting(socket, String(data)));
       });
       socket.on("CMD:play", async () => {
         (await authorizeRoomCommand("activeMember")) && this.playVideo(socket);
@@ -670,7 +670,7 @@ export class Room {
         (await authorizeRoomCommand("member")) && this.sendChatMessage(socket, data),
       );
       socket.on("CMD:editMessage", async (data: unknown) => {
-        (await authorizeRoomCommand("member")) && this.editMessage(socket, data);
+        void ((await authorizeRoomCommand("member")) && this.editMessage(socket, data));
       });
       socket.on("CMD:addReaction", async (data: unknown) =>
         (await authorizeRoomCommand("member")) && this.addReaction(socket, data),
@@ -709,16 +709,16 @@ export class Room {
       );
       socket.on("CMD:leaveScreenShare", async () => (await authorizeRoomCommand("member")) && this.leaveScreenSharing(socket));
       socket.on("CMD:startVBrowser", async (data: unknown) => {
-        (await authorizeRoomCommand("lock")) && this.startVBrowser(socket, data);
+        void ((await authorizeRoomCommand("lock")) && this.startVBrowser(socket, data));
       });
       socket.on("CMD:stopVBrowser", async () => {
-        (await authorizeRoomCommand("lock")) && this.stopVBrowser();
+        void ((await authorizeRoomCommand("lock")) && this.stopVBrowser());
       });
       socket.on("CMD:changeController", async (data: unknown) => {
         (await authorizeRoomCommand("lock")) && this.changeController(String(data));
       });
       socket.on("CMD:subtitle", async (data: unknown) => {
-        (await authorizeRoomCommand("lock")) && this.addSubtitles(String(data));
+        void ((await authorizeRoomCommand("lock")) && this.addSubtitles(String(data)));
       });
       socket.on("CMD:lock", async (data: unknown) => {
         if (!(await authorizeRoomCommand("member"))) return;
@@ -744,7 +744,7 @@ export class Room {
         (await authorizeRoomCommand("lock")) && this.playlistNext(data);
       });
       socket.on("CMD:playlistAdd", async (data: unknown) => {
-        (await authorizeRoomCommand("lock")) && this.playlistAdd(socket, String(data));
+        void ((await authorizeRoomCommand("lock")) && this.playlistAdd(socket, String(data)));
       });
       socket.on("CMD:playlistMove", async (data: unknown) => {
         (await authorizeRoomCommand("lock")) && this.playlistMove(data);
@@ -753,10 +753,10 @@ export class Room {
         (await authorizeRoomCommand("lock")) && this.playlistDelete(Number(data));
       });
       socket.on("CMD:kickUser", async (data: unknown) => {
-        (await authorizeRoomCommand("owner")) && this.kickUser(data);
+        void ((await authorizeRoomCommand("owner")) && this.kickUser(data));
       });
       socket.on("CMD:deleteChatMessages", async (data: unknown) => {
-        (await authorizeRoomCommand("owner")) && this.deleteChatMessages(data);
+        void ((await authorizeRoomCommand("owner")) && this.deleteChatMessages(data));
       });
 
       socket.on("signal", async (data: unknown) =>
@@ -802,7 +802,7 @@ export class Room {
         await this.emitWaitingLoungeState(socket);
         this.broadcastWaitingListToHost();
       } else {
-        socket.join("admitted");
+        void socket.join("admitted");
         socket.emit("REC:waitingLounge", { inLounge: false });
 
         socket.emit("REC:host", this.getHostState());
@@ -826,7 +826,7 @@ export class Room {
         socket.emit("chatinit", formattedMessages.reverse());
         socket.emit("ROOM_MESSAGES", formattedMessages);
         socket.emit("playlist", this.playlist);
-        this.getRoomState(socket);
+        void this.getRoomState(socket);
         this.emitToRoom("roster", this.getRosterForApp());
 
         if (socket.uid && this.owner_id && socket.uid === this.owner_id) {
@@ -996,7 +996,7 @@ export class Room {
     this.cmdHost(null, "");
     // Force a save because this might change in unattended rooms
     this.lastUpdateTime = new Date();
-    this.saveRoom();
+    void this.saveRoom();
     if (redis && assignTime) {
       await redis.lpush("vBrowserSessionMS", Date.now() - assignTime);
       await redis.ltrim("vBrowserSessionMS", 0, 19);
@@ -1041,7 +1041,7 @@ export class Room {
     this.emitToRoom("REC:host", this.getHostState());
     if (socket && data) {
       const chatMsg = { id: socket.clientId, cmd: "host", msg: data };
-      this.addChatMessage(socket, chatMsg);
+      void this.addChatMessage(socket, chatMsg);
     }
     if (data === "") {
       this.playlistNext(null);
@@ -1168,12 +1168,12 @@ export class Room {
       );
       return;
     }
-    redisCount("urlStarts");
+    void redisCount("urlStarts");
     if (config.STREAM_PATH && data?.startsWith(config.STREAM_PATH)) {
-      redisCount("streamStarts");
+      void redisCount("streamStarts");
     }
     if (config.CONVERT_PATH && data?.startsWith(config.CONVERT_PATH)) {
-      redisCount("convertStarts");
+      void redisCount("convertStarts");
     }
     // If a reddit URL, extract video URL
     if (
@@ -1254,7 +1254,7 @@ export class Room {
     if (data && data.length > 20000) {
       return;
     }
-    redisCount("playlistAdds");
+    void redisCount("playlistAdds");
     const youtubeVideoId = getYoutubeVideoID(data);
     const item = {
       name: data,
@@ -1285,7 +1285,7 @@ export class Room {
         cmd: "playlistAdd",
         msg: data,
       };
-      this.addChatMessage(socket, chatMsg);
+      void this.addChatMessage(socket, chatMsg);
     }
     if (!this.video) {
       this.playlistNext(null);
@@ -1320,7 +1320,7 @@ export class Room {
       msg: ts?.toString(),
     };
     this.paused = false;
-    this.addChatMessage(socket, chatMsg);
+    void this.addChatMessage(socket, chatMsg);
   };
 
   private pauseVideo = (socket: Socket) => {
@@ -1332,7 +1332,7 @@ export class Room {
       msg: ts?.toString(),
     };
     this.paused = true;
-    this.addChatMessage(socket, chatMsg);
+    void this.addChatMessage(socket, chatMsg);
   };
 
   private seekVideo = (socket: Socket, data: number) => {
@@ -1343,7 +1343,7 @@ export class Room {
     this.tsMap[socket.clientId] = data;
     socket.broadcast.emit("REC:seek", data);
     const chatMsg = { id: socket.clientId, cmd: "seek", msg: data?.toString() };
-    this.addChatMessage(socket, chatMsg);
+    void this.addChatMessage(socket, chatMsg);
   };
 
   private setPlaybackRate = (socket: Socket, data: number) => {
@@ -1357,7 +1357,7 @@ export class Room {
       cmd: "playbackRate",
       msg: data?.toString(),
     };
-    this.addChatMessage(socket, chatMsg);
+    void this.addChatMessage(socket, chatMsg);
   };
 
   private setLoop = (data: boolean) => {
@@ -1428,8 +1428,8 @@ export class Room {
 
     const baseMsg: ChatMessageBase = { id: socket.clientId, msg, clientMessageId };
     const emitChatMessage = (chatMsg: ChatMessageBase) => {
-      redisCount("chatMessages");
-      this.addChatMessage(socket, chatMsg);
+      void redisCount("chatMessages");
+      void this.addChatMessage(socket, chatMsg);
     };
 
     // No reply metadata -> regular message.
@@ -1509,7 +1509,7 @@ export class Room {
       return;
     }
     const reaction: Reaction = { user: socket.clientId, ...data };
-    redisCount("addReaction");
+    void redisCount("addReaction");
     this.emitToRoom("REC:addReaction", reaction);
   };
 
@@ -1530,7 +1530,7 @@ export class Room {
     const match = this.roster.find((user) => user.id === socket.clientId);
     if (match) {
       match.isVideoChat = true;
-      redisCount("videoChatStarts");
+      void redisCount("videoChatStarts");
     }
     this.emitToRoom("roster", this.getRosterForApp());
   };
@@ -1587,17 +1587,17 @@ export class Room {
       // TODO set up the room on the remote server rather than letting the remote server create
       mediasoupSuffix =
         "@" + config.MEDIASOUP_SERVER + "/" + crypto.randomUUID();
-      redisCount("mediasoupStarts");
+      void redisCount("mediasoupStarts");
     }
     if (data && data.file) {
       this.cmdHost(socket, "fileshare://" + socket.clientId + mediasoupSuffix);
-      redisCount("fileShareStarts");
+      void redisCount("fileShareStarts");
     } else {
       this.cmdHost(
         socket,
         "screenshare://" + socket.clientId + mediasoupSuffix,
       );
-      redisCount("screenShareStarts");
+      void redisCount("screenShareStarts");
     }
     this.emitToRoom("roster", this.getRosterForApp());
   };
@@ -1649,19 +1649,19 @@ export class Room {
             1,
             clientId,
           );
-          redis.expireat("vBrowserClientIDs", expireTime);
+          void redis.expireat("vBrowserClientIDs", expireTime);
           const clientMinutes = await redis.zincrby(
             "vBrowserClientIDMinutes",
             1,
             clientId,
           );
-          redis.expireat("vBrowserClientIDMinutes", expireTime);
+          void redis.expireat("vBrowserClientIDMinutes", expireTime);
         }
         if (uid) {
           const uidCount = await redis.zincrby("vBrowserUIDs", 1, uid);
-          redis.expireat("vBrowserUIDs", expireTime);
+          void redis.expireat("vBrowserUIDs", expireTime);
           const uidMinutes = await redis.zincrby("vBrowserUIDMinutes", 1, uid);
-          redis.expireat("vBrowserUIDMinutes", expireTime);
+          void redis.expireat("vBrowserUIDMinutes", expireTime);
           // TODO limit users based on client or uid usage
         }
       }
@@ -1690,7 +1690,7 @@ export class Room {
       }
     }
 
-    redisCount("vBrowserStarts");
+    void redisCount("vBrowserStarts");
     this.cmdHost(socket, "vbrowser://");
     // Put the room in the vbrowser queue
     this.vBrowserQueue = {
@@ -1759,7 +1759,7 @@ export class Room {
       return;
     }
     await this.stopVBrowserInternal();
-    redisCount("vBrowserTerminateManual");
+    void redisCount("vBrowserTerminateManual");
   };
 
   private changeController = (data: string) => {
@@ -1793,7 +1793,7 @@ export class Room {
       cmd: data.locked ? "lock" : "unlock",
       msg: "",
     };
-    this.addChatMessage(socket, chatMsg);
+    void this.addChatMessage(socket, chatMsg);
   };
 
   private setRoomOwner = async (socket: Socket, raw: unknown) => {
@@ -2164,7 +2164,7 @@ export class Room {
       if (socket.uid) {
         this.admittedUids.add(socket.uid);
       }
-      socket.join("admitted");
+      void socket.join("admitted");
       socket.emit("REC:waitingLounge", { inLounge: false });
 
       socket.emit("REC:host", this.getHostState());
@@ -2189,11 +2189,11 @@ export class Room {
       socket.emit("chatinit", formattedMessages.reverse());
       socket.emit("ROOM_MESSAGES", formattedMessages);
       socket.emit("playlist", this.playlist);
-      this.getRoomState(socket);
+      void this.getRoomState(socket);
     }
 
     this.emitToRoom("roster", this.getRosterForApp());
-    this.broadcastWaitingLoungeStateToWaitingGuests();
+    void this.broadcastWaitingLoungeStateToWaitingGuests();
     this.broadcastWaitingListToHost();
   };
 
@@ -2219,7 +2219,7 @@ export class Room {
       });
     }
 
-    this.broadcastWaitingLoungeStateToWaitingGuests();
+    void this.broadcastWaitingLoungeStateToWaitingGuests();
     this.broadcastWaitingListToHost();
   };
 
@@ -2228,7 +2228,7 @@ export class Room {
 
     if (this.waitingLounge.has(clientId)) {
       this.waitingLounge.delete(clientId);
-      this.broadcastWaitingLoungeStateToWaitingGuests();
+      void this.broadcastWaitingLoungeStateToWaitingGuests();
       this.broadcastWaitingListToHost();
     }
 
@@ -2243,7 +2243,7 @@ export class Room {
       delete this.socketIdMap[clientId];
 
       if (socket.uid && this.owner_id && socket.uid === this.owner_id) {
-        this.broadcastWaitingLoungeStateToWaitingGuests();
+        void this.broadcastWaitingLoungeStateToWaitingGuests();
       }
 
       if (this.roster.length === 0) {
@@ -2284,7 +2284,7 @@ export class Room {
       if (userToBeKickedSocket.uid) {
         this.admittedUids.delete(userToBeKickedSocket.uid);
       }
-      userToBeKickedSocket.leave("admitted");
+      void userToBeKickedSocket.leave("admitted");
       userToBeKickedSocket.emit("kicked");
       userToBeKickedSocket.disconnect();
     }

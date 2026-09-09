@@ -452,7 +452,7 @@ class CoWatch extends React.Component {
       // Listen for changes. Defer handleSession via setTimeout(0) to prevent GoTrue mutex deadlock.
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         setTimeout(() => {
-          handleSession(session);
+          void handleSession(session);
         }, 0);
       });
       this.authSubscription = subscription;
@@ -461,7 +461,7 @@ class CoWatch extends React.Component {
       safeGetSession(1200)
         .then(({ data: { session } }) => {
           setTimeout(() => {
-            handleSession(session);
+            void handleSession(session);
           }, 0);
         })
         .catch(err => {

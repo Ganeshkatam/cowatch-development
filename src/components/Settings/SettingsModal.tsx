@@ -145,7 +145,7 @@ export const SettingsModal = ({
           setCoverPreview(data.coverPhoto);
         }
       };
-      fetchRoomData();
+      void fetchRoomData();
     }
   }, [modalOpen, roomTitle, roomDescription, roomLock, isChatDisabled, isWaitingLoungeEnabled, profile, roomId]);
 
@@ -274,7 +274,7 @@ export const SettingsModal = ({
           }
 
           if (draftLock !== Boolean(roomLock)) {
-            setRoomLock(draftLock);
+            void setRoomLock(draftLock);
           }
 
           if (draftWaitingLounge !== Boolean(isWaitingLoungeEnabled)) {
@@ -535,7 +535,7 @@ export const SettingsModal = ({
                                   variant="subtle"
                                   color={copiedCurrentPassword ? "green" : "gray"}
                                   onClick={() => {
-                                    navigator.clipboard.writeText(currentSavedPasscode);
+                                    void navigator.clipboard.writeText(currentSavedPasscode);
                                     setCopiedCurrentPassword(true);
                                     setTimeout(() => setCopiedCurrentPassword(false), 2000);
                                   }}

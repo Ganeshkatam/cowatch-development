@@ -169,7 +169,7 @@ setInterval(saveRooms, 1000);
 setInterval(expireRooms, 60 * 1000);
 if (process.env.NODE_ENV === "development") {
   try {
-    import("./vmWorker.ts");
+    void import("./vmWorker.ts");
     // import('./syncSubs.ts');
     // import('./timeSeries.ts');
   } catch (e) {
@@ -218,7 +218,7 @@ app.post("/subtitle", async (req, res) => {
     .toString("hex");
   let gzipData = gzipSync(data);
   await redis.setex("subtitle:" + hash, 24 * 60 * 60, gzipData);
-  redisCount("subUploads");
+  void redisCount("subUploads");
   res.json({ hash });
 });
 
@@ -240,7 +240,7 @@ app.get("/downloadSubtitles", async (req, res) => {
         // sub_format: 'srt',
       },
     });
-    redisCount("subDownloadsOS");
+    void redisCount("subDownloadsOS");
     if (!redis) {
       // Return the direct link to the user, will work for about 3 hours
       res.json(urlResp.data);
@@ -316,7 +316,7 @@ app.get("/searchSubtitles", async (req, res) => {
     console.error(e.message);
     res.json([]);
   }
-  redisCount("subSearchesOS");
+  void redisCount("subSearchesOS");
 });
 
 app.get("/stats", async (req, res) => {
@@ -428,7 +428,7 @@ app.get("/timeSeries", async (req, res) => {
 app.get("/youtube", async (req, res) => {
   if (typeof req.query.q === "string") {
     try {
-      redisCount("youtubeSearch");
+      void redisCount("youtubeSearch");
       const items = await searchYoutube(req.query.q);
       res.json(items);
     } catch {
@@ -683,7 +683,7 @@ app.post("/createRoom", async (req, res) => {
       if (e.code === '23505' && e.constraint === 'rooms_passcode_fingerprint_key' && attempt < MAX_PASSCODE_ATTEMPTS) {
         continue; // Collision on fingerprint, retry
       }
-      redisCount("createRoomError");
+      void redisCount("createRoomError");
       res.status(500).json({ error: "Failed to create room." });
       return;
     }
@@ -691,7 +691,7 @@ app.post("/createRoom", async (req, res) => {
 
   const preload = (req.body?.video || "").slice(0, 20000);
   if (preload) {
-    redisCount("createRoomPreload");
+    void redisCount("createRoomPreload");
     newRoom.video = preload;
     newRoom.paused = true;
     await newRoom.saveRoom();
@@ -699,7 +699,7 @@ app.post("/createRoom", async (req, res) => {
   const prePlaylist = Array.isArray(req.body?.playlist) && req.body?.playlist;
   if (prePlaylist) {
     for (let item of req.body.playlist) {
-      newRoom.playlistAdd(null, item);
+      void newRoom.playlistAdd(null, item);
     }
   }
   rooms.set(name, newRoom);
@@ -1018,7 +1018,7 @@ app.delete("/deleteAccount", async (req, res) => {
   }
   await cleanupUserStorage(decoded.uid);
   await deleteUser(decoded.uid);
-  redisCount("deleteAccount");
+  void redisCount("deleteAccount");
   res.json({});
 });
 
@@ -1742,7 +1742,7 @@ app.get("/generateName", async (req, res) => {
 
 // Proxy video segments
 app.get("/proxy/*splat", async (req, res) => {
-  redisCount("proxyReqs");
+  void redisCount("proxyReqs");
   try {
     const parsed = new URL("http://localhost" + req.url);
     const pathname = parsed.pathname.slice("/proxy".length);
@@ -1851,7 +1851,7 @@ async function expireRooms() {
         const room = rooms.get(row.roomId);
         if (room) {
           room.status = 'expired';
-          room.addChatMessage(null, {
+          void room.addChatMessage(null, {
             id: '',
             system: true,
             msg: 'This room has expired.',
@@ -1870,7 +1870,7 @@ async function expireRooms() {
           room.emitToRoom("errorMessage", "This watch party session has expired.");
 
           if (room.vBrowser) {
-            room.stopVBrowserInternal();
+            void room.stopVBrowserInternal();
           }
 
           room.disconnectAllSockets();
@@ -1917,20 +1917,20 @@ async function release() {
         Date.now() - Number(room.lastUpdateTime) > 5 * 60 * 1000;
       if (isTimedOut || (isRoomEmpty && isRoomIdle)) {
         console.log("[RELEASE] VM in room:", room.roomId);
-        room.stopVBrowserInternal();
+        void room.stopVBrowserInternal();
         if (isTimedOut) {
-          room.addChatMessage(null, {
+          void room.addChatMessage(null, {
             id: "",
             system: true,
             cmd: "vBrowserTimeout",
             msg: "",
           });
-          redisCount("vBrowserTerminateTimeout");
+          void redisCount("vBrowserTerminateTimeout");
         } else if (isRoomEmpty) {
-          redisCount("vBrowserTerminateEmpty");
+          void redisCount("vBrowserTerminateEmpty");
         }
       } else if (isAlmostTimedOut) {
-        room.addChatMessage(null, {
+        void room.addChatMessage(null, {
           id: "",
           system: true,
           cmd: "vBrowserAlmostTimeout",

@@ -41,7 +41,7 @@ const Debug = () => {
       // Save the value for the next update
       last = nextState.current;
     };
-    update();
+    void update();
     setInterval(update, 10000);
   }, []);
   // Get the keys from the last/mostrecent element

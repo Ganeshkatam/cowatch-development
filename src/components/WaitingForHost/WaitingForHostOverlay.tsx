@@ -46,10 +46,6 @@ export const WaitingForHostOverlay: React.FC<WaitingForHostOverlayProps> = ({
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState("");
 
-  if (roomStatus !== "waiting") {
-    return null;
-  }
-
   const isOwner = Boolean(
     user && owner && (
       String(user.id).toLowerCase() === String(owner).toLowerCase() ||
@@ -100,7 +96,7 @@ export const WaitingForHostOverlay: React.FC<WaitingForHostOverlayProps> = ({
   useEffect(() => {
     if (isOwner && roomStatus === "waiting") {
       // Host has opened the room; activate room in the background without blocking the stage
-      handleStartRoom();
+      void handleStartRoom();
     }
   }, [isOwner, roomStatus]);
 

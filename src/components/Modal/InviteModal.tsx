@@ -58,7 +58,7 @@ export const InviteModal = ({
         if (isMounted) setLoadingInvite(false);
       }
     };
-    createInvite();
+    void createInvite();
     return () => {
       isMounted = false;
     };
@@ -70,13 +70,13 @@ export const InviteModal = ({
     : baseUrl;
 
   const handleCopyInviteLink = () => {
-    navigator.clipboard.writeText(fullUrl);
+    void navigator.clipboard.writeText(fullUrl);
     setInviteLinkCopied(true);
     setTimeout(() => setInviteLinkCopied(false), 2000);
   };
 
   const handleCopyRoomId = () => {
-    navigator.clipboard.writeText(roomIdOrVanity);
+    void navigator.clipboard.writeText(roomIdOrVanity);
     setRoomIdCopied(true);
     setTimeout(() => setRoomIdCopied(false), 2000);
   };

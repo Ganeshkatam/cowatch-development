@@ -78,7 +78,7 @@ export class Docker extends VMManager {
     );
     console.log(stdout, stderr);
     // The container is out of date. Delete it
-    this.terminateVMWrapper(id);
+    void this.terminateVMWrapper(id);
     return;
   };
 

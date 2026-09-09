@@ -3,7 +3,7 @@ import axios from "axios";
 import { redis } from "./utils/redis.ts";
 import { getStats } from "./utils/getStats.ts";
 
-statsTimeSeries();
+void statsTimeSeries();
 setInterval(statsTimeSeries, 5 * 60 * 1000);
 
 async function statsTimeSeries() {

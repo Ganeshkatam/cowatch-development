@@ -350,7 +350,7 @@ export abstract class BaseClient extends EventEmitter<any> {
         "useinbandfec=1;stereo=1",
       );
 
-      this._peer!.setLocalDescription(d);
+      void this._peer!.setLocalDescription(d);
 
       this._ws!.send(
         JSON.stringify({
@@ -406,7 +406,7 @@ export abstract class BaseClient extends EventEmitter<any> {
       const { data } = payload as SignalCandidatePayload;
       const candidate: RTCIceCandidate = JSON.parse(data);
       if (this._peer) {
-        this._peer.addIceCandidate(candidate);
+        void this._peer.addIceCandidate(candidate);
       } else {
         this._candidates.push(candidate);
       }

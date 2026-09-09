@@ -186,7 +186,7 @@ export abstract class VMManager {
       // Check if VM needs to be reimaged
       if (this.imageId !== vmImageId) {
         await this.reimageVM(vmid);
-        redisCount("vBrowserReimage");
+        void redisCount("vBrowserReimage");
         // Update the vmImageId
         await postgres.query(
           `UPDATE vbrowser SET image = $3 WHERE pool = $1 AND vmid = $2`,
@@ -212,7 +212,7 @@ export abstract class VMManager {
       // if cleaning up a VM we didn't record in db on create
       // if we resized down and deleted db row but didn't complete the termination
     } else {
-      this.terminateVMWrapper(vmid);
+      void this.terminateVMWrapper(vmid);
     }
   };
 
@@ -227,7 +227,7 @@ export abstract class VMManager {
     VALUES($1, $2, NOW(), 'staging', $3)`,
       [this.getPoolName(), id, this.imageId],
     );
-    redisCount("vBrowserLaunches");
+    void redisCount("vBrowserLaunches");
     return id;
   };
 
@@ -387,7 +387,7 @@ export abstract class VMManager {
       );
       for (let server of allVMs) {
         if (!inUse.has(server.id)) {
-          redisCount("vBrowserCleanup");
+          void redisCount("vBrowserCleanup");
           console.log("[CLEANUP]", this.getPoolName(), server.id);
           try {
             await this.resetVM(server.id);
@@ -468,12 +468,12 @@ export abstract class VMManager {
             this.getPoolName(),
             vmid,
           );
-          this.powerOn(vmid);
+          void this.powerOn(vmid);
           //this.attachToNetwork(vmid);
         }
         if (retryCount % 180 === 0) {
           console.log("[CHECKSTAGING]", this.getPoolName(), "giving up:", vmid);
-          redisCount("vBrowserStagingFails");
+          void redisCount("vBrowserStagingFails");
           await redis?.lpush("vBrowserStageFails", vmid);
           await redis?.ltrim("vBrowserStageFails", 0, 19);
           // VM didn't come up. set image to null so we reimage

@@ -65,7 +65,7 @@ export default function JoinRoom() {
   }, [room]);
 
   useEffect(() => {
-    fetchMetadata();
+    void fetchMetadata();
   }, [roomId, context.user?.id]);
 
   // Scheduled countdown timer
@@ -81,7 +81,7 @@ export default function JoinRoom() {
         setTimeRemaining("00:00:00");
         clearInterval(interval);
         // Refresh metadata when scheduled start time is reached
-        fetchMetadata();
+        void fetchMetadata();
       } else {
         const h = Math.floor(diff / (1000 * 60 * 60));
         const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -213,7 +213,7 @@ export default function JoinRoom() {
 
   const handleJoinClicked = () => {
     if (isHost || admissionRequirement === "none") {
-      requestAdmission();
+      void requestAdmission();
     }
   };
 

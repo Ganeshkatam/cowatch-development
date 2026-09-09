@@ -1,6 +1,6 @@
 import { postgres } from "./utils/postgres.ts";
 
-cleanupPostgres();
+void cleanupPostgres();
 setInterval(cleanupPostgres, 5 * 60 * 1000);
 
 async function cleanupPostgres() {

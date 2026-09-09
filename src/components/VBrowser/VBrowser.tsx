@@ -76,7 +76,7 @@ export class VBrowser extends React.Component<{
           "iPhoneAudio",
         ) as HTMLAudioElement;
         audio.srcObject = new MediaStream([track]);
-        audio.play();
+        void audio.play();
       }
       await this.props.doPlay();
     });
@@ -176,7 +176,7 @@ export class VBrowser extends React.Component<{
       typeof navigator.clipboard.writeText === "function"
     ) {
       // Received clipboard contents from vbrowser
-      navigator.clipboard.writeText(clipboard);
+      void navigator.clipboard.writeText(clipboard);
     }
   }
   onFocus = async (e: React.MouseEvent) => {
@@ -287,7 +287,7 @@ export class VBrowser extends React.Component<{
       return;
     }
     this._overlay.current!.focus();
-    this.onFocus(e);
+    void this.onFocus(e);
     this.focused = true;
   };
 

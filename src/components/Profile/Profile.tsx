@@ -546,7 +546,7 @@ export const Profile: React.FC = () => {
                                 value={displayName}
                                 onChange={(e) => setDisplayName(e.target.value)}
                                 onKeyDown={(e) => {
-                                  if (e.key === "Enter") saveDisplayName();
+                                  if (e.key === "Enter") void saveDisplayName();
                                   if (e.key === "Escape") cancelEditDisplayName();
                                 }}
                                 maxLength={50}

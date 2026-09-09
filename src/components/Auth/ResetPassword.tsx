@@ -34,7 +34,7 @@ export const ResetPassword = () => {
         setError("Invalid or expired password reset link. Please request a new one.");
       }
     };
-    checkSession();
+    void checkSession();
   }, []);
 
   const handleUpdate = async (e: React.FormEvent) => {

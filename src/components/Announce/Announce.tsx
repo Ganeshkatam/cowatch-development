@@ -62,7 +62,7 @@ export const Announce: React.FC<AnnounceProps> = ({ page = "all" }) => {
       }
     }
 
-    fetchAnnouncements();
+    void fetchAnnouncements();
 
     return () => {
       isMounted = false;

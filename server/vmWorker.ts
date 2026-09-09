@@ -11,7 +11,7 @@ const vmManagers = getBgVMManagers();
 app.use(bodyParser.json());
 
 Object.values(vmManagers).forEach((manager) => {
-  manager?.runBackgroundJobs();
+  void manager?.runBackgroundJobs();
 });
 
 // Security Invariant: vmWorker is strictly an internal-only service. 

@@ -129,7 +129,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
   };
 
   private handleCopyInvite = () => {
-    navigator.clipboard.writeText(window.location.href);
+    void navigator.clipboard.writeText(window.location.href);
     this.setState({ copied: true });
     setTimeout(() => this.setState({ copied: false }), 2000);
   };
@@ -179,7 +179,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
       const prefCameraOn = this.context.profile?.pref_camera_on ?? false;
       const prefMicOn = this.context.profile?.pref_mic_on ?? false;
       if (prefCameraOn || prefMicOn) {
-        this.setupWebRTC();
+        void this.setupWebRTC();
       }
     }
   }
@@ -214,7 +214,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
       this.lastPrefCameraOn = currentPrefCamera;
       // If we are in a room and the preference diverges from our current stream state, apply the preference change
       if (window.cowatch.ourStream && currentPrefCamera !== Boolean(this.getVideoWebRTC())) {
-        this.toggleVideoWebRTC();
+        void this.toggleVideoWebRTC();
       }
     }
 
@@ -223,7 +223,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
       this.lastPrefMicOn = currentPrefMic;
       // If we are in a room and the preference diverges from our current stream state, apply the preference change
       if (window.cowatch.ourStream && currentPrefMic !== Boolean(this.getAudioWebRTC())) {
-        this.toggleAudioWebRTC();
+        void this.toggleAudioWebRTC();
       }
     }
   }
@@ -254,7 +254,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        this.sendSignal(id, { ice: event.candidate });
+        void this.sendSignal(id, { ice: event.candidate });
       }
     };
 
@@ -370,7 +370,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
           offer.sdp = offer.sdp.replace(/useinbandfec=1/g, "useinbandfec=1;minptime=10");
         }
         await pc.setLocalDescription(offer);
-        this.sendSignal(id, { sdp: pc.localDescription });
+        void this.sendSignal(id, { sdp: pc.localDescription });
       } catch (e) {
         console.warn("[VideoChat] Negotiation error:", e);
       } finally {
@@ -445,7 +445,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
           answer.sdp = answer.sdp.replace(/useinbandfec=1/g, "useinbandfec=1;minptime=10");
         }
         await pc.setLocalDescription(answer);
-        this.sendSignal(from, { sdp: pc.localDescription });
+        void this.sendSignal(from, { sdp: pc.localDescription });
 
         // If we rolled back our own offer, check if we need to renegotiate our outgoing tracks
         const ourStream = window.cowatch.ourStream;
@@ -458,7 +458,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
                   renegotiationOffer.sdp = renegotiationOffer.sdp.replace(/useinbandfec=1/g, "useinbandfec=1;minptime=10");
                 }
                 await pc.setLocalDescription(renegotiationOffer);
-                this.sendSignal(from, { sdp: pc.localDescription });
+                void this.sendSignal(from, { sdp: pc.localDescription });
               }
             } catch (err) {
               console.warn("[VideoChat] Error renegotiating after rollback:", err);
@@ -624,7 +624,7 @@ export class VideoChat extends React.Component<VideoChatProps> {
               offer.sdp = offer.sdp.replace(/useinbandfec=1/g, "useinbandfec=1;minptime=10");
             }
             await pc.setLocalDescription(offer);
-            this.sendSignal(id, { sdp: pc.localDescription });
+            void this.sendSignal(id, { sdp: pc.localDescription });
           }
         }
       } catch (e) {

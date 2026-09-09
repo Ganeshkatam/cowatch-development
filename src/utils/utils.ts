@@ -224,7 +224,7 @@ async function fetchMeteredIceServers(): Promise<RTCIceServer[]> {
 }
 
 // Pre-fetch on module load so credentials are ready before first video call
-fetchMeteredIceServers();
+void fetchMeteredIceServers();
 
 export const iceServers = (): RTCIceServer[] => {
   if (_cachedIceServers) {

@@ -5,7 +5,7 @@ export function useFetch<T>(url: string) {
   useEffect(() => {
     if (url) {
       let ignore = false;
-      fetch(url)
+      void fetch(url)
         .then((response) => response.json())
         .then((json) => {
           if (!ignore) {

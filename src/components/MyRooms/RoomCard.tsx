@@ -218,7 +218,7 @@ export const EditRoomModal = ({
 
   const handleCopyCurrentPassword = () => {
     if (!currentPassword) return;
-    navigator.clipboard.writeText(currentPassword);
+    void navigator.clipboard.writeText(currentPassword);
     setCopiedCurrentPassword(true);
     setTimeout(() => setCopiedCurrentPassword(false), 2000);
   };

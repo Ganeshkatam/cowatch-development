@@ -175,7 +175,7 @@ export class ChatComponent extends React.Component<ChatProps & { onLoadMore?: ()
   async componentDidMount() {
     this.scrollToBottom();
     this.messagesRef.current?.addEventListener("scroll", this.onScroll);
-    init({});
+    void init({});
   }
 
   componentDidUpdate(prevProps: ChatProps) {

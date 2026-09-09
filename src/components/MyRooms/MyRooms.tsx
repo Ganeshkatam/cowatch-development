@@ -150,9 +150,9 @@ export const useRooms = (user: any) => {
   }, [user]);
 
   useEffect(() => {
-    fetchRooms();
+    void fetchRooms();
     const interval = setInterval(() => {
-      fetchRooms({ silent: true });
+      void fetchRooms({ silent: true });
     }, 30000);
     return () => clearInterval(interval);
   }, [fetchRooms]);
