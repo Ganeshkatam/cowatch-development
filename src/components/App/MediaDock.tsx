@@ -223,15 +223,17 @@ export const MediaDock: React.FC<MediaDockProps> = ({
             </div>
           </Menu.Item>
 
-          <Menu.Item
-            leftSection={<IconBrowser size={18} color="#34D399" />}
-            onClick={onOpenVBrowser}
-          >
-            <div className={styles.menuItemWithDesc}>
-              <span className={styles.menuItemTitle}>Browser</span>
-              <span className={styles.menuItemDesc}>Browse the web together</span>
-            </div>
-          </Menu.Item>
+          {import.meta.env.VITE_VBROWSER_ENABLED !== "false" && (
+            <Menu.Item
+              leftSection={<IconBrowser size={18} color="#34D399" />}
+              onClick={onOpenVBrowser}
+            >
+              <div className={styles.menuItemWithDesc}>
+                <span className={styles.menuItemTitle}>Browser</span>
+                <span className={styles.menuItemDesc}>Browse the web together</span>
+              </div>
+            </Menu.Item>
+          )}
 
           <Menu.Item
             leftSection={<IconFile size={18} color="#A78BFA" />}
