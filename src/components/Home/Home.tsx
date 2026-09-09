@@ -123,7 +123,7 @@ export const Home = () => {
               </div>
               <img
                 src="/screenshot_full.png"
-                alt="CoWatch watchparty interface preview"
+                alt="CoWatch interface preview"
                 className={styles.heroScreenshot}
               />
             </div>

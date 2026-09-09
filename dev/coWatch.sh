@@ -78,7 +78,7 @@ sudo apt-get install -y nodejs
 
 # Set up certbot or Cloudflare HTTPS
 
-# Build watchparty
+# Build cowatch
 npm run build
 
 # Set .env config

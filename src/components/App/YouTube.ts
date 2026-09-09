@@ -2,29 +2,29 @@ import { MediaPlayerClass } from "dashjs";
 import { Player } from "./Player";
 
 export class YouTube implements Player {
-  watchPartyYTPlayer: YT.Player | null;
-  constructor(watchPartyYTPlayer: YT.Player | null) {
-    this.watchPartyYTPlayer = watchPartyYTPlayer;
+  coWatchYTPlayer: YT.Player | null;
+  constructor(coWatchYTPlayer: YT.Player | null) {
+    this.coWatchYTPlayer = coWatchYTPlayer;
   }
   clearDashState = () => {};
   setDashState = (player: MediaPlayerClass) => {};
 
   getCurrentTime = () => {
-    return this.watchPartyYTPlayer?.getCurrentTime() ?? 0;
+    return this.coWatchYTPlayer?.getCurrentTime() ?? 0;
   };
 
   getDuration = () => {
-    return this.watchPartyYTPlayer?.getDuration() ?? 0;
+    return this.coWatchYTPlayer?.getDuration() ?? 0;
   };
 
   isMuted = () => {
-    return this.watchPartyYTPlayer?.isMuted() ?? false;
+    return this.coWatchYTPlayer?.isMuted() ?? false;
   };
 
   isSubtitled = (): boolean => {
     // This actually isn't accurate after subtitles have been toggled off because track doesn't update
     // try {
-    //   const current = this.watchPartyYTPlayer?.getOption('captions', 'track');
+    //   const current = this.coWatchYTPlayer?.getOption('captions', 'track');
     //   return Boolean(current && current.languageCode);
     // } catch (e) {
     //   console.warn(e);
@@ -34,11 +34,11 @@ export class YouTube implements Player {
   };
 
   getPlaybackRate = (): number => {
-    return this.watchPartyYTPlayer?.getPlaybackRate() ?? 1;
+    return this.coWatchYTPlayer?.getPlaybackRate() ?? 1;
   };
 
   setPlaybackRate = (rate: number) => {
-    this.watchPartyYTPlayer?.setPlaybackRate(rate);
+    this.coWatchYTPlayer?.setPlaybackRate(rate);
   };
 
   setSrcAndTime = async (src: string, time: number) => {
@@ -47,25 +47,25 @@ export class YouTube implements Player {
     let videoId = new URLSearchParams(url.search).get("v");
     // Link shortener https://youtu.be/ID
     let altVideoId = src.split("/").slice(-1)[0].split("?")[0];
-    this.watchPartyYTPlayer?.cueVideoById(videoId || altVideoId, time);
-    // this.watchPartyYTPlayer?.cuePlaylist({listType: 'playlist', list: 'OLAK5uy_mtoaOGQksRdPbwlNtQ9IiK67wir5QqyIc'});
+    this.coWatchYTPlayer?.cueVideoById(videoId || altVideoId, time);
+    // this.coWatchYTPlayer?.cuePlaylist({listType: 'playlist', list: 'OLAK5uy_mtoaOGQksRdPbwlNtQ9IiK67wir5QqyIc'});
   };
 
   playVideo = async () => {
-    this.watchPartyYTPlayer?.playVideo();
+    this.coWatchYTPlayer?.playVideo();
   };
 
   pauseVideo = () => {
-    this.watchPartyYTPlayer?.pauseVideo();
+    this.coWatchYTPlayer?.pauseVideo();
   };
 
   seekVideo = (time: number) => {
-    this.watchPartyYTPlayer?.seekTo(time, true);
+    this.coWatchYTPlayer?.seekTo(time, true);
   };
 
   shouldPlay = () => {
     return (
-      this.watchPartyYTPlayer?.getPlayerState() ===
+      this.coWatchYTPlayer?.getPlayerState() ===
         window.YT?.PlayerState.PAUSED ||
       this.getCurrentTime() === this.getDuration()
     );
@@ -73,30 +73,30 @@ export class YouTube implements Player {
 
   setMute = (muted: boolean) => {
     if (muted) {
-      this.watchPartyYTPlayer?.mute();
+      this.coWatchYTPlayer?.mute();
     } else {
-      this.watchPartyYTPlayer?.unMute();
+      this.coWatchYTPlayer?.unMute();
     }
   };
 
   setVolume = (volume: number) => {
-    this.watchPartyYTPlayer?.setVolume(volume * 100);
+    this.coWatchYTPlayer?.setVolume(volume * 100);
   };
 
   getVolume = (): number => {
-    const volume = this.watchPartyYTPlayer?.getVolume();
+    const volume = this.coWatchYTPlayer?.getVolume();
     return (volume ?? 0) / 100;
   };
 
   setSubtitleMode = (mode?: TextTrackMode, lang?: string) => {
     // Show the available options
-    // console.log(this.watchPartyYTPlayer?.getOptions('captions'));
+    // console.log(this.coWatchYTPlayer?.getOptions('captions'));
     if (mode === "showing") {
       console.log(lang);
       //@ts-expect-error
-      this.watchPartyYTPlayer?.setOption("captions", "reload", true);
+      this.coWatchYTPlayer?.setOption("captions", "reload", true);
       //@ts-expect-error
-      this.watchPartyYTPlayer?.setOption("captions", "track", {
+      this.coWatchYTPlayer?.setOption("captions", "track", {
         languageCode: lang ?? "en",
       });
     }
@@ -105,7 +105,7 @@ export class YouTube implements Player {
       // so we can't determine if subtitles are on or off
       // need to provide separate menu options
       //@ts-expect-error
-      this.watchPartyYTPlayer?.setOption("captions", "track", {});
+      this.coWatchYTPlayer?.setOption("captions", "track", {});
     }
   };
 
@@ -114,11 +114,11 @@ export class YouTube implements Player {
   };
 
   isReady = () => {
-    return Boolean(this.watchPartyYTPlayer);
+    return Boolean(this.coWatchYTPlayer);
   };
 
   stopVideo = () => {
-    this.watchPartyYTPlayer?.stopVideo();
+    this.coWatchYTPlayer?.stopVideo();
   };
 
   clearState = () => {
@@ -138,14 +138,14 @@ export class YouTube implements Player {
       {
         start: 0,
         end:
-          (this.watchPartyYTPlayer?.getVideoLoadedFraction() ?? 0) *
+          (this.coWatchYTPlayer?.getVideoLoadedFraction() ?? 0) *
           this.getDuration(),
       },
     ];
   };
 
   setLoop = (loop: boolean): void => {
-    this.watchPartyYTPlayer?.setLoop(loop);
+    this.coWatchYTPlayer?.setLoop(loop);
   };
 
   getVideoEl = (): HTMLMediaElement => {

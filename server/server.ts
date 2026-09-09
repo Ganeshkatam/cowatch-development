@@ -2020,7 +2020,7 @@ function computeOpenSubtitlesHash(first: Buffer, last: Buffer, size: number) {
 // ---------------------------------------------------------
 // Startup-Safe Scheduled Room Worker
 // Note: This in-process polling scheduler is optimized for a single
-// PM2 application instance. If WatchParty scales horizontally (e.g. cluster mode),
+// PM2 application instance. If CoWatch scales horizontally (e.g. cluster mode),
 // this should be replaced with a distributed task queue or external cron to avoid
 // redundant polling, although the SQL query is atomic and safe.
 // ---------------------------------------------------------

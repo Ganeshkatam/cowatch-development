@@ -20,7 +20,7 @@ interface HostConsoleProps {
   durationLabel: string;
   isPermanent: boolean;
   submitting: boolean;
-  onStartWatchParty: () => void;
+  onStartCoWatch: () => void;
   onEnterActiveRoom: () => void;
   onCopyInvite: () => void;
   copiedInvite: boolean;
@@ -36,7 +36,7 @@ export const HostConsole: React.FC<HostConsoleProps> = ({
   durationLabel,
   isPermanent,
   submitting,
-  onStartWatchParty,
+  onStartCoWatch,
   onEnterActiveRoom,
   onCopyInvite,
   copiedInvite,
@@ -92,7 +92,7 @@ export const HostConsole: React.FC<HostConsoleProps> = ({
       {/* Primary Action Button */}
       {isWaiting ? (
         <Button
-          onClick={onStartWatchParty}
+          onClick={onStartCoWatch}
           fullWidth
           size="lg"
           color="violet"

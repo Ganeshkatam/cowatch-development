@@ -217,7 +217,7 @@ export default function JoinRoom() {
     }
   };
 
-  const handleStartWatchParty = async () => {
+  const handleStartCoWatch = async () => {
     setSubmitting(true);
     setError(null);
     try {
@@ -246,14 +246,14 @@ export default function JoinRoom() {
 
       await requestAdmission();
     } catch (err: any) {
-      console.error("handleStartWatchParty error:", err);
+      console.error("handleStartCoWatch error:", err);
       setError(err.message || "Failed to start watch party.");
       setSubmitting(false);
     }
   };
 
   const handleStartEarly = async () => {
-    await handleStartWatchParty();
+    await handleStartCoWatch();
   };
 
   const handleCopyInviteLink = () => {
@@ -379,7 +379,7 @@ export default function JoinRoom() {
               durationLabel={canonicalDuration}
               isPermanent={!room.durationMinutes || room.durationMinutes <= 0}
               submitting={submitting}
-              onStartWatchParty={handleStartWatchParty}
+              onStartCoWatch={handleStartCoWatch}
               onEnterActiveRoom={handleJoinClicked}
               onCopyInvite={handleCopyInviteLink}
               copiedInvite={copiedInvite}
