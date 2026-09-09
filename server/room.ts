@@ -8,14 +8,9 @@ import { getStartOfDay } from "./utils/time.ts";
 import { postgres, updateObject, upsertObject } from "./utils/postgres.ts";
 import { hashRoomPasscode } from "./utils/roomPasscode.ts";
 import { validateRoomInviteCredential } from "./utils/roomInvites.ts";
-import {
-  startRoomLifecycle,
-} from "./roomLifecycle.ts";
+import { startRoomLifecycle } from "./roomLifecycle.ts";
 import { getAdmissionRecord } from "./utils/roomAdmission.ts";
-import {
-  fetchYoutubeVideo,
-  getYoutubeVideoID,
-} from "./utils/youtube.ts";
+import { fetchYoutubeVideo, getYoutubeVideoID } from "./utils/youtube.ts";
 //@ts-expect-error
 import twitch from "twitch-m3u8";
 import { type QueryResult } from "pg";
@@ -25,7 +20,7 @@ export interface RoomMessageRow {
   roomId: string;
   user_id: string | null;
   message: string;
-  message_type: 'user' | 'system';
+  message_type: "user" | "system";
   event_type: string | null;
   metadata: any | null;
   created_at: Date;
@@ -39,10 +34,10 @@ export async function persistRoomMessage(
   roomId: string,
   userId: string,
   message: string,
-  messageType: 'user' | 'system' = 'user',
+  messageType: "user" | "system" = "user",
   eventType: string | null = null,
   metadata: any | null = null,
-  clientMessageId: string | null = null
+  clientMessageId: string | null = null,
 ): Promise<RoomMessageRow | null> {
   if (!postgres) return null;
 
@@ -52,7 +47,15 @@ export async function persistRoomMessage(
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (room_id, user_id, client_message_id) DO NOTHING
        RETURNING id, room_id as "roomId", user_id, message, message_type, event_type, metadata, created_at, updated_at`,
-      [roomId, userId, message, messageType, eventType, metadata, clientMessageId]
+      [
+        roomId,
+        userId,
+        message,
+        messageType,
+        eventType,
+        metadata,
+        clientMessageId,
+      ],
     );
     if (result.rowCount === 0 && clientMessageId) {
       // Duplicate client_message_id for this room/user, fetch the existing one
@@ -60,7 +63,7 @@ export async function persistRoomMessage(
         `SELECT id, room_id as "roomId", user_id, message, message_type, event_type, metadata, created_at, updated_at
          FROM room_messages
          WHERE room_id = $1 AND user_id = $2 AND client_message_id = $3`,
-        [roomId, userId, clientMessageId]
+        [roomId, userId, clientMessageId],
       );
       return existingResult.rows[0] || null;
     }
@@ -71,7 +74,11 @@ export async function persistRoomMessage(
   }
 }
 
-export async function loadRoomMessages(roomId: string, limit: number = 50, beforeCursor?: string | { createdAt: string; id: string }): Promise<RoomMessageRow[]> {
+export async function loadRoomMessages(
+  roomId: string,
+  limit: number = 50,
+  beforeCursor?: string | { createdAt: string; id: string },
+): Promise<RoomMessageRow[]> {
   if (!postgres) return [];
 
   try {
@@ -84,7 +91,7 @@ export async function loadRoomMessages(roomId: string, limit: number = 50, befor
     const params: any[] = [roomId];
 
     if (beforeCursor) {
-      if (typeof beforeCursor === 'string') {
+      if (typeof beforeCursor === "string") {
         query += ` AND rm.created_at < $2`;
         params.push(beforeCursor);
       } else {
@@ -155,11 +162,18 @@ export class Room {
   private tsInterval: NodeJS.Timeout | undefined = undefined;
   private inactivityTimeout: NodeJS.Timeout | undefined = undefined;
   public isChatDisabled: boolean | undefined = undefined;
-  public status: 'waiting' | 'scheduled' | 'active' | 'inactive' | 'ended' | 'expired' | 'cancelled' = 'waiting';
+  public status:
+    | "waiting"
+    | "scheduled"
+    | "active"
+    | "inactive"
+    | "ended"
+    | "expired"
+    | "cancelled" = "waiting";
   public scheduledStartsAt: Date | null = null;
   public startedAt: Date | undefined = undefined;
   public expiresAt: Date | undefined = undefined;
-  public owner_id: string = '';
+  public owner_id: string = "";
   public isPermanent: boolean = false;
   public durationMinutes: number | null = null;
   public coverPhoto: string | null = null;
@@ -169,13 +183,13 @@ export class Room {
   // If we want a real queue then we need external processing of the jobs and a way to update the room from outside
   public vBrowserQueue:
     | {
-      roomId: string;
-      queueTime: Date;
-      isLarge: boolean;
-      region: string;
-      uid: string;
-      clientId: string;
-    }
+        roomId: string;
+        queueTime: Date;
+        isLarge: boolean;
+        region: string;
+        uid: string;
+        clientId: string;
+      }
     | undefined = undefined;
 
   constructor(
@@ -205,10 +219,13 @@ export class Room {
       }
     }, 500);
 
-    const cleanRoomId = this.roomId.startsWith("/") ? this.roomId.substring(1) : this.roomId;
+    const cleanRoomId = this.roomId.startsWith("/")
+      ? this.roomId.substring(1)
+      : this.roomId;
 
     io.of(roomId).use(async (socket, next) => {
-      const admissionToken = (socket.handshake.auth?.admissionToken || socket.handshake.query?.admissionToken) as string;
+      const admissionToken = (socket.handshake.auth?.admissionToken ||
+        socket.handshake.query?.admissionToken) as string;
 
       // Ensure admission token is present
       if (!admissionToken) {
@@ -241,17 +258,20 @@ export class Room {
         if (owner_id) {
           this.owner_id = owner_id;
         }
-        if (isWaitingLoungeEnabled !== undefined && isWaitingLoungeEnabled !== null) {
+        if (
+          isWaitingLoungeEnabled !== undefined &&
+          isWaitingLoungeEnabled !== null
+        ) {
           this.isWaitingLoungeEnabled = Boolean(isWaitingLoungeEnabled);
         }
 
         // Validate lifecycle
         const now = Date.now();
-        if (status === 'ended') {
+        if (status === "ended") {
           next(new Error("ROOM_ENDED"));
           return;
         }
-        if (status === 'cancelled') {
+        if (status === "cancelled") {
           next(new Error("ROOM_NOT_JOINABLE"));
           return;
         }
@@ -285,9 +305,15 @@ export class Room {
 
         const inviteCredential = socket.handshake.auth?.inviteCredential;
         let isInviteValid = false;
-        if (typeof inviteCredential === "string" && inviteCredential.length > 0) {
+        if (
+          typeof inviteCredential === "string" &&
+          inviteCredential.length > 0
+        ) {
           const validation =
-            (await validateRoomInviteCredential(cleanRoomId, inviteCredential)) ||
+            (await validateRoomInviteCredential(
+              cleanRoomId,
+              inviteCredential,
+            )) ||
             (await validateRoomInviteCredential(this.roomId, inviteCredential));
           if (validation.valid && validation.inviteId) {
             isInviteValid = true;
@@ -392,23 +418,34 @@ export class Room {
         this.inactivityTimeout = undefined;
       }
 
-      if (this.status === 'inactive') {
-        if (!this.isPermanent && this.expiresAt && this.expiresAt.getTime() <= Date.now()) {
-          this.status = 'expired';
+      if (this.status === "inactive") {
+        if (
+          !this.isPermanent &&
+          this.expiresAt &&
+          this.expiresAt.getTime() <= Date.now()
+        ) {
+          this.status = "expired";
           if (postgres) {
-            postgres.query(
-              `UPDATE rooms SET status = 'expired', "lastUpdateTime" = NOW() WHERE "roomId" = $1`,
-              [this.roomId]
-            ).catch(console.error);
+            postgres
+              .query(
+                `UPDATE rooms SET status = 'expired', "lastUpdateTime" = NOW() WHERE "roomId" = $1`,
+                [this.roomId],
+              )
+              .catch(console.error);
           }
           next(new Error("This room has ended or expired."));
           return;
         }
 
-        this.status = 'active';
+        this.status = "active";
         this.lastUpdateTime = new Date();
         if (postgres) {
-          updateObject(postgres, "rooms", { status: 'active', "lastActiveAt": new Date() }, { "roomId": this.roomId }).catch(console.error);
+          updateObject(
+            postgres,
+            "rooms",
+            { status: "active", lastActiveAt: new Date() },
+            { roomId: this.roomId },
+          ).catch(console.error);
         }
       }
 
@@ -430,7 +467,7 @@ export class Room {
       redisCount("connectStarts");
       redisCountDistinct("connectStartsDistinct", clientId);
 
-      if (this.status === 'expired' || this.status === 'ended') {
+      if (this.status === "expired" || this.status === "ended") {
         socket.emit("errorMessage", "This room has ended or expired.");
         socket.disconnect(true);
         return;
@@ -444,7 +481,7 @@ export class Room {
 
       // Check if this room is expired
       const validateNotExpired = () => {
-        if (this.status === 'expired' || this.status === 'ended') {
+        if (this.status === "expired" || this.status === "ended") {
           socket.emit("errorMessage", "This room has ended or expired.");
           return false;
         }
@@ -454,13 +491,17 @@ export class Room {
           return true;
         }
         if (this.expiresAt && this.expiresAt.getTime() <= Date.now()) {
-          this.status = 'expired';
+          this.status = "expired";
           socket.emit("errorMessage", "This room has ended or expired.");
           if (postgres) {
-            postgres.query(
-              `UPDATE rooms SET status = 'expired', "lastUpdateTime" = NOW() WHERE "roomId" = $1`,
-              [this.roomId]
-            ).catch(e => console.error("Failed to update status on real-time check:", e));
+            postgres
+              .query(
+                `UPDATE rooms SET status = 'expired', "lastUpdateTime" = NOW() WHERE "roomId" = $1`,
+                [this.roomId],
+              )
+              .catch((e) =>
+                console.error("Failed to update status on real-time check:", e),
+              );
           }
           if (this.vBrowser) {
             this.stopVBrowserInternal();
@@ -501,12 +542,18 @@ export class Room {
         }
       });
       socket.on("CMD:setWaitingLounge", async (data: { enabled: boolean }) => {
-        if ((await validateOwner()) && validateNotExpired() && data !== undefined) {
+        if (
+          (await validateOwner()) &&
+          validateNotExpired() &&
+          data !== undefined
+        ) {
           this.isWaitingLoungeEnabled = Boolean(data.enabled);
           if (!this.isWaitingLoungeEnabled) {
             await this.admitAllGuests();
           }
-          this.emitToRoom("REC:waitingLoungeEnabled", { enabled: this.isWaitingLoungeEnabled });
+          this.emitToRoom("REC:waitingLoungeEnabled", {
+            enabled: this.isWaitingLoungeEnabled,
+          });
           this.broadcastWaitingListToHost();
           this.saveRoom().catch(console.warn);
         }
@@ -553,12 +600,18 @@ export class Room {
             try {
               const profileRes = await postgres.query(
                 "SELECT display_name, username, avatar_url FROM profiles WHERE id = $1 LIMIT 1",
-                [decoded.uid]
+                [decoded.uid],
               );
               if (profileRes.rows && profileRes.rows.length > 0) {
                 const profile = profileRes.rows[0];
-                const resolvedName = profile.display_name?.trim() || profile.username?.trim();
-                if (resolvedName && (!this.nameMap[socket.clientId] || this.nameMap[socket.clientId].startsWith("Guest") || this.nameMap[socket.clientId] === socket.clientId)) {
+                const resolvedName =
+                  profile.display_name?.trim() || profile.username?.trim();
+                if (
+                  resolvedName &&
+                  (!this.nameMap[socket.clientId] ||
+                    this.nameMap[socket.clientId].startsWith("Guest") ||
+                    this.nameMap[socket.clientId] === socket.clientId)
+                ) {
                   this.nameMap[socket.clientId] = resolvedName;
                   this.emitToRoom("REC:nameMap", this.nameMap);
                 }
@@ -578,15 +631,23 @@ export class Room {
 
           const isRoomOwner = Boolean(
             (this.owner_id && this.owner_id === decoded.uid) ||
-            (this.creator && decoded.email && this.creator.toLowerCase() === decoded.email.toLowerCase())
+            (this.creator &&
+              decoded.email &&
+              this.creator.toLowerCase() === decoded.email.toLowerCase()),
           );
 
           if (isRoomOwner && this.status === "waiting") {
             try {
-              console.log("[Room] Host authenticated to waiting room %s. Auto-activating room lifecycle.", this.roomId);
+              console.log(
+                "[Room] Host authenticated to waiting room %s. Auto-activating room lifecycle.",
+                this.roomId,
+              );
               await startRoomLifecycle(this.roomId, decoded.uid);
             } catch (autoStartErr) {
-              console.error("[Room] Error auto-activating waiting room on host connection:", autoStartErr);
+              console.error(
+                "[Room] Error auto-activating waiting room on host connection:",
+                autoStartErr,
+              );
             }
           }
 
@@ -611,8 +672,11 @@ export class Room {
       });
       // Validates that the room is not in 'waiting' state (media playback locked until host starts)
       const validateNotWaiting = () => {
-        if (this.status === 'waiting') {
-          socket.emit("errorMessage", "The host has not started the watch party yet.");
+        if (this.status === "waiting") {
+          socket.emit(
+            "errorMessage",
+            "The host has not started the watch party yet.",
+          );
           return false;
         }
         return true;
@@ -621,60 +685,111 @@ export class Room {
       // CMD:startRoom - Host starts the watch party (delegates to shared startRoomLifecycle)
       socket.on("CMD:startRoom", async () => {
         if (!socket.uid) {
-          socket.emit("errorMessage", "Authentication required to start the room.");
+          socket.emit(
+            "errorMessage",
+            "Authentication required to start the room.",
+          );
           return;
         }
         try {
           const result = await startRoomLifecycle(this.roomId, socket.uid);
           // The startRoomLifecycle function handles broadcast, in-memory update, and persistence
-          console.log("[Room] CMD:startRoom succeeded for room %s by user %s", this.roomId, socket.uid);
+          console.log(
+            "[Room] CMD:startRoom succeeded for room %s by user %s",
+            this.roomId,
+            socket.uid,
+          );
         } catch (err: any) {
           socket.emit("errorMessage", err.message || "Failed to start room.");
         }
       });
 
       socket.on("CMD:host", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.startHosting(socket, String(data));
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          validateNotWaiting() &&
+          this.startHosting(socket, String(data));
       });
       socket.on("CMD:play", () => {
-        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.playVideo(socket);
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          validateNotWaiting() &&
+          this.playVideo(socket);
       });
       socket.on("CMD:pause", () => {
-        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.pauseVideo(socket);
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          validateNotWaiting() &&
+          this.pauseVideo(socket);
       });
       socket.on("CMD:seek", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.seekVideo(socket, Number(data));
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          validateNotWaiting() &&
+          this.seekVideo(socket, Number(data));
       });
       socket.on("CMD:playbackRate", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.setPlaybackRate(socket, Number(data));
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          validateNotWaiting() &&
+          this.setPlaybackRate(socket, Number(data));
       });
       socket.on("CMD:loop", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && validateNotWaiting() && this.setLoop(Boolean(data));
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          validateNotWaiting() &&
+          this.setLoop(Boolean(data));
       });
-      socket.on("CMD:ts", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.setTimestamp(socket, Number(data)),
+      socket.on(
+        "CMD:ts",
+        (data: unknown) =>
+          validateAdmitted() &&
+          validateNotExpired() &&
+          this.setTimestamp(socket, Number(data)),
       );
-      socket.on("CMD:chat", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.sendChatMessage(socket, String(data)),
+      socket.on(
+        "CMD:chat",
+        (data: unknown) =>
+          validateAdmitted() &&
+          validateNotExpired() &&
+          this.sendChatMessage(socket, String(data)),
       );
-      socket.on("CMD:chatV2", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.sendChatMessage(socket, data),
+      socket.on(
+        "CMD:chatV2",
+        (data: unknown) =>
+          validateAdmitted() &&
+          validateNotExpired() &&
+          this.sendChatMessage(socket, data),
       );
       socket.on("CMD:editMessage", (data: unknown) => {
-        validateAdmitted() && validateNotExpired() && this.editMessage(socket, data);
+        validateAdmitted() &&
+          validateNotExpired() &&
+          this.editMessage(socket, data);
       });
-      socket.on("CMD:addReaction", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.addReaction(socket, data),
+      socket.on(
+        "CMD:addReaction",
+        (data: unknown) =>
+          validateAdmitted() &&
+          validateNotExpired() &&
+          this.addReaction(socket, data),
       );
       socket.on("CMD:removeReaction", (data: unknown) => {
-        validateAdmitted() && validateNotExpired() && this.removeReaction(socket, data);
+        validateAdmitted() &&
+          validateNotExpired() &&
+          this.removeReaction(socket, data);
       });
       socket.on("CMD:loadMessages", async (data: any) => {
         if (!validateAdmitted() || !validateNotExpired()) return;
         const beforeCursor = data?.beforeCursor;
         const messages = await loadRoomMessages(this.roomId, 50, beforeCursor);
         const formattedMessages = messages.map((row: any) => ({
-          id: row.metadata?.clientId || 'unknown',
+          id: row.metadata?.clientId || "unknown",
           msg: row.message,
           cmd: row.event_type || undefined,
           timestamp: row.created_at.toISOString(),
@@ -687,74 +802,152 @@ export class Room {
         }));
         socket.emit("ROOM_MESSAGES", formattedMessages.reverse());
       });
-      socket.on("CMD:joinVideo", () => validateAdmitted() && validateNotExpired() && this.joinVideo(socket));
-      socket.on("CMD:leaveVideo", () => validateAdmitted() && validateNotExpired() && this.leaveVideo(socket));
+      socket.on(
+        "CMD:joinVideo",
+        () =>
+          validateAdmitted() && validateNotExpired() && this.joinVideo(socket),
+      );
+      socket.on(
+        "CMD:leaveVideo",
+        () =>
+          validateAdmitted() && validateNotExpired() && this.leaveVideo(socket),
+      );
       socket.on("CMD:joinScreenShare", (data) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.joinScreenSharing(socket, data);
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          this.joinScreenSharing(socket, data);
       });
-      socket.on("CMD:userMute", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.setUserMute(socket, data),
+      socket.on(
+        "CMD:userMute",
+        (data: unknown) =>
+          validateAdmitted() &&
+          validateNotExpired() &&
+          this.setUserMute(socket, data),
       );
-      socket.on("CMD:userVideoMute", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.setUserVideoMute(socket, data),
+      socket.on(
+        "CMD:userVideoMute",
+        (data: unknown) =>
+          validateAdmitted() &&
+          validateNotExpired() &&
+          this.setUserVideoMute(socket, data),
       );
-      socket.on("CMD:leaveScreenShare", () => validateAdmitted() && validateNotExpired() && this.leaveScreenSharing(socket));
+      socket.on(
+        "CMD:leaveScreenShare",
+        () =>
+          validateAdmitted() &&
+          validateNotExpired() &&
+          this.leaveScreenSharing(socket),
+      );
       socket.on("CMD:startVBrowser", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.startVBrowser(socket, data);
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          this.startVBrowser(socket, data);
       });
       socket.on("CMD:stopVBrowser", () => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.stopVBrowser();
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          this.stopVBrowser();
       });
       socket.on("CMD:changeController", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.changeController(String(data));
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          this.changeController(String(data));
       });
       socket.on("CMD:subtitle", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.addSubtitles(String(data));
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          this.addSubtitles(String(data));
       });
       socket.on("CMD:lock", async (data: unknown) => {
         if (!validateAdmitted() || !validateNotExpired()) return;
         const isOwner = Boolean(this.owner_id && socket.uid === this.owner_id);
-        const isCurrentLockHolder = Boolean(this.lock && socket.uid === this.lock);
+        const isCurrentLockHolder = Boolean(
+          this.lock && socket.uid === this.lock,
+        );
         if (!this.lock || isOwner || isCurrentLockHolder) {
           await this.lockRoom(socket, data);
         } else {
-          socket.emit("errorMessage", "Only the room owner can change the lock");
+          socket.emit(
+            "errorMessage",
+            "Only the room owner can change the lock",
+          );
         }
       });
       socket.on("CMD:askHost", () => {
-        validateAdmitted() && validateNotExpired() && socket.emit("REC:host", this.getHostState());
+        validateAdmitted() &&
+          validateNotExpired() &&
+          socket.emit("REC:host", this.getHostState());
       });
-      socket.on("CMD:getRoomState", () => validateAdmitted() && validateNotExpired() && this.getRoomState(socket));
+      socket.on(
+        "CMD:getRoomState",
+        () =>
+          validateAdmitted() &&
+          validateNotExpired() &&
+          this.getRoomState(socket),
+      );
       socket.on("CMD:setRoomState", async (data: unknown) => {
-        socket.emit("errorMessage", "Room settings cannot be changed while the room is active");
+        socket.emit(
+          "errorMessage",
+          "Room settings cannot be changed while the room is active",
+        );
       });
       socket.on("CMD:setRoomOwner", async (data: unknown) => {
-        socket.emit("errorMessage", "Room settings cannot be changed while the room is active");
+        socket.emit(
+          "errorMessage",
+          "Room settings cannot be changed while the room is active",
+        );
       });
       socket.on("CMD:playlistNext", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.playlistNext(data);
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          this.playlistNext(data);
       });
       socket.on("CMD:playlistAdd", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.playlistAdd(socket, String(data));
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          this.playlistAdd(socket, String(data));
       });
       socket.on("CMD:playlistMove", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.playlistMove(data);
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          this.playlistMove(data);
       });
       socket.on("CMD:playlistDelete", (data: unknown) => {
-        validateAdmitted() && validateLock() && validateNotExpired() && this.playlistDelete(Number(data));
+        validateAdmitted() &&
+          validateLock() &&
+          validateNotExpired() &&
+          this.playlistDelete(Number(data));
       });
       socket.on("CMD:kickUser", async (data: unknown) => {
         (await validateOwner()) && validateNotExpired() && this.kickUser(data);
       });
       socket.on("CMD:deleteChatMessages", async (data: unknown) => {
-        (await validateOwner()) && validateNotExpired() && this.deleteChatMessages(data);
+        (await validateOwner()) &&
+          validateNotExpired() &&
+          this.deleteChatMessages(data);
       });
 
-      socket.on("signal", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.sendSignal(socket, data, "signal"),
+      socket.on(
+        "signal",
+        (data: unknown) =>
+          validateAdmitted() &&
+          validateNotExpired() &&
+          this.sendSignal(socket, data, "signal"),
       );
-      socket.on("signalSS", (data: unknown) =>
-        validateAdmitted() && validateNotExpired() && this.sendSignal(socket, data, "signalSS"),
+      socket.on(
+        "signalSS",
+        (data: unknown) =>
+          validateAdmitted() &&
+          validateNotExpired() &&
+          this.sendSignal(socket, data, "signalSS"),
       );
 
       socket.on("disconnect", () => this.onDisconnect(socket));
@@ -770,12 +963,18 @@ export class Room {
             if (postgres) {
               const profileRes = await postgres.query(
                 "SELECT display_name, username, avatar_url FROM profiles WHERE id = $1 LIMIT 1",
-                [decoded.uid]
+                [decoded.uid],
               );
               if (profileRes.rows && profileRes.rows.length > 0) {
                 const profile = profileRes.rows[0];
-                const resolvedName = profile.display_name?.trim() || profile.username?.trim();
-                if (resolvedName && (!this.nameMap[clientId] || this.nameMap[clientId].startsWith("Guest") || this.nameMap[clientId] === clientId)) {
+                const resolvedName =
+                  profile.display_name?.trim() || profile.username?.trim();
+                if (
+                  resolvedName &&
+                  (!this.nameMap[clientId] ||
+                    this.nameMap[clientId].startsWith("Guest") ||
+                    this.nameMap[clientId] === clientId)
+                ) {
                   this.nameMap[clientId] = resolvedName;
                 }
                 if (profile.avatar_url && !this.pictureMap[clientId]) {
@@ -803,7 +1002,7 @@ export class Room {
         socket.emit("REC:lock", this.lock);
         const recentMessages = await loadRoomMessages(this.roomId, 50);
         const formattedMessages = recentMessages.map((row: any) => ({
-          id: row.metadata?.clientId || 'unknown',
+          id: row.metadata?.clientId || "unknown",
           msg: row.message,
           cmd: row.event_type || undefined,
           timestamp: row.created_at.toISOString(),
@@ -954,7 +1153,9 @@ export class Room {
   private getHostState = (): HostState => {
     let currentTS = this.videoTS;
     const sockets = Array.from(this.io.of(this.roomId).sockets.values());
-    const hostSocket = this.owner_id ? sockets.find((s) => s.uid === this.owner_id) : undefined;
+    const hostSocket = this.owner_id
+      ? sockets.find((s) => s.uid === this.owner_id)
+      : undefined;
     const controllerClient = this.vBrowser?.controllerClient;
     if (hostSocket && this.tsMap[hostSocket.clientId] !== undefined) {
       currentTS = this.tsMap[hostSocket.clientId];
@@ -1065,7 +1266,10 @@ export class Room {
     return dbOwner === uid;
   };
 
-  public addChatMessage = async (socket: Socket | null, chatMsg: ChatMessageBase) => {
+  public addChatMessage = async (
+    socket: Socket | null,
+    chatMsg: ChatMessageBase,
+  ) => {
     if (this.isChatDisabled && !chatMsg.cmd) {
       return;
     }
@@ -1079,7 +1283,7 @@ export class Room {
 
     // Determine persistence rules
     const isCmd = Boolean(chatMsg.cmd);
-    const messageType = isCmd ? 'system' : 'user';
+    const messageType = isCmd ? "system" : "user";
     const eventType = isCmd ? chatMsg.cmd : null;
 
     // Every persisted message must have a user_id
@@ -1088,7 +1292,7 @@ export class Room {
         socket.emit("ROOM_MESSAGE", {
           cmd: "system",
           msg: "You must be logged in to send messages.",
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
       // System events without a uid are still emitted live but never persisted
@@ -1097,7 +1301,12 @@ export class Room {
       return;
     }
 
-    const shouldPersist = !isCmd || (isCmd && ['room.inactive', 'room.reactivated', 'room.expired'].includes(chatMsg.cmd!));
+    const shouldPersist =
+      !isCmd ||
+      (isCmd &&
+        ["room.inactive", "room.reactivated", "room.expired"].includes(
+          chatMsg.cmd!,
+        ));
 
     let dbId: string | undefined = undefined;
     if (shouldPersist) {
@@ -1107,8 +1316,15 @@ export class Room {
         chatMsg.msg || "",
         messageType,
         eventType,
-        { clientId: socket?.clientId, videoTS: chatWithTime.videoTS, name: socket?.clientId ? this.nameMap[socket.clientId] : undefined, picture: socket?.clientId ? this.pictureMap[socket.clientId] : undefined },
-        chatMsg.clientMessageId
+        {
+          clientId: socket?.clientId,
+          videoTS: chatWithTime.videoTS,
+          name: socket?.clientId ? this.nameMap[socket.clientId] : undefined,
+          picture: socket?.clientId
+            ? this.pictureMap[socket.clientId]
+            : undefined,
+        },
+        chatMsg.clientMessageId,
       );
       if (dbRow) {
         dbId = dbRow.id;
@@ -1127,7 +1343,11 @@ export class Room {
     // Still emit REC:chat for legacy UI compatibility while we transition
     this.emitToRoom("REC:chat", { ...chatWithTime, dbId, userId: socket.uid });
     // Emit new ROOM_MESSAGE event for the refactored frontend
-    this.emitToRoom("ROOM_MESSAGE", { ...chatWithTime, dbId, userId: socket.uid });
+    this.emitToRoom("ROOM_MESSAGE", {
+      ...chatWithTime,
+      dbId,
+      userId: socket.uid,
+    });
   };
 
   private changeUserName = (socket: Socket, data: string) => {
@@ -1380,7 +1600,10 @@ export class Room {
     if (this.paused) {
       this.tsMap[socket.clientId] = data;
     } else {
-      this.tsMap[socket.clientId] = Math.max(0, data - timeSinceTsMap / 1000 + 0.5);
+      this.tsMap[socket.clientId] = Math.max(
+        0,
+        data - timeSinceTsMap / 1000 + 0.5,
+      );
     }
   };
 
@@ -1404,7 +1627,10 @@ export class Room {
       typeof data.replyToTimestamp === "string"
         ? data.replyToTimestamp
         : undefined;
-    const clientMessageId = typeof data.clientMessageId === "string" ? data.clientMessageId : undefined;
+    const clientMessageId =
+      typeof data.clientMessageId === "string"
+        ? data.clientMessageId
+        : undefined;
 
     if (!msg || !this.isValidChatMessage(msg)) {
       return;
@@ -1415,7 +1641,11 @@ export class Room {
       return;
     }
 
-    const baseMsg: ChatMessageBase = { id: socket.clientId, msg, clientMessageId };
+    const baseMsg: ChatMessageBase = {
+      id: socket.clientId,
+      msg,
+      clientMessageId,
+    };
     const emitChatMessage = (chatMsg: ChatMessageBase) => {
       redisCount("chatMessages");
       this.addChatMessage(socket, chatMsg);
@@ -1441,9 +1671,15 @@ export class Room {
   private editMessage = async (socket: Socket, raw: unknown) => {
     if (!socket.uid) return; // Must be authenticated to edit
     const data = raw as { messageId: string; newMessage: string };
-    if (!data || typeof data.messageId !== 'string' || typeof data.newMessage !== 'string') return;
+    if (
+      !data ||
+      typeof data.messageId !== "string" ||
+      typeof data.newMessage !== "string"
+    )
+      return;
     const trimmedMsg = data.newMessage.trim();
-    if (trimmedMsg.length === 0 || trimmedMsg.length > ROOM_MESSAGE_MAX_LENGTH) return;
+    if (trimmedMsg.length === 0 || trimmedMsg.length > ROOM_MESSAGE_MAX_LENGTH)
+      return;
 
     if (!postgres) return;
 
@@ -1454,7 +1690,12 @@ export class Room {
         WHERE id = $2 AND room_id = $3 AND user_id = $4 AND message_type = 'user'
         RETURNING id, room_id as "roomId", user_id, message, message_type, event_type, metadata, created_at, updated_at
       `;
-      const result = await postgres.query(query, [trimmedMsg, data.messageId, this.roomId, socket.uid]);
+      const result = await postgres.query(query, [
+        trimmedMsg,
+        data.messageId,
+        this.roomId,
+        socket.uid,
+      ]);
 
       if (result.rowCount === 0) {
         return; // Message not found or not owned by user
@@ -1463,14 +1704,17 @@ export class Room {
       const row = result.rows[0];
       // Fetch profile data just like loadRoomMessages does, for the broadcast
       let profile_name, profile_picture;
-      const profileResult = await postgres.query('SELECT display_name, avatar_url FROM profiles WHERE id = $1', [row.user_id]);
+      const profileResult = await postgres.query(
+        "SELECT display_name, avatar_url FROM profiles WHERE id = $1",
+        [row.user_id],
+      );
       if ((profileResult.rowCount ?? 0) > 0) {
         profile_name = profileResult.rows[0].display_name;
         profile_picture = profileResult.rows[0].avatar_url;
       }
 
       const updatedMsg = {
-        id: row.metadata?.clientId || 'unknown',
+        id: row.metadata?.clientId || "unknown",
         msg: row.message,
         cmd: row.event_type || undefined,
         timestamp: row.created_at.toISOString(),
@@ -1796,7 +2040,7 @@ export class Room {
     if (data.undo) {
       const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000);
       this.expiresAt = expiresAt;
-      this.status = 'active';
+      this.status = "active";
       this.isPermanent = false;
       await updateObject(
         postgres,
@@ -1810,7 +2054,7 @@ export class Room {
           roomDescription: null,
           mediaPath: null,
           expiresAt: expiresAt,
-          status: 'active',
+          status: "active",
           isPermanent: false,
         },
         { roomId: this.roomId },
@@ -1837,11 +2081,11 @@ export class Room {
         owner_id: uid,
         isSubRoom: true,
         expiresAt: null,
-        status: 'active',
+        status: "active",
         isPermanent: true,
       };
       this.expiresAt = undefined;
-      this.status = 'active';
+      this.status = "active";
       this.owner_id = uid;
       this.isPermanent = true;
       let result: QueryResult | null = null;
@@ -1949,11 +2193,14 @@ export class Room {
     const { uid } = socket;
     if (uid) {
       if (normalizedTitle !== undefined) roomObj.roomTitle = normalizedTitle;
-      if (roomDescription !== undefined) roomObj.roomDescription = roomDescription;
+      if (roomDescription !== undefined)
+        roomObj.roomDescription = roomDescription;
     }
 
     // Remove undefined fields so they aren't part of the Postgres UPDATE query
-    Object.keys(roomObj).forEach(key => roomObj[key] === undefined && delete roomObj[key]);
+    Object.keys(roomObj).forEach(
+      (key) => roomObj[key] === undefined && delete roomObj[key],
+    );
     try {
       const query = `UPDATE rooms
         SET ${Object.keys(roomObj).map((k, i) => `"${k}" = $${i + 1}`)}
@@ -2002,7 +2249,10 @@ export class Room {
   };
 
   public emitToRoom = (eventName: string, ...args: any[]) => {
-    this.io.of(this.roomId).to("admitted").emit(eventName, ...args);
+    this.io
+      .of(this.roomId)
+      .to("admitted")
+      .emit(eventName, ...args);
   };
 
   private isAdmitted = (socket: Socket): boolean => {
@@ -2024,7 +2274,11 @@ export class Room {
     return false;
   };
 
-  private getHostInfo = async (): Promise<{ name: string; picture: string; online: boolean }> => {
+  private getHostInfo = async (): Promise<{
+    name: string;
+    picture: string;
+    online: boolean;
+  }> => {
     let online = false;
     let name = "Host";
     let picture = "";
@@ -2047,12 +2301,13 @@ export class Room {
           try {
             const res = await postgres.query(
               "SELECT display_name, username, avatar_url FROM profiles WHERE id = $1 LIMIT 1",
-              [this.owner_id]
+              [this.owner_id],
             );
             if (res.rows && res.rows.length > 0) {
               const row = res.rows[0];
               if (name === "Host" && (row.display_name || row.username)) {
-                name = (row.display_name?.trim() || row.username?.trim()) || "Host";
+                name =
+                  row.display_name?.trim() || row.username?.trim() || "Host";
               }
               if (!picture && row.avatar_url) {
                 picture = row.avatar_url;
@@ -2143,7 +2398,9 @@ export class Room {
     }
 
     const socketId = this.socketIdMap[clientId];
-    const socket = socketId ? this.io.of(this.roomId).sockets.get(socketId) : undefined;
+    const socket = socketId
+      ? this.io.of(this.roomId).sockets.get(socketId)
+      : undefined;
     if (socket) {
       if (socket.uid) {
         this.admittedUids.add(socket.uid);
@@ -2195,7 +2452,9 @@ export class Room {
     this.waitingLounge.delete(clientId);
 
     const socketId = this.socketIdMap[clientId];
-    const socket = socketId ? this.io.of(this.roomId).sockets.get(socketId) : undefined;
+    const socket = socketId
+      ? this.io.of(this.roomId).sockets.get(socketId)
+      : undefined;
     if (socket) {
       socket.emit("REC:waitingLounge", {
         inLounge: true,
@@ -2233,11 +2492,16 @@ export class Room {
       if (this.roster.length === 0) {
         if (this.inactivityTimeout) clearTimeout(this.inactivityTimeout);
         this.inactivityTimeout = setTimeout(async () => {
-          if (this.roster.length === 0 && this.status === 'active') {
-            this.status = 'inactive';
+          if (this.roster.length === 0 && this.status === "active") {
+            this.status = "inactive";
             this.lastUpdateTime = new Date();
             if (postgres) {
-              await updateObject(postgres, "rooms", { status: 'inactive', "lastActiveAt": new Date() }, { "roomId": this.roomId });
+              await updateObject(
+                postgres,
+                "rooms",
+                { status: "inactive", lastActiveAt: new Date() },
+                { roomId: this.roomId },
+              );
             }
           }
         }, 120 * 1000);
@@ -2288,13 +2552,21 @@ export class Room {
     if (postgres) {
       if (!data.timestamp && !data.author) {
         // Clear all
-        await postgres.query(`DELETE FROM room_messages WHERE room_id = $1`, [this.roomId]);
+        await postgres.query(`DELETE FROM room_messages WHERE room_id = $1`, [
+          this.roomId,
+        ]);
       } else if (data.timestamp && data.author) {
         // Delete specific message
-        await postgres.query(`DELETE FROM room_messages WHERE room_id = $1 AND (user_id = $2 OR metadata->>'clientId' = $2) AND created_at = $3`, [this.roomId, data.author, data.timestamp]);
+        await postgres.query(
+          `DELETE FROM room_messages WHERE room_id = $1 AND (user_id = $2 OR metadata->>'clientId' = $2) AND created_at = $3`,
+          [this.roomId, data.author, data.timestamp],
+        );
       } else if (data.author) {
         // Delete by author
-        await postgres.query(`DELETE FROM room_messages WHERE room_id = $1 AND (user_id = $2 OR metadata->>'clientId' = $2)`, [this.roomId, data.author]);
+        await postgres.query(
+          `DELETE FROM room_messages WHERE room_id = $1 AND (user_id = $2 OR metadata->>'clientId' = $2)`,
+          [this.roomId, data.author],
+        );
       }
     }
 
