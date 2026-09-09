@@ -492,19 +492,23 @@ export class VBrowser extends React.Component<{
                     ?.dispatchEvent(new KeyboardEvent("keyup", { key: e.key }));
                 }
               }}
-              onBeforeInputCapture={(e: any) => {
+              onBeforeInputCapture={(
+                e: React.SyntheticEvent<HTMLInputElement, Event>,
+              ) => {
                 e.nativeEvent.preventDefault();
                 // document.getElementById('debug')!.innerHTML = e.type + ' ' + e.data;
                 if (e.type === "beforeinput") {
                   document.getElementById("leftOverlay")?.dispatchEvent(
                     new KeyboardEvent("keydown", {
-                      key: e.data,
-                      shiftKey: e.data === e.data.toUpperCase(),
+                      key: (e as any).data,
+                      shiftKey:
+                        (e as any).data ===
+                        (e as any).data.toUpperCase(),
                     }),
                   );
                   document.getElementById("leftOverlay")?.dispatchEvent(
                     new KeyboardEvent("keyup", {
-                      key: e.data,
+                      key: (e as any).data,
                     }),
                   );
                 }
