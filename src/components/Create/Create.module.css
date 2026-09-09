@@ -84,7 +84,72 @@
   margin: 0;
 }
 
-/* Two-column row for side-by-side fields */
+/*
+ * Cinematic horizontal field layout.
+ * Wide screens use a stable label column with a flexible control column;
+ * narrow screens collapse back to Mantine's natural vertical field layout.
+ */
+.horizontalInputGroup {
+  display: grid;
+  grid-template-columns: clamp(120px, 15dvw, 200px) minmax(0, 1fr);
+  column-gap: clamp(16px, 3dvw, 28px);
+  align-items: start;
+}
+
+.horizontalInputGroup :global(.mantine-InputWrapper-label) {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+  padding-top: 9px;
+  font-size: clamp(14px, 1.1dvw, 16px);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.horizontalInputGroup :global(.mantine-InputWrapper-label) + :global(.mantine-Input-wrapper) {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.horizontalInputGroup :global(.mantine-InputWrapper-description) {
+  grid-column: 2;
+  grid-row: 2;
+  margin-top: 6px;
+}
+
+.horizontalInputGroup :global(.mantine-InputWrapper-error) {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.horizontalInputGroup :global(.mantine-InputWrapper-root) {
+  min-width: 0;
+}
+
+.horizontalInputGroup .inputHelp {
+  grid-column: 2;
+}
+
+/* Description / cover use the same label-control rhythm as primary fields. */
+.optionalFieldGroup {
+  display: grid;
+  grid-template-columns: clamp(120px, 15dvw, 200px) minmax(0, 1fr);
+  column-gap: clamp(16px, 3dvw, 28px);
+  align-items: start;
+}
+
+.optionalFieldLabel {
+  padding-top: 8px;
+  font-size: clamp(14px, 1.1dvw, 16px);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.optionalFieldControl {
+  min-width: 0;
+}
+
+/* Keep the legacy utility for places that still benefit from intrinsic columns. */
 .twoColRow {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
@@ -229,12 +294,6 @@
   transition: all 0.2s ease;
 }
 
-.cancelBtn:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: var(--text-primary) !important;
-  border-color: var(--border-default) !important;
-}
-
 .createBtnPrimary {
   height: 48px;
   padding: 0 32px;
@@ -254,7 +313,6 @@
   transform: translateY(0);
 }
 
-/* Responsive layouts are handled via fluid grids and clamp() */
 .previewBanner {
   position: relative;
   width: 100%;
@@ -306,4 +364,24 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .horizontalInputGroup,
+  .optionalFieldGroup {
+    display: block;
+  }
+
+  .horizontalInputGroup :global(.mantine-InputWrapper-label),
+  .optionalFieldLabel {
+    display: block;
+    padding-top: 0;
+    margin-bottom: 6px;
+  }
+
+  .horizontalInputGroup :global(.mantine-InputWrapper-description),
+  .horizontalInputGroup :global(.mantine-InputWrapper-error),
+  .horizontalInputGroup .inputHelp {
+    margin-left: 0;
+  }
 }
