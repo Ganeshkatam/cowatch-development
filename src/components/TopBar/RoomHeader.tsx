@@ -182,7 +182,6 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
             <button
               type="button"
               className={styles.iconOnlyBtn}
-              onClick={onOpenSettings}
               aria-label={isRoomActive ? "Preferences" : "Room settings"}
               title={isRoomActive ? "Preferences" : "Room settings"}
             >
