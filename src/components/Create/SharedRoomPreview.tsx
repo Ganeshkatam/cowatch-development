@@ -61,11 +61,11 @@ export const SharedRoomPreview: React.FC<SharedRoomPreviewProps> = ({
           </Group>
           <Badge
             variant="light"
-            color={formState.passcode ? "yellow" : "teal"}
+            color="yellow"
             size="xs"
-            leftSection={formState.passcode ? <IconLock size={11} /> : <IconLockOpen size={11} />}
+            leftSection={<IconLock size={11} />}
           >
-            {formState.passcode ? "Protected" : "Public"}
+            Protected
           </Badge>
         </div>
 

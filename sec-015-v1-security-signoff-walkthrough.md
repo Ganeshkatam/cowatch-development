@@ -38,7 +38,7 @@ This document outlines the final completion of the Web V1 security checklist, sp
 
 ## 5. Observability & Security Logging (A09)
 > [!TIP]
-> Implemented structural security observability to comply with OWASP A09.
+> Implemented structured security-event logging and request correlation for V1.
 
 - Built `SecurityLogger.ts` which emits structured JSON events to `stdout`.
 - Integrated `req.id` (`X-Request-ID`) into the main Express application to trace HTTP requests.
@@ -48,10 +48,13 @@ This document outlines the final completion of the Web V1 security checklist, sp
 > [!WARNING]
 > Completed the `npm audit` and manual dependency review.
 
-- `npm audit` identified vulnerabilities in `ip`, `js-yaml`, and `linkify-it`. Given these are mostly frontend/build dependencies or related to text parsing (which we sanitize), the risk is moderate but should be addressed in upcoming V2 updates.
-- `mediasoup` is not explicitly used; instead, the project leverages `webtorrent` which depends on `node-datachannel@0.12.0` (via `@thaunknown/simple-peer` -> `webrtc-polyfill`).
-- The `node-datachannel` version is stable for V1, though the overall dependency graph will need an `npm audit fix --force` refresh during the V2 phase.
-
+- `npm audit` identified 11 vulnerabilities (4 moderate, 7 high) in dependencies such as `ip`, `js-yaml`, `linkify-it`, and `uuid`.
+- **Reachability and Risk Analysis:**
+  - `ip` (High, SSRF): Pulled in by `webtorrent`. Reachability is low as it is used primarily for local interface enumeration in WebRTC, not parsing user input on the server.
+  - `js-yaml` (High, DoS): Pulled in by `pm2`. PM2 is an operational dependency parsing trusted ecosystem configurations; untrusted YAML is not processed.
+  - `linkify-it` (High, DoS): Pulled in by `react-linkify` on the client. Crafted chat messages could potentially cause client-side regex denial of service (freezing a specific user's tab).
+  - `uuid` (Moderate, Buffer bounds): Pulled in by `@googleapis/youtube`.
+- **Remediation Strategy:** A known high-severity vulnerability in a production dependency is not deferred merely as "V2 feature work". However, upgrading these specific packages requires major version bumps (e.g., `webtorrent@0.7.3` -> `webtorrent@latest`, `pm2@7.0.4`, `@googleapis/youtube@35.0.0`) which introduce significant regression risk for V1 stability. Because the server-side exploitability is low/nil for these specific paths, the remediation is scheduled as a dedicated security-patching milestone independent of V2 feature work, following a full regression test pass.
 ## Conclusion
 
 With the finalization of the Secure Invitation Token Subsystem and the closing of the open Operational, Auth, and Observability gaps, **the CoWatch Web V1 codebase is verified against the baseline OWASP criteria.** No numeric Zoom-style meeting IDs were introduced, and the platform retains its cinematic aesthetic and secure baseline.

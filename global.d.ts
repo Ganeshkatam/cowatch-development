@@ -104,10 +104,13 @@ interface PersistentRoom {
   data?: any;
   owner?: string;
   owner_id: string;
-  status?: 'waiting' | 'scheduled' | 'active' | 'inactive' | 'ended' | 'expired';
+  status?: 'waiting' | 'scheduled' | 'active' | 'inactive' | 'ended' | 'expired' | 'cancelled';
   startedAt?: Date | string;
   expiresAt?: Date | string;
   endedAt?: Date | string;
+  scheduledStartsAt?: Date | string;
+  cancelledAt?: Date | string;
+  passcode_fingerprint?: string;
 }
 
 interface LinkAccount {
